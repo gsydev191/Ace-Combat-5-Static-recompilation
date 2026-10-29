@@ -20,12 +20,28 @@ int g_cap_deep      = 0;
 int g_cap_shallow   = 0;
 int g_cap_disable   = 0;
 
-void ps2_mkdir_p(const char *path) {
+static void mkdir_one(const char *path) {
 #ifdef _WIN32
     _mkdir(path);
 #else
     mkdir(path, 0777);
 #endif
+}
+
+void ps2_mkdir_p(const char *path) {
+    char tmp[512];
+    size_t i, n = strlen(path);
+    if (n >= sizeof tmp) return;
+    memcpy(tmp, path, n + 1);
+    for (i = 1; i < n; i++) {
+        if (tmp[i] == '/' || tmp[i] == '\\') {
+            char c = tmp[i];
+            tmp[i] = 0;
+            mkdir_one(tmp);
+            tmp[i] = c;
+        }
+    }
+    mkdir_one(tmp);
 }
 
 #define CAP_DICT_SLOTS_DEFAULT  8192u

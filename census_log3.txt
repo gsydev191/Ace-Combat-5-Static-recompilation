@@ -1,0 +1,1864 @@
+ps2recomp runtime: 10742 recompiled functions, entry 0031C138
+diag: per-primitive censuses disabled (PS2_CENSUS=1 enables; captures can arm temporarily)
+snap: armed: press F8 in the game window (or drop snap.on) for a full state snapshot into out/snap_NNN/
+rn: native sun flare and lens ghosts on (PS2_RN_SUN=0 turns them off) -- the emulated draws of sub_118BC8 and sub_1B0680 are replaced
+rn: native sky on (PS2_RN_SKY=0 turns it off)
+rn: native 2D layer on (PS2_RN_2D=0 turns it off)
+clock: Windows high-resolution waitable timer; absolute 59.94-Hz field deadlines (unless PS2_FIELD_HZ overrides)
+gfxq: the graphics machine (VIF, VU1, GIF, GS) runs on its own thread; 64 MB ring
+dispatch: 10742 functions, index 00100000..00399304 (681153 slots)
+image: 3689260 bytes loaded at 00100000
+mod: 97 name(s) from config/game_symbols.txt
+mod: 0 mod(s) in 'mods', 0 enabled, 0 file(s) for the filesystem
+vfs: disc image 'C:\Users\Dan\Downloads\Ace Combat 5 - The Unsung War (USA) (En,Ja)\Ace Combat 5 - The Unsung War (USA) (En,Ja).iso', 24 files, sectors 32..2168044
+hook: rn-taps runs before 00320098 CDoubleBuff::_Open (priority 100)
+hook: rn-taps runs before 003200D8 CDoubleBuff::_Close (priority 100)
+hook: rn-taps runs before 00320538 COt::_Open (priority 100)
+hook: rn-taps runs before 003265E8 DrawCtrl::_Flush (priority 100)
+hook: rn-taps runs after 003265E8 DrawCtrl::_Flush (priority 100)
+hook: rn-taps runs before 0031CF00 scene_Dispatch (priority 100)
+hook: rn-taps runs before 0032B3F0 (priority 100)
+hook: rn-taps runs before 0032B5B0 (priority 100)
+hook: rn-taps runs before 0032B650 (priority 100)
+hook: rn-taps runs before 0032B6F0 (priority 100)
+hook: rn-taps runs before 0032B850 (priority 100)
+hook: rn-taps runs before 0032B928 (priority 100)
+hook: rn-taps runs after 0011AAF0 sun_OcclusionChain (priority 100)
+hook: rn-taps runs after 00118BC8 sun_Flare (priority 100)
+hook: rn-taps runs after 001B0680 sun_LensGhosts (priority 100)
+rn: render taps attached (packet buffer, ordering table, 2D helpers, DrawCtrl flush); provenance and census on
+rn: native VU1 programs off (PS2_RN_VP=0)
+hook: rn-intents runs before 0031FB88 prim_Write (priority 100)
+hook: rn-intents runs after 0031FB88 prim_Write (priority 100)
+hook: rn-intents runs before 0031FF00 prim_Rect (priority 100)
+hook: rn-intents runs before 0031FFB0 prim_Line (priority 100)
+hook: rn-intents runs before 002D6E00 msgwin_Draw (priority 100)
+hook: rn-intents runs after 002D6E00 msgwin_Draw (priority 100)
+hook: rn-intents runs before 00134598 (priority 100)
+hook: rn-intents runs after 00134598 (priority 100)
+hook: rn-intents runs before 00134EB0 (priority 100)
+hook: rn-intents runs after 00134EB0 (priority 100)
+hook: rn-intents runs before 00141AC8 (priority 100)
+hook: rn-intents runs after 00141AC8 (priority 100)
+hook: rn-intents runs before 00141EC8 (priority 100)
+hook: rn-intents runs after 00141EC8 (priority 100)
+hook: rn-intents runs before 00135378 (priority 100)
+hook: rn-intents runs after 00135378 (priority 100)
+hook: rn-intents runs before 001354D0 (priority 100)
+hook: rn-intents runs after 001354D0 (priority 100)
+hook: rn-intents runs before 00135928 (priority 100)
+hook: rn-intents runs after 00135928 (priority 100)
+hook: rn-intents runs before 00135EC0 (priority 100)
+hook: rn-intents runs after 00135EC0 (priority 100)
+hook: rn-intents runs before 0013E300 (priority 100)
+hook: rn-intents runs after 0013E300 (priority 100)
+hook: rn-intents runs before 00136330 (priority 100)
+hook: rn-intents runs after 00136330 (priority 100)
+hook: rn-intents runs before 00136688 (priority 100)
+hook: rn-intents runs after 00136688 (priority 100)
+hook: rn-intents runs before 00136A68 (priority 100)
+hook: rn-intents runs after 00136A68 (priority 100)
+hook: rn-intents runs before 00136E88 (priority 100)
+hook: rn-intents runs after 00136E88 (priority 100)
+hook: rn-intents runs before 00137010 (priority 100)
+hook: rn-intents runs after 00137010 (priority 100)
+hook: rn-intents runs before 00137258 (priority 100)
+hook: rn-intents runs after 00137258 (priority 100)
+hook: rn-intents runs before 00137C10 (priority 100)
+hook: rn-intents runs after 00137C10 (priority 100)
+hook: rn-intents runs before 00138A58 (priority 100)
+hook: rn-intents runs after 00138A58 (priority 100)
+hook: rn-intents runs before 0013E920 (priority 100)
+hook: rn-intents runs after 0013E920 (priority 100)
+hook: rn-intents runs before 0013FB70 (priority 100)
+hook: rn-intents runs after 0013FB70 (priority 100)
+hook: rn-intents runs before 00140780 (priority 100)
+hook: rn-intents runs after 00140780 (priority 100)
+hook: rn-intents runs before 0013F660 (priority 100)
+hook: rn-intents runs after 0013F660 (priority 100)
+hook: rn-intents runs before 0013F878 (priority 100)
+hook: rn-intents runs after 0013F878 (priority 100)
+hook: rn-intents runs before 00140A20 (priority 100)
+hook: rn-intents runs after 00140A20 (priority 100)
+hook: rn-intents runs before 001410D0 (priority 100)
+hook: rn-intents runs after 001410D0 (priority 100)
+hook: rn-intents runs before 00141478 (priority 100)
+hook: rn-intents runs after 00141478 (priority 100)
+hook: rn-intents runs before 00149298 (priority 100)
+hook: rn-intents runs after 00149298 (priority 100)
+hook: rn-intents runs before 00139250 (priority 100)
+hook: rn-intents runs after 00139250 (priority 100)
+hook: rn-intents runs before 0013E6F8 (priority 100)
+hook: rn-intents runs after 0013E6F8 (priority 100)
+hook: rn-intents runs before 0013DBD8 (priority 100)
+hook: rn-intents runs after 0013DBD8 (priority 100)
+hook: rn-intents runs before 0013DE38 (priority 100)
+hook: rn-intents runs after 0013DE38 (priority 100)
+hook: rn-intents runs before 00142A38 (priority 100)
+hook: rn-intents runs after 00142A38 (priority 100)
+hook: rn-intents runs after 00114F20 (priority 100)
+hook: rn-intents runs before 00114A70 (priority 100)
+hook: rn-intents runs after 00114A70 (priority 100)
+hook: rn-intents runs before 001AF720 (priority 100)
+hook: rn-intents runs after 001AFE80 (priority 100)
+hook: rn-intents runs before 001CF718 (priority 100)
+hook: rn-intents runs after 001CF718 (priority 100)
+hook: rn-intents runs before 001CD568 (priority 100)
+hook: rn-intents runs after 001CD568 (priority 100)
+hook: rn-intents runs before 001D1D88 (priority 100)
+hook: rn-intents runs after 001D1D88 (priority 100)
+hook: rn-intents runs before 001D0D30 (priority 100)
+hook: rn-intents runs after 001D0D30 (priority 100)
+rn: render intents on (primitive writer 0031FB88)
+hook: rn-fixes runs before 00118BC8 sun_Flare (priority 110)
+hook: rn-fixes runs after 00118BC8 sun_Flare (priority 110)
+settings: no settings file, defaults -- preset low, internal resolution 1, texture filter 0, anisotropy 0, windowed 1280x896, aspect 0, widescreen 0, present mailbox, fps limit 0
+vk: Intel(R) Arc(TM) 140V GPU (8GB) (API 1.4.348)
+vk: internal resolution: images up to 16384 px, lines up to 8.0 px wide, points up to 255.9 px, depth kept on a rebuild
+vk: pipeline cache loaded (576036 bytes from C:\Users\Dan\Documents\Reversing\Ace-Combat-5-Static-recompilation\build\gcc\ac5_pipelines.cache)
+vk: 96 pipeline states from earlier sessions to build ahead of use
+vk: present mode FIFO (vsync) -- the surface does not offer the mode asked for
+vk: shader gs.vert.spv  1872 bytes  fnv=7B8F8FDD
+vk: shader gs.frag.spv  24376 bytes  fnv=67117256
+vk: shader present.vert.spv  932 bytes  fnv=E9DD504B
+vk: shader present.frag.spv  9684 bytes  fnv=8115A351
+vk: shader mesh.vert.spv  12032 bytes  fnv=F7012219
+vk: shader mesh.frag.spv  8652 bytes  fnv=3C748AF7
+vk: shader gs_zcopy.frag.spv  1852 bytes  fnv=289390DB
+vk: shader colclip.frag.spv  1052 bytes  fnv=1C995F35
+vk: shader rn_vis.frag.spv  2556 bytes  fnv=67A372F2
+vk: shader rn_sun.vert.spv  1364 bytes  fnv=BC6A69DD
+vk: shader rn_sun.frag.spv  4188 bytes  fnv=2CC2EB42
+ui: Dear ImGui 1.92.9b ready -- F4 opens the settings menu
+pad: Xbox Series X Controller connected
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+vk: 96 remembered pipeline states built in advance
+audio: 48000 Hz 2-channel s16 device open, SPU2 mixer attached
+entering recompiled guest at 0031C138
+kernel: InitMainThread(gp=00448270 stack=FFFFFFFF size=00100000) -> sp=01FFFFC0
+kernel: InitHeap(base=00484B2C size=FFFFFFFF) -> end=01F00000
+kernel: CreateSema(param=01FFFF60) -> id 1  raw[+0]=0 [+4]=1 [+8]=1 [+12]=0 [+16]=00000000 [+20]=00000000
+kernel: CreateSema(param=01FFFF80) -> id 2  raw[+0]=0 [+4]=1 [+8]=1 [+12]=0 [+16]=00000000 [+20]=00000000
+kernel: CreateSema(param=01FFFF60) -> id 3  raw[+0]=0 [+4]=255 [+8]=0 [+12]=0 [+16]=00000000 [+20]=00000000
+kernel: CreateThread(param=01FFFF30) -> id 1 entry=00339270 stack=0044CC50 size=1024 gp=00448270 prio=0
+kernel: thread 1 entering 00339270 (sp=0044D040 gp=00448270)
+dma4: CHCR write #1 = 00000000  mod=0 str=0 madr=00000000 qwc=0 tadr=00000000
+rpc: sceSifInitRpc -- native RPC layer active
+cdvd: init mode=0, 24 files on disc
+iop: LoadModule 'cdrom0:\IRX\SIO2MAN.IRX;1' -> id 3 (serviced natively)
+iop: LoadModule 'cdrom0:\IRX\DBCMAN.IRX;1' -> id 4 (serviced natively)
+iop: LoadModule 'cdrom0:\IRX\SIO2D.IRX;1' -> id 5 (serviced natively)
+iop: LoadModule 'cdrom0:\IRX\DS2U.IRX;1' -> id 6 (serviced natively)
+iop: LoadModule 'cdrom0:\IRX\DS2U.IRX;1' -> id 7 (serviced natively)
+kernel: CreateSema(param=01FFFED0) -> id 4  raw[+0]=3669052 [+4]=127 [+8]=1 [+12]=128 [+16]=00420BD8 [+20]=00EA0137
+pad: socket 0 -> port 0 slot 0
+pad: socket 1 -> port 1 slot 0
+settings: widescreen patch off
+gs: field 1 shows base 0, which holds nothing current (never a target) -- black
+alive: present #1  dropped=0  closed=0 frame_done=1 requested=0
+gs: field 2 shows base 0, which holds nothing current (never a target) -- black
+kernel: SetGsCrt(inter=1 mode=2 field=1)
+pad: only the libpad2 path will report input
+scene: scanning machine 0 (object 00588480, table 00443280)
+scene: all 23 handlers across 1 states are recompiled
+scene: field 4  state 0.0 -> 0010EA48
+iop: LoadModule 'cdrom0:\IRX\USBD.IRX;1' -> id 8 (serviced natively)
+iop: LoadModule 'cdrom0:\IRX\FS2.IRX;1' -> id 9 (serviced natively)
+iop: LoadModule 'cdrom0:\IRX\LGDEV.IRX;1' -> id 10 (serviced natively)
+iop: LoadModule 'cdrom0:\IRX\LIBSD.IRX;1' -> id 11 (serviced natively)
+iop: LoadModule 'cdrom0:\IRX\MCMAN.IRX;1' -> id 12 (serviced natively)
+iop: LoadModule 'cdrom0:\IRX\MCSERV.IRX;1' -> id 13 (serviced natively)
+iop: LoadModule 'cdrom0:\IRX\NUSOUND.IRX;1' -> id 14 (serviced natively)
+iop: LoadModule 'cdrom0:\IRX\NUFILE.IRX;1' -> id 15 (serviced natively)
+iop: LoadModule 'cdrom0:\IRX\NUSNDSTR.IRX;1' -> id 16 (serviced natively)
+kernel: CreateSema(param=01FFFDB0) -> id 5  raw[+0]=1137495245 [+4]=1 [+8]=1 [+12]=0 [+16]=00000000 [+20]=00000000
+kernel: CreateSema(param=01FFFDB0) -> id 6  raw[+0]=1137495245 [+4]=1 [+8]=1 [+12]=0 [+16]=00000000 [+20]=00000000
+kernel: CreateSema(param=01FFFDB0) -> id 7  raw[+0]=1137495245 [+4]=1 [+8]=1 [+12]=0 [+16]=00000000 [+20]=00000000
+kernel: CreateSema(param=01FFFDB0) -> id 8  raw[+0]=1137495245 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=00000000
+guest: Version 1.08, built on Aug 20 2002 at 19:08:30
+lgdev: reported version 1.08
+kernel: CreateSema(param=01FFFE50) -> id 9  raw[+0]=0 [+4]=1 [+8]=1 [+12]=0 [+16]=00000000 [+20]=00000000
+gs: field 3 shows base 917504, which holds nothing current (never a target) -- black
+gs: field 4 shows base 917504, which holds nothing current (never a target) -- black
+dmac: channel 0 completed; handlers registered=0, EnableDmac(0)=NO -> NOTHING TO RUN
+dmac: channel 2 completed; handlers registered=0, EnableDmac(2)=NO -> NOTHING TO RUN
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 512x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 0.8000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=00000294895459F0 slot=1 created=1 layout=5 | rt 640x448 x1  disp 0,0 512x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 0.8000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+scene: field 9  state 0.1 -> 0010F3D0
+dmac: channel 1 completed; handlers registered=0, EnableDmac(1)=NO -> NOTHING TO RUN
+kernel: CreateSema(param=01FFFE70) -> id 10  raw[+0]=9241088 [+4]=1 [+8]=1 [+12]=0 [+16]=00000000 [+20]=00000000
+kernel: CreateThread(param=01FFFE80) -> id 2 entry=0035A4AC stack=0047ED00 size=2048 gp=00448270 prio=3
+kernel: CreateSema(param=01FFFE70) -> id 11  raw[+0]=9241088 [+4]=2147483647 [+8]=0 [+12]=0 [+16]=00000000 [+20]=00000000
+kernel: CreateSema(param=01FFFE70) -> id 12  raw[+0]=9241088 [+4]=1 [+8]=1 [+12]=0 [+16]=00000000 [+20]=00000000
+kernel: CreateThread(param=01FFFE90) -> id 3 entry=0035F408 stack=00480A80 size=4096 gp=00448270 prio=3
+kernel: CreateSema(param=01FFFE50) -> id 13  raw[+0]=9347232 [+4]=1 [+8]=1 [+12]=0 [+16]=00000000 [+20]=00000000
+kernel: CreateSema(param=01FFFE50) -> id 14  raw[+0]=9347232 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=00000000
+kernel: CreateThread(param=01FFFE70) -> id 4 entry=00363B74 stack=00481B80 size=4096 gp=00448270 prio=12
+kernel: thread 2 entering 0035A4AC (sp=0047F4F0 gp=00448270)
+kernel: thread 3 entering 0035F408 (sp=00481A70 gp=00448270)
+kernel: thread 4 entering 00363B74 (sp=00482B70 gp=00448270)
+guest: [!] CSelectFont::_InitFont: cannot load font files.
+scene: field 16  state 0.2 -> 0010F598
+nusndstr: SPU transfer sequence 1 -> 2 complete
+scene: field 23  state 0.3 -> 0010F5F8
+lgdev: enumerate -> no devices attached
+scene: scanning machine 1 (object 008D3050, table 003C7F88)
+scene: all 518 handlers across 47 states are recompiled
+scene: field 23  state 0.0 -> 0010F620
+scene: field 24  state 12.0 -> 002CA890
+scene: field 25  state 17.0 -> 0028B990
+scene: field 26  state 17.1 -> 0028BA68
+gs: field 26 shows base 1146880, which holds nothing current (never a target) -- black
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+kernel: CreateSema(param=01FFFDC0) -> id 15  raw[+0]=1063107447 [+4]=1 [+8]=1 [+12]=0 [+16]=00000000 [+20]=00000000
+kernel: CreateSema(param=01FFFDC0) -> id 16  raw[+0]=1063107447 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=00000000
+scene: field 60  state 17.2 -> 0028BB18
+scene: field 61  state 17.3 -> 0028BBA8
+guest: [-] ************* rtx dpl load done.
+scene: field 74  state 17.4 -> 0028BC40
+memcard: loaded 'saves/card0.ps2mc'
+vk: 2D overlay composed at 2x (1280x896)
+present: pipe=00000294895BCC38 set=0000029489546C70 slot=2427589972 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+scene: field 95  state 17.6 -> 0028BCE0
+scene: field 514  state 17.7 -> 0028BD80
+alive: vblank pump at field 600
+alive: present #601  dropped=3  closed=0 frame_done=1 requested=0
+scene: field 874  state 17.8 -> 0028BE20
+alive: vblank pump at field 1200 -- 59.9 fields/s over the last 600 (16.68 ms/field); 0 dropped, guest clock at 100% of real time
+alive: present #1201  dropped=3  closed=0 frame_done=1 requested=0
+scene: field 1234  state 17.9 -> 0028BEB8
+scene: field 1235  state 15.0 -> 002886D8
+scene: field 1236  state 15.1 -> 002887A8
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+sound: load('cd:\BIN\US\BGM.PAC', 00000005, 43698800) field=1270 caller=00356EB0
+file: open('cd:\BIN\US\BGM.PAC', 00000001, 00000003, 00000000, 00000000)
+file: path split 'cd:\BIN\US\BGM.PAC'
+file: device lookup 'cd'
+kernel: CreateSema(param=01FFFD50) -> id 17  raw[+0]=4663348 [+4]=1 [+8]=0 [+12]=33553816 [+16]=00000000 [+20]=01FFFD40
+nufile: open 'cd:\BIN\US\BGM.PAC' -> fd 1 (1138632704 bytes)
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=0 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=0 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nustream: open slot=5 file='cd:\BIN\US\BGM.PAC' offset=43698800 bytes/ch=513616 channels=2 interleave=2048 pitch=3763 result=loaded
+nusound: stream 5 state 0 -> 3 (cmd 7 wait_go=0 field=1270)
+nustream: status field=1270 slot=5 state=3 position=00000000 eof=0
+nustream: audio slot=5 ready=1 playing=0 paused=0 voices=43,41 loop=FFFFFFFF mixed=0 audible=0
+scene: field 1271  state 15.2 -> 00288880
+nusound: stream 5 state 3 -> 5 (cmd 10 wait_go=0 field=1271)
+present: pipe=00000294895BCC38 set=0000029489546C70 slot=2427589972 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+scene: field 1312  state 15.3 -> 00288A48
+scene: field 1313  state 16.0 -> 00289260
+sound: load('cd:\BIN\US\BGM.PAC', 00000005, 05E19800) field=1313 caller=00356EB0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nusound: stream 5 state 5 -> 1 (cmd 11 wait_go=0 field=1313)
+nustream: open slot=5 file='cd:\BIN\US\BGM.PAC' offset=05E19800 bytes/ch=3147408 channels=2 interleave=2048 pitch=3763 result=loaded
+nusound: stream 5 state 1 -> 3 (cmd 7 wait_go=0 field=1313)
+scene: field 1314  state 16.2 -> 00289948
+nusound: stream 5 state 3 -> 5 (cmd 10 wait_go=0 field=1314)
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489546C70 slot=2427589972 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+guest: [-] ************* rtx dpl load done.
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489546C70 slot=2427589972 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+scene: field 1489  state 16.4 -> 00289C78
+present: pipe=00000294895BCC38 set=0000029489546C70 slot=2427589972 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+nustream: status field=1570 slot=5 state=5 position=00034880 eof=0
+nustream: audio slot=5 ready=1 playing=1 paused=0 voices=43,41 loop=000683A4 mixed=204960 audible=203942
+present: pipe=00000294895BCC38 set=0000029489546C70 slot=2427589972 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+scene: field 1690  state 16.5 -> 00289F10
+scene: field 1691  state 18.0 -> 0028C1A8
+scene: field 1692  state 18.1 -> 0028C348
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+scene: field 1698  state 18.2 -> 0028C4A8
+scene: field 1699  state 18.3 -> 0028C4D0
+scene: field 1700  state 18.4 -> 0028C638
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dma4: CHCR write #2 = 00000000  mod=0 str=0 madr=00000000 qwc=0 tadr=00000000
+dma4: CHCR write #3 = 00000001  mod=0 str=0 madr=00000000 qwc=0 tadr=00000000
+ipu: first bytes in: 08 10 10 13 10 13 16 16 16 16 16 16 1A 18 1A 1B 
+nusound: stream 5 state 5 -> 1 (cmd 11 wait_go=0 field=1702)
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+sound: load('cd:\BIN\US\BGM.PAC', 00000005, 27241800) field=1714 caller=00356EB0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nustream: open slot=5 file='cd:\BIN\US\BGM.PAC' offset=27241800 bytes/ch=2398080 channels=2 interleave=2048 pitch=3763 result=loaded
+nusound: stream 5 state 1 -> 4 (cmd 7 wait_go=1 field=1714)
+dma4: CHCR write #4 = 00000000  mod=0 str=0 madr=00000000 qwc=0 tadr=00000000
+dma4: CHCR write #5 = 00000105  mod=1 str=1 madr=00000000 qwc=0 tadr=00C84380
+dma4: feed madr=00B03B10 n=8 | 00 00 01 B3 28 01 30 15 0A FC A2 C1 10 11 11 12 
+dma4: CHCR write #6 = 00000005  mod=1 str=0 madr=00B03B90 qwc=65516 tadr=00C84390
+dma4: CHCR write #7 = 00000101  mod=0 str=1 madr=0041E6C0 qwc=4 tadr=00C84390
+dma4: feed madr=0041E6C0 n=4 | 08 10 10 13 10 13 16 16 16 16 16 16 1A 18 1A 1B 
+dma4: tag drained but mode is 0, not chain -- chcr=00000101 madr=0041E700 tadr=00C84390: the rest of the chain is unreachable
+dma4: CHCR write #8 = 00000105  mod=1 str=1 madr=00B03B10 qwc=65524 tadr=00C84390
+dma4: feed madr=00B03B10 n=8 | 00 00 01 B3 28 01 30 15 0A FC A2 C1 10 11 11 12 
+dma4: feed madr=00B03B90 n=8 | F8 7B 46 8D 18 61 B8 D1 A3 46 18 6E 34 68 D1 86 
+ipu: bdec out y[0..7]=16 16 16 16 16 16 16 16  cb[0..3]=128 128 128 128  cr[0..3]=128 128 128 128
+dma4: feed madr=00B03C10 n=8 | 46 8D 18 61 B8 D1 A3 46 18 6E 34 68 D1 86 1B 8D 
+dma4: feed madr=00B03C90 n=8 | 34 61 86 E3 46 8D 18 61 B8 D1 A3 46 18 6E 34 68 
+dmac: channel 3 completed; handlers registered=0, EnableDmac(3)=NO -> NOTHING TO RUN
+dmac: channel 4 completed; handlers registered=0, EnableDmac(4)=NO -> NOTHING TO RUN
+dma4: feed madr=00B03D10 n=8 | 86 E3 46 8D 18 61 B8 D1 A3 46 18 6E 34 68 D1 86 
+dma4: feed madr=00B03D90 n=8 | 8D 1A 34 61 86 E3 46 8D 18 61 B8 D1 A3 46 18 6E 
+dma4: feed madr=00B03E10 n=8 | 34 61 86 00 00 01 04 0B F8 7B 46 8D 18 61 B8 D1 
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dma4: feed madr=00B03E90 n=8 | 86 1B 8D 1A 34 61 86 E3 46 8D 18 61 B8 D1 A3 46 
+dma4: feed madr=00B03F10 n=8 | 6E 34 68 D1 86 1B 8D 1A 34 61 86 E3 46 8D 18 61 
+dma4: feed madr=00B03F90 n=7 | 68 D1 86 1B 8D 1A 34 61 86 E3 46 8D 18 61 B8 D1 
+dmac: channel 9 completed; handlers registered=0, EnableDmac(9)=NO -> NOTHING TO RUN
+dma4: CHCR write #9 = 00000005  mod=1 str=0 madr=00B04C90 qwc=65244 tadr=00C84390
+dma4: CHCR write #10 = 00000101  mod=0 str=1 madr=00C853C0 qwc=18240 tadr=00C84390
+dma3: picture writeback madr=00D5BF00 qwc=48640 -> 48640 left, STILL RUNNING
+ipu: csc in  y[0..7]=16 16 16 16 16 16 16 16  cb[0..3]=128 128 128 128  cr[0..3]=128 128 128 128
+dma4: CHCR write #11 = 00000105  mod=1 str=1 madr=00B04C40 qwc=65249 tadr=00C84390
+nusound: stream 5 Go Wait -> KeyOnWait (mask 00000020 field=1716)
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dma4: CHCR write #12 = 00000005  mod=1 str=0 madr=00B04D40 qwc=65233 tadr=00C84390
+dma3: picture writeback madr=00D5BF00 qwc=48640 -> 48640 left, STILL RUNNING
+nusound: stream 5 state 3 -> 5 (cmd 10 wait_go=0 field=1718)
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dma3: picture writeback madr=00D5BF00 qwc=48640 -> 48640 left, STILL RUNNING
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dma3: picture writeback madr=00D5BF00 qwc=48640 -> 48640 left, STILL RUNNING
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dma3: picture writeback madr=00D5BF00 qwc=48640 -> 48640 left, STILL RUNNING
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dma3: picture writeback madr=00D5BF00 qwc=48640 -> 48640 left, STILL RUNNING
+dma3: picture writeback madr=00D5BF00 qwc=48640 -> 48640 left, STILL RUNNING
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dma3: picture writeback madr=00D5BF00 qwc=48640 -> 48640 left, STILL RUNNING
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dma3: picture writeback madr=00D5BF00 qwc=48640 -> 48640 left, STILL RUNNING
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dma3: picture writeback madr=00D5BF00 qwc=48640 -> 48640 left, STILL RUNNING
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dma3: picture writeback madr=00D5BF00 qwc=48640 -> 48640 left, STILL RUNNING
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dma3: picture writeback madr=00D5BF00 qwc=48640 -> 48640 left, STILL RUNNING
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dma3: picture writeback madr=00D5BF00 qwc=48640 -> 48640 left, STILL RUNNING
+dma3: picture writeback madr=00D5BF00 qwc=48640 -> 48640 left, STILL RUNNING
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dma3: picture writeback madr=00D5BF00 qwc=48640 -> 48640 left, STILL RUNNING
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dma3: picture writeback madr=00D5BF00 qwc=48640 -> 48640 left, STILL RUNNING
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dma3: picture writeback madr=00D5BF00 qwc=48640 -> 48640 left, STILL RUNNING
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dma3: picture writeback madr=00D5BF00 qwc=48640 -> 48640 left, STILL RUNNING
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dma3: picture writeback madr=00D5BF00 qwc=48640 -> 48640 left, STILL RUNNING
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dma3: picture writeback madr=00D5BF00 qwc=48640 -> 48640 left, STILL RUNNING
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dma3: picture writeback madr=00D5BF00 qwc=48640 -> 48640 left, STILL RUNNING
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dma3: picture writeback madr=00D5BF00 qwc=48640 -> 48640 left, STILL RUNNING
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dma3: picture writeback madr=00D5BF00 qwc=48640 -> 48640 left, STILL RUNNING
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dma3: picture writeback madr=00D5BF00 qwc=48640 -> 48640 left, STILL RUNNING
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dma3: picture writeback madr=00D5BF00 qwc=48640 -> 48640 left, STILL RUNNING
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dma3: picture writeback madr=00D5BF00 qwc=48640 -> 48640 left, STILL RUNNING
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dma3: picture writeback madr=00D5BF00 qwc=48640 -> 48640 left, STILL RUNNING
+dma3: picture writeback madr=00D5BF00 qwc=48640 -> 48640 left, STILL RUNNING
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dma3: picture writeback madr=00D5BF00 qwc=48640 -> 48640 left, STILL RUNNING
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dma3: picture writeback madr=00D5BF00 qwc=48640 -> 48640 left, STILL RUNNING
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+alive: vblank pump at field 1800 -- 59.9 fields/s over the last 600 (16.68 ms/field); 0 dropped, guest clock at 100% of real time
+alive: present #1801  dropped=3  closed=0 frame_done=1 requested=0
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+nusound: stream 5 state 5 -> 1 (cmd 11 wait_go=0 field=1864)
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+scene: field 1869  state 18.0 -> 0028C1A8
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+scene: field 1870  state 18.1 -> 0028C348
+scene: field 1876  state 18.2 -> 0028C4A8
+scene: field 1877  state 18.3 -> 0028C4D0
+scene: field 1878  state 18.4 -> 0028C638
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+sound: load('cd:\BIN\US\BGM.PAC', 00000005, 276D5000) field=1892 caller=00356EB0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nustream: open slot=5 file='cd:\BIN\US\BGM.PAC' offset=276D5000 bytes/ch=5255264 channels=2 interleave=2048 pitch=3763 result=loaded
+nusound: stream 5 state 1 -> 4 (cmd 7 wait_go=1 field=1892)
+nustream: status field=1892 slot=5 state=4 position=00000000 eof=0
+nustream: audio slot=5 ready=1 playing=0 paused=0 voices=43,41 loop=FFFFFFFF mixed=0 audible=0
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+nusound: stream 5 Go Wait -> KeyOnWait (mask 00000020 field=1894)
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+nusound: stream 5 state 3 -> 5 (cmd 10 wait_go=0 field=1896)
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+nusound: stream 5 state 5 -> 1 (cmd 11 wait_go=0 field=2026)
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+scene: field 2031  state 21.0 -> 0028CC40
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+scene: field 2032  state 21.1 -> 0028CD58
+sound: load('cd:\BIN\US\BGM.PAC', 00000005, 050D5000) field=2066 caller=00356EB0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nustream: open slot=5 file='cd:\BIN\US\BGM.PAC' offset=050D5000 bytes/ch=126000 channels=2 interleave=2048 pitch=3763 result=loaded
+nusound: stream 5 state 1 -> 3 (cmd 7 wait_go=0 field=2066)
+scene: field 2067  state 21.2 -> 0028CE40
+nusound: stream 5 state 3 -> 5 (cmd 10 wait_go=0 field=2067)
+present: pipe=00000294895BCC38 set=0000029489546C70 slot=2427589972 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+scene: field 2122  state 21.3 -> 0028CFB8
+scene: field 2123  state 22.0 -> 0028D750
+scene: field 2124  state 22.1 -> 0028DB48
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+scene: field 2152  state 22.2 -> 0028DB90
+scene: field 2153  state 22.3 -> 0028DBD8
+guest: [-] ************* rtx dpl load done.
+scene: field 2166  state 22.4 -> 0028DC20
+scene: field 2167  state 22.5 -> 0028DDC8
+scene: field 2173  state 22.11 -> 0028EAE8
+scene: field 2174  state 22.12 -> 0028EC70
+vu1: microprogram census armed (PS2_VU_CENSUS) -- distinct images and entry points will be written to out/vu_programs/
+scene: field 2180  state 22.6 -> 0028DF28
+scene: field 2181  state 22.7 -> 0028E0F8
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+nusound: stream 5 state 5 -> 1 (cmd 11 wait_go=0 field=2184)
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+sound: load('cd:\BIN\US\BGM.PAC', 00000003, 3D498800) field=2196 caller=00356EB0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nustream: open slot=3 file='cd:\BIN\US\BGM.PAC' offset=3D498800 bytes/ch=631248 channels=1 interleave=2048 pitch=1881 result=loaded
+nusound: stream 3 state 0 -> 4 (cmd 7 wait_go=1 field=2196)
+nustream: status field=2196 slot=3 state=4 position=00000000 eof=0
+nustream: audio slot=3 ready=1 playing=0 paused=0 voices=45,44 loop=FFFFFFFF mixed=0 audible=0
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2198
+dmac: EnableDmac(ch=3) at field 2198
+preempt: a guest loop back edge reached the runtime with DMAC status 008 pending -- delivering
+dmac: running ch3 handler 00346330 (field 2198)
+dmac: running ch3 handler 00346330 (field 2198)
+nusound: stream 3 Go Wait -> KeyOnWait (mask 00000008 field=2198)
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2200
+dmac: EnableDmac(ch=3) at field 2200
+dmac: running ch3 handler 00346330 (field 2200)
+dmac: running ch3 handler 00346330 (field 2200)
+sound: load('cd:\BIN\US\BGM.PAC', 00000005, 0641B000) field=2200 caller=00356EB0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nusound: stream 3 state 3 -> 5 (cmd 10 wait_go=0 field=2200)
+nustream: open slot=5 file='cd:\BIN\US\BGM.PAC' offset=0641B000 bytes/ch=3439408 channels=2 interleave=2048 pitch=3763 result=loaded
+nusound: stream 5 state 1 -> 3 (cmd 7 wait_go=0 field=2200)
+nustream: status field=2200 slot=5 state=3 position=00000000 eof=0
+nustream: audio slot=5 ready=1 playing=0 paused=0 voices=43,41 loop=000D8A88 mixed=0 audible=0
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2202
+dmac: EnableDmac(ch=3) at field 2202
+dmac: running ch3 handler 00346330 (field 2202)
+dmac: running ch3 handler 00346330 (field 2202)
+nusound: stream 5 state 3 -> 5 (cmd 10 wait_go=0 field=2202)
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2204
+dmac: EnableDmac(ch=3) at field 2204
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2206
+dmac: EnableDmac(ch=3) at field 2206
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2208
+dmac: EnableDmac(ch=3) at field 2208
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2210
+dmac: EnableDmac(ch=3) at field 2210
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2212
+dmac: EnableDmac(ch=3) at field 2212
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2214
+dmac: EnableDmac(ch=3) at field 2214
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2216
+dmac: EnableDmac(ch=3) at field 2216
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2218
+dmac: EnableDmac(ch=3) at field 2218
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2220
+dmac: EnableDmac(ch=3) at field 2220
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2222
+dmac: EnableDmac(ch=3) at field 2222
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2224
+dmac: EnableDmac(ch=3) at field 2224
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2226
+dmac: EnableDmac(ch=3) at field 2226
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2228
+dmac: EnableDmac(ch=3) at field 2228
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2230
+dmac: EnableDmac(ch=3) at field 2230
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2232
+dmac: EnableDmac(ch=3) at field 2232
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2234
+dmac: EnableDmac(ch=3) at field 2234
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2236
+dmac: EnableDmac(ch=3) at field 2236
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2238
+dmac: EnableDmac(ch=3) at field 2238
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2240
+dmac: EnableDmac(ch=3) at field 2240
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2242
+dmac: EnableDmac(ch=3) at field 2242
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2244
+dmac: EnableDmac(ch=3) at field 2244
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2246
+dmac: EnableDmac(ch=3) at field 2246
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2248
+dmac: EnableDmac(ch=3) at field 2248
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2250
+dmac: EnableDmac(ch=3) at field 2250
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2252
+dmac: EnableDmac(ch=3) at field 2252
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2254
+dmac: EnableDmac(ch=3) at field 2254
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2256
+dmac: EnableDmac(ch=3) at field 2256
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2258
+dmac: EnableDmac(ch=3) at field 2258
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2260
+dmac: EnableDmac(ch=3) at field 2260
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2262
+dmac: EnableDmac(ch=3) at field 2262
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2264
+dmac: EnableDmac(ch=3) at field 2264
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2266
+dmac: EnableDmac(ch=3) at field 2266
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2268
+dmac: EnableDmac(ch=3) at field 2268
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+dmac: AddDmacHandler(ch=3, handler=00346330, next=0) at field 2270
+dmac: EnableDmac(ch=3) at field 2270
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+nusound: stream 3 state 5 -> 1 (cmd 11 wait_go=0 field=2274)
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545870 slot=0 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+scene: field 2279  state 22.8 -> 0028E400
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489546C70 slot=2427589972 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+alive: vblank pump at field 2400 -- 59.9 fields/s over the last 600 (16.68 ms/field); 0 dropped, guest clock at 100% of real time
+alive: present #2401  dropped=3  closed=0 frame_done=1 requested=0
+scene: field 2438  state 22.9 -> 0028E7A8
+scene: field 2439  state 22.10 -> 0028E8E8
+scene: field 2465  state 23.0 -> 002907C0
+sound: load('cd:\BIN\US\BGM.PAC', 00000005, 05E19800) field=2465 caller=00356EB0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nusound: stream 5 state 5 -> 1 (cmd 11 wait_go=0 field=2465)
+nustream: open slot=5 file='cd:\BIN\US\BGM.PAC' offset=05E19800 bytes/ch=3147408 channels=2 interleave=2048 pitch=3763 result=loaded
+nusound: stream 5 state 1 -> 3 (cmd 7 wait_go=0 field=2465)
+scene: field 2466  state 23.2 -> 00290DE8
+nusound: stream 5 state 3 -> 5 (cmd 10 wait_go=0 field=2466)
+present: pipe=00000294895BCC38 set=0000029489546C70 slot=2427589972 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+nustream: status field=2500 slot=5 state=5 position=00007020 eof=0
+nustream: audio slot=5 ready=1 playing=1 paused=0 voices=43,41 loop=000683A4 mixed=27360 audible=26342
+guest: [-] ************* rtx dpl load done.
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489546C70 slot=2427589972 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+scene: field 2648  state 23.4 -> 002910E8
+present: pipe=00000294895BCC38 set=0000029489546C70 slot=2427589972 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+scene: field 2672  state 23.5 -> 00291330
+scene: field 2673  state 1.0 -> 0010F6B8
+scene: field 2674  state 1.1 -> 00111150
+scene: field 2675  state 1.2 -> 001111D8
+present: pipe=00000294895BCC38 set=0000029489545CF0 slot=3 created=1 layout=5 | rt 640x448 x1  disp 0,0 640x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 1.0000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=00000294895459F0 slot=1 created=1 layout=5 | rt 640x448 x1  disp 0,0 512x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 0.8000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+scene: field 2698  state 1.5 -> 001112B0
+scene: field 2699  state 1.6 -> 001112E8
+nusound: stream 5 state 5 -> 1 (cmd 11 wait_go=0 field=2718)
+scene: field 2743  state 1.3 -> 00111210
+scene: field 2744  state 1.4 -> 00111278
+scene: field 2770  state 1.7 -> 00111320
+scene: field 2771  state 1.8 -> 00111358
+scene: field 2780  state 1.13 -> 001114C0
+nusndstr: SPU transfer sequence 2 -> 3 complete
+nusndstr: SPU transfer sequence 3 -> 4 complete
+nusndstr: SPU transfer sequence 4 -> 5 complete
+scene: field 2822  state 1.14 -> 001114F8
+scene: field 2838  state 1.15 -> 00111530
+guest: WAD : wad data addr set & data setup
+guest: WBD : wbd data addr set & data setup
+guest: wad tree info -> 38987 155948
+guest: wbd tree info -> 16470 65880
+guest: Mapeff : mapeffect data dammy
+scene: field 2839  state 1.16 -> 00111568
+scene: field 2852  state 1.17 -> 001115A0
+scene: field 2853  state 1.18 -> 00111A38
+sound: load('cd:\BIN\US\BGM.PAC', 00000005, 07901000) field=2853 caller=00356EB0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+sound: load('cd:\BIN\US\BGM.PAC', 00000003, 21486800) field=2853 caller=00356EB0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nustream: open slot=5 file='cd:\BIN\US\BGM.PAC' offset=07901000 bytes/ch=2268176 channels=2 interleave=2048 pitch=3763 result=loaded
+nusound: stream 5 state 1 -> 4 (cmd 7 wait_go=1 field=2853)
+nustream: open slot=3 file='cd:\BIN\US\BGM.PAC' offset=21486800 bytes/ch=229536 channels=2 interleave=2048 pitch=1881 result=loaded
+nusound: stream 3 state 1 -> 4 (cmd 7 wait_go=1 field=2853)
+nustream: status field=2853 slot=3 state=4 position=00000000 eof=0
+nustream: audio slot=3 ready=1 playing=0 paused=0 voices=45,44 loop=FFFFFFFF mixed=0 audible=0
+nustream: status field=2853 slot=5 state=4 position=00000000 eof=0
+nustream: audio slot=5 ready=1 playing=0 paused=0 voices=43,41 loop=0016B724 mixed=0 audible=0
+nusound: stream 3 Go Wait -> KeyOnWait (mask 00000028 field=2856)
+nusound: stream 5 Go Wait -> KeyOnWait (mask 00000028 field=2856)
+nusound: stream 3 state 3 -> 5 (cmd 10 wait_go=0 field=2857)
+nusound: stream 5 state 3 -> 5 (cmd 10 wait_go=0 field=2857)
+vk: mesh keeps gs.frag: mesh_fs=1 date=1 colclip=0 shuffle=0 tex_rt=0 depth=0 zcopy=0 fst=0 wms=1 wmt=1
+vk: mesh keeps gs.frag: mesh_fs=1 date=1 colclip=0 shuffle=0 tex_rt=0 depth=0 zcopy=0 fst=0 wms=1 wmt=1
+vk: mesh keeps gs.frag: mesh_fs=1 date=1 colclip=0 shuffle=0 tex_rt=0 depth=0 zcopy=0 fst=0 wms=1 wmt=1
+vk: mesh keeps gs.frag: mesh_fs=1 date=1 colclip=0 shuffle=0 tex_rt=0 depth=0 zcopy=0 fst=0 wms=1 wmt=1
+vk: mesh keeps gs.frag: mesh_fs=1 date=1 colclip=0 shuffle=0 tex_rt=0 depth=0 zcopy=0 fst=0 wms=1 wmt=1
+vk: mesh keeps gs.frag: mesh_fs=1 date=1 colclip=0 shuffle=0 tex_rt=0 depth=0 zcopy=0 fst=0 wms=1 wmt=1
+vk: mesh keeps gs.frag: mesh_fs=1 date=1 colclip=0 shuffle=0 tex_rt=0 depth=0 zcopy=0 fst=0 wms=1 wmt=1
+vk: mesh keeps gs.frag: mesh_fs=1 date=1 colclip=0 shuffle=0 tex_rt=0 depth=0 zcopy=0 fst=0 wms=1 wmt=1
+nusound: stream 3 state 5 -> 1 (cmd 11 wait_go=0 field=2994)
+present: pipe=00000294895BCC38 set=0000029489546C70 slot=2427589972 created=1 layout=5 | rt 640x448 x1  disp 0,0 512x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 0.8000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+alive: vblank pump at field 3000 -- 59.9 fields/s over the last 600 (16.68 ms/field); 0 dropped, guest clock at 100% of real time
+alive: present #3001  dropped=3  closed=0 frame_done=1 requested=0
+sound: load('cd:\BIN\RADIOEE.PAC', 00000000, 00000000) field=3056 caller=00356EB0
+file: open('cd:\BIN\RADIOEE.PAC', 00000001, 00000003, 00000000, 00000000)
+file: path split 'cd:\BIN\RADIOEE.PAC'
+file: device lookup 'cd'
+kernel: CreateSema(param=01FFFD50) -> id 17  raw[+0]=4670628 [+4]=1 [+8]=0 [+12]=33553816 [+16]=00000000 [+20]=01FFFD40
+nufile: open 'cd:\BIN\RADIOEE.PAC' -> fd 2 (522614784 bytes)
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nustream: open slot=0 file='cd:\BIN\RADIOEE.PAC' offset=00000000 bytes/ch=32096 channels=1 interleave=2048 pitch=1881 result=loaded
+nusound: stream 0 state 0 -> 4 (cmd 7 wait_go=1 field=3056)
+nustream: status field=3056 slot=0 state=4 position=00000000 eof=0
+nustream: audio slot=0 ready=1 playing=0 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=0 audible=0
+nusound: stream 0 Go Wait -> KeyOnWait (mask 00000001 field=3057)
+nusound: stream 0 state 3 -> 5 (cmd 10 wait_go=0 field=3058)
+nustream: status field=3153 slot=5 state=5 position=0003CA80 eof=0
+nustream: audio slot=5 ready=1 playing=1 paused=0 voices=43,41 loop=0016B724 mixed=236640 audible=236493
+nustream: status field=3211 slot=0 state=5 position=FFFFFFFF eof=1
+nustream: audio slot=0 ready=1 playing=0 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=122310 audible=87622
+nusound: stream 0 state 5 -> 1 (cmd 11 wait_go=0 field=3212)
+sound: load('cd:\BIN\RADIOEE.PAC', 00000000, 00009000) field=3216 caller=00356EB0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nustream: open slot=0 file='cd:\BIN\RADIOEE.PAC' offset=00009000 bytes/ch=25232 channels=1 interleave=2048 pitch=1881 result=loaded
+nusound: stream 0 state 1 -> 4 (cmd 7 wait_go=1 field=3216)
+nusound: stream 0 Go Wait -> KeyOnWait (mask 00000001 field=3217)
+nusound: stream 0 state 3 -> 5 (cmd 10 wait_go=0 field=3218)
+nustream: status field=3339 slot=0 state=5 position=FFFFFFFF eof=1
+nustream: audio slot=0 ready=1 playing=0 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=96153 audible=62025
+nusound: stream 0 state 5 -> 1 (cmd 11 wait_go=0 field=3340)
+sound: load('cd:\BIN\RADIOEE.PAC', 00000000, 00010800) field=3344 caller=00356EB0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nustream: open slot=0 file='cd:\BIN\RADIOEE.PAC' offset=00010800 bytes/ch=31408 channels=1 interleave=2048 pitch=1881 result=loaded
+nusound: stream 0 state 1 -> 4 (cmd 7 wait_go=1 field=3344)
+nusound: stream 0 Go Wait -> KeyOnWait (mask 00000001 field=3345)
+nusound: stream 0 state 3 -> 5 (cmd 10 wait_go=0 field=3346)
+nustream: status field=3453 slot=5 state=5 position=0007A4C0 eof=0
+nustream: audio slot=5 ready=1 playing=1 paused=0 voices=43,41 loop=0016B724 mixed=477120 audible=476973
+nustream: status field=3496 slot=0 state=5 position=FFFFFFFF eof=1
+nustream: audio slot=0 ready=1 playing=0 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=119688 audible=85744
+nusound: stream 0 state 5 -> 1 (cmd 11 wait_go=0 field=3497)
+alive: vblank pump at field 3600 -- 59.9 fields/s over the last 600 (16.68 ms/field); 0 dropped, guest clock at 100% of real time
+alive: present #3601  dropped=3  closed=0 frame_done=1 requested=0
+nustream: status field=3753 slot=5 state=5 position=000B7F00 eof=0
+nustream: audio slot=5 ready=1 playing=1 paused=0 voices=43,41 loop=0016B724 mixed=717600 audible=717453
+sound: load('cd:\BIN\RADIOEE.PAC', 00000000, 00019800) field=3771 caller=00356EB0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nustream: open slot=0 file='cd:\BIN\RADIOEE.PAC' offset=00019800 bytes/ch=76048 channels=1 interleave=2048 pitch=1881 result=loaded
+nusound: stream 0 state 1 -> 4 (cmd 7 wait_go=1 field=3771)
+nusound: stream 0 Go Wait -> KeyOnWait (mask 00000001 field=3772)
+nusound: stream 0 state 3 -> 5 (cmd 10 wait_go=0 field=3773)
+nustream: status field=3796 slot=0 state=5 position=000012B0 eof=0
+nustream: audio slot=0 ready=1 playing=1 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=18240 audible=18233
+nustream: status field=4053 slot=5 state=5 position=000F5760 eof=0
+nustream: audio slot=5 ready=1 playing=1 paused=0 voices=43,41 loop=0016B724 mixed=957600 audible=957447
+nustream: status field=4096 slot=0 state=5 position=00010930 eof=0
+nustream: audio slot=0 ready=1 playing=1 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=258720 audible=257193
+nustream: status field=4135 slot=0 state=5 position=FFFFFFFF eof=1
+nustream: audio slot=0 ready=1 playing=0 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=289800 audible=288265
+nusound: stream 0 state 5 -> 1 (cmd 11 wait_go=0 field=4136)
+alive: vblank pump at field 4200 -- 59.9 fields/s over the last 600 (16.68 ms/field); 0 dropped, guest clock at 100% of real time
+alive: present #4201  dropped=3  closed=0 frame_done=1 requested=0
+sound: load('cd:\BIN\RADIOEE.PAC', 00000000, 1A21D000) field=4217 caller=00356EB0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nustream: open slot=0 file='cd:\BIN\RADIOEE.PAC' offset=1A21D000 bytes/ch=46400 channels=1 interleave=2048 pitch=1881 result=loaded
+nusound: stream 0 state 1 -> 4 (cmd 7 wait_go=1 field=4217)
+nusound: stream 0 Go Wait -> KeyOnWait (mask 00000001 field=4218)
+nusound: stream 0 state 3 -> 5 (cmd 10 wait_go=0 field=4219)
+nustream: status field=4353 slot=5 state=5 position=00132FC0 eof=0
+nustream: audio slot=5 ready=1 playing=1 paused=0 voices=43,41 loop=0016B724 mixed=1198080 audible=1197888
+nustream: status field=4435 slot=0 state=5 position=0000B120 eof=0
+nustream: audio slot=0 ready=1 playing=1 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=172800 audible=170266
+nustream: status field=4440 slot=0 state=5 position=FFFFFFFF eof=1
+nustream: audio slot=0 ready=1 playing=0 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=176819 audible=174285
+nusound: stream 0 state 5 -> 1 (cmd 11 wait_go=0 field=4441)
+sound: load('cd:\BIN\RADIOEE.PAC', 00000000, 00041800) field=4446 caller=00356EB0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nustream: open slot=0 file='cd:\BIN\RADIOEE.PAC' offset=00041800 bytes/ch=56160 channels=1 interleave=2048 pitch=1881 result=loaded
+nusound: stream 0 state 1 -> 4 (cmd 7 wait_go=1 field=4446)
+nusound: stream 0 Go Wait -> KeyOnWait (mask 00000001 field=4447)
+nusound: stream 0 state 3 -> 5 (cmd 10 wait_go=0 field=4448)
+nustream: status field=4653 slot=5 state=5 position=00170A00 eof=0
+nustream: audio slot=5 ready=1 playing=1 paused=0 voices=43,41 loop=0016B724 mixed=1438080 audible=1437854
+nustream: status field=4716 slot=0 state=5 position=FFFFFFFF eof=1
+nustream: audio slot=0 ready=1 playing=0 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=214012 audible=163956
+nusound: stream 0 state 5 -> 1 (cmd 11 wait_go=0 field=4717)
+sound: load('cd:\BIN\RADIOEE.PAC', 00000000, 00050800) field=4721 caller=00356EB0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nustream: open slot=0 file='cd:\BIN\RADIOEE.PAC' offset=00050800 bytes/ch=82336 channels=1 interleave=2048 pitch=1881 result=loaded
+nusound: stream 0 state 1 -> 4 (cmd 7 wait_go=1 field=4721)
+nusound: stream 0 Go Wait -> KeyOnWait (mask 00000001 field=4722)
+nusound: stream 0 state 3 -> 5 (cmd 10 wait_go=0 field=4723)
+alive: vblank pump at field 4800 -- 59.9 fields/s over the last 600 (16.68 ms/field); 0 dropped, guest clock at 100% of real time
+alive: present #4801  dropped=3  closed=0 frame_done=1 requested=0
+nustream: status field=4953 slot=5 state=5 position=001AE440 eof=0
+nustream: audio slot=5 ready=1 playing=1 paused=0 voices=43,41 loop=0016B724 mixed=1678560 audible=1678288
+nustream: status field=5016 slot=0 state=5 position=0000F090 eof=0
+nustream: audio slot=0 ready=1 playing=1 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=234720 audible=217408
+nustream: status field=5115 slot=0 state=5 position=FFFFFFFF eof=1
+nustream: audio slot=0 ready=1 playing=0 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=313762 audible=262494
+nusound: stream 0 state 5 -> 1 (cmd 11 wait_go=0 field=5116)
+sound: load('cd:\BIN\RADIOEE.PAC', 00000000, 00066000) field=5120 caller=00356EB0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nustream: open slot=0 file='cd:\BIN\RADIOEE.PAC' offset=00066000 bytes/ch=96480 channels=1 interleave=2048 pitch=1881 result=loaded
+nusound: stream 0 state 1 -> 4 (cmd 7 wait_go=1 field=5120)
+nusound: stream 0 Go Wait -> KeyOnWait (mask 00000001 field=5121)
+nusound: stream 0 state 3 -> 5 (cmd 10 wait_go=0 field=5122)
+nustream: status field=5253 slot=5 state=5 position=001EBCA0 eof=0
+nustream: audio slot=5 ready=1 playing=1 paused=0 voices=43,41 loop=0016B724 mixed=1918560 audible=1918242
+alive: vblank pump at field 5400 -- 59.9 fields/s over the last 600 (16.68 ms/field); 0 dropped, guest clock at 100% of real time
+alive: present #5401  dropped=3  closed=0 frame_done=1 requested=0
+nustream: status field=5415 slot=0 state=5 position=0000F090 eof=0
+nustream: audio slot=0 ready=1 playing=1 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=234720 audible=222634
+nustream: status field=5553 slot=5 state=5 position=002296E0 eof=0
+nustream: audio slot=5 ready=1 playing=1 paused=0 voices=43,41 loop=0016B724 mixed=2159040 audible=2158684
+nustream: status field=5581 slot=0 state=5 position=FFFFFFFF eof=1
+nustream: audio slot=0 ready=1 playing=0 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=367661 audible=316839
+nusound: stream 0 state 5 -> 1 (cmd 11 wait_go=0 field=5582)
+sound: load('cd:\BIN\RADIOEE.PAC', 00000000, 0007F000) field=5586 caller=00356EB0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nustream: open slot=0 file='cd:\BIN\RADIOEE.PAC' offset=0007F000 bytes/ch=94128 channels=1 interleave=2048 pitch=1881 result=loaded
+nusound: stream 0 state 1 -> 4 (cmd 7 wait_go=1 field=5586)
+nusound: stream 0 Go Wait -> KeyOnWait (mask 00000001 field=5587)
+nusound: stream 0 state 3 -> 5 (cmd 10 wait_go=0 field=5588)
+nustream: status field=5853 slot=5 state=5 position=00266F40 eof=0
+nustream: audio slot=5 ready=1 playing=1 paused=0 voices=43,41 loop=0016B724 mixed=2399040 audible=2398684
+nustream: status field=5881 slot=0 state=5 position=0000F090 eof=0
+nustream: audio slot=0 ready=1 playing=1 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=234720 audible=219121
+alive: vblank pump at field 6000 -- 59.9 fields/s over the last 600 (16.68 ms/field); 0 dropped, guest clock at 100% of real time
+alive: present #6001  dropped=3  closed=0 frame_done=1 requested=0
+nustream: status field=6037 slot=0 state=5 position=FFFFFFFF eof=1
+nustream: audio slot=0 ready=1 playing=0 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=358698 audible=308374
+nusound: stream 0 state 5 -> 1 (cmd 11 wait_go=0 field=6038)
+sound: load('cd:\BIN\RADIOEE.PAC', 00000000, 00097000) field=6042 caller=00356EB0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nustream: open slot=0 file='cd:\BIN\RADIOEE.PAC' offset=00097000 bytes/ch=49440 channels=1 interleave=2048 pitch=1881 result=loaded
+nusound: stream 0 state 1 -> 4 (cmd 7 wait_go=1 field=6042)
+nusound: stream 0 Go Wait -> KeyOnWait (mask 00000001 field=6043)
+nusound: stream 0 state 3 -> 5 (cmd 10 wait_go=0 field=6044)
+nustream: status field=6153 slot=5 state=5 position=002A4980 eof=0
+nustream: audio slot=5 ready=1 playing=1 paused=0 voices=43,41 loop=0016B724 mixed=2639520 audible=2639162
+nustream: status field=6280 slot=0 state=5 position=FFFFFFFF eof=1
+nustream: audio slot=0 ready=1 playing=0 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=188403 audible=138385
+nusound: stream 0 state 5 -> 1 (cmd 11 wait_go=0 field=6281)
+sound: load('cd:\BIN\RADIOEE.PAC', 00000000, 000A4800) field=6285 caller=00356EB0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nustream: open slot=0 file='cd:\BIN\RADIOEE.PAC' offset=000A4800 bytes/ch=50464 channels=1 interleave=2048 pitch=1881 result=loaded
+nusound: stream 0 state 1 -> 4 (cmd 7 wait_go=1 field=6285)
+nusound: stream 0 Go Wait -> KeyOnWait (mask 00000001 field=6286)
+nusound: stream 0 state 3 -> 5 (cmd 10 wait_go=0 field=6287)
+nustream: status field=6453 slot=5 state=5 position=002E21E0 eof=0
+nustream: audio slot=5 ready=1 playing=1 paused=0 voices=43,41 loop=0016B724 mixed=2879520 audible=2879159
+nustream: status field=6528 slot=0 state=5 position=FFFFFFFF eof=1
+nustream: audio slot=0 ready=1 playing=0 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=192306 audible=162869
+nusound: stream 0 state 5 -> 1 (cmd 11 wait_go=0 field=6529)
+alive: vblank pump at field 6600 -- 59.9 fields/s over the last 600 (16.68 ms/field); 0 dropped, guest clock at 100% of real time
+alive: present #6601  dropped=3  closed=0 frame_done=1 requested=0
+sound: load('cd:\BIN\RADIOEE.PAC', 00000000, 1A295800) field=6624 caller=00356EB0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nustream: open slot=0 file='cd:\BIN\RADIOEE.PAC' offset=1A295800 bytes/ch=40624 channels=1 interleave=2048 pitch=1881 result=loaded
+nusound: stream 0 state 1 -> 4 (cmd 7 wait_go=1 field=6624)
+nusound: stream 0 Go Wait -> KeyOnWait (mask 00000001 field=6625)
+nusound: stream 0 state 3 -> 5 (cmd 10 wait_go=0 field=6626)
+nustream: status field=6757 slot=5 state=5 position=00320800 eof=0
+nustream: audio slot=5 ready=1 playing=1 paused=0 voices=43,41 loop=0016B724 mixed=3122880 audible=3122504
+nustream: status field=6820 slot=0 state=5 position=FFFFFFFF eof=1
+nustream: audio slot=0 ready=1 playing=0 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=154808 audible=152610
+nusound: stream 0 state 5 -> 1 (cmd 11 wait_go=0 field=6821)
+sound: load('cd:\BIN\RADIOEE.PAC', 00000000, 1A2A0800) field=6980 caller=00356EB0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nustream: open slot=0 file='cd:\BIN\RADIOEE.PAC' offset=1A2A0800 bytes/ch=33344 channels=1 interleave=2048 pitch=1881 result=loaded
+nusound: stream 0 state 1 -> 4 (cmd 7 wait_go=1 field=6980)
+nusound: stream 0 Go Wait -> KeyOnWait (mask 00000001 field=6981)
+nusound: stream 0 state 3 -> 5 (cmd 10 wait_go=0 field=6982)
+nustream: status field=7057 slot=5 state=5 position=0035E240 eof=0
+nustream: audio slot=5 ready=1 playing=1 paused=0 voices=43,41 loop=0016B724 mixed=3363360 audible=3362981
+nustream: status field=7120 slot=0 state=5 position=00007120 eof=0
+nustream: audio slot=0 ready=1 playing=1 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=110400 audible=54952
+nustream: status field=7141 slot=0 state=5 position=FFFFFFFF eof=1
+nustream: audio slot=0 ready=1 playing=0 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=127066 audible=54989
+nusound: stream 0 state 5 -> 1 (cmd 11 wait_go=0 field=7142)
+alive: vblank pump at field 7200 -- 59.9 fields/s over the last 600 (16.68 ms/field); 0 dropped, guest clock at 100% of real time
+alive: present #7201  dropped=59  closed=0 frame_done=1 requested=0
+sound: load('cd:\BIN\RADIOEE.PAC', 00000000, 000B2000) field=7296 caller=00356EB0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nustream: open slot=0 file='cd:\BIN\RADIOEE.PAC' offset=000B2000 bytes/ch=39904 channels=1 interleave=2048 pitch=1881 result=loaded
+nusound: stream 0 state 1 -> 4 (cmd 7 wait_go=1 field=7296)
+nusound: stream 0 Go Wait -> KeyOnWait (mask 00000001 field=7297)
+nusound: stream 0 state 3 -> 5 (cmd 10 wait_go=0 field=7298)
+nustream: status field=7357 slot=5 state=5 position=0039BA80 eof=0
+nustream: audio slot=5 ready=1 playing=1 paused=0 voices=43,41 loop=0016B724 mixed=3603360 audible=3602981
+nustream: status field=7441 slot=0 state=5 position=00007590 eof=0
+nustream: audio slot=0 ready=1 playing=1 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=114720 audible=109483
+nustream: status field=7488 slot=0 state=5 position=FFFFFFFF eof=1
+nustream: audio slot=0 ready=1 playing=0 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=152064 audible=122802
+nusound: stream 0 state 5 -> 1 (cmd 11 wait_go=0 field=7489)
+sound: load('cd:\BIN\RADIOEE.PAC', 00000000, 000BD000) field=7493 caller=00356EB0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nustream: open slot=0 file='cd:\BIN\RADIOEE.PAC' offset=000BD000 bytes/ch=40096 channels=1 interleave=2048 pitch=1881 result=loaded
+nusound: stream 0 state 1 -> 4 (cmd 7 wait_go=1 field=7493)
+nusound: stream 0 Go Wait -> KeyOnWait (mask 00000001 field=7494)
+nusound: stream 0 state 3 -> 5 (cmd 10 wait_go=0 field=7495)
+nustream: status field=7657 slot=5 state=5 position=003D94E0 eof=0
+nustream: audio slot=5 ready=1 playing=1 paused=0 voices=43,41 loop=0016B724 mixed=3843840 audible=3843458
+nustream: status field=7687 slot=0 state=5 position=FFFFFFFF eof=1
+nustream: audio slot=0 ready=1 playing=0 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=152796 audible=123338
+nusound: stream 0 state 5 -> 1 (cmd 11 wait_go=0 field=7688)
+sound: load('cd:\BIN\RADIOEE.PAC', 00000000, 000C8000) field=7692 caller=00356EB0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nustream: open slot=0 file='cd:\BIN\RADIOEE.PAC' offset=000C8000 bytes/ch=71072 channels=1 interleave=2048 pitch=1881 result=loaded
+nusound: stream 0 state 1 -> 4 (cmd 7 wait_go=1 field=7692)
+nusound: stream 0 Go Wait -> KeyOnWait (mask 00000001 field=7693)
+nusound: stream 0 state 3 -> 5 (cmd 10 wait_go=0 field=7694)
+alive: vblank pump at field 7800 -- 59.9 fields/s over the last 600 (16.68 ms/field); 0 dropped, guest clock at 100% of real time
+alive: present #7801  dropped=59  closed=0 frame_done=1 requested=0
+nustream: status field=7957 slot=5 state=5 position=00416D20 eof=0
+nustream: audio slot=5 ready=1 playing=1 paused=0 voices=43,41 loop=0016B724 mixed=4083840 audible=4083441
+nustream: status field=7987 slot=0 state=5 position=0000F090 eof=0
+nustream: audio slot=0 ready=1 playing=1 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=234720 audible=227457
+nustream: status field=8033 slot=0 state=5 position=FFFFFFFF eof=1
+nustream: audio slot=0 ready=1 playing=0 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=270837 audible=239549
+nusound: stream 0 state 5 -> 1 (cmd 11 wait_go=0 field=8034)
+sound: load('cd:\BIN\RADIOEE.PAC', 00000000, 000DA800) field=8038 caller=00356EB0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nustream: open slot=0 file='cd:\BIN\RADIOEE.PAC' offset=000DA800 bytes/ch=51920 channels=1 interleave=2048 pitch=1881 result=loaded
+nusound: stream 0 state 1 -> 4 (cmd 7 wait_go=1 field=8038)
+nusound: stream 0 Go Wait -> KeyOnWait (mask 00000001 field=8039)
+nusound: stream 0 state 3 -> 5 (cmd 10 wait_go=0 field=8040)
+nustream: status field=8257 slot=5 state=5 position=001A0540 eof=0
+nustream: audio slot=5 ready=1 playing=1 paused=0 voices=43,41 loop=0016B724 mixed=4324320 audible=4323884
+nustream: status field=8288 slot=0 state=5 position=FFFFFFFF eof=1
+nustream: audio slot=0 ready=1 playing=0 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=197854 audible=168127
+nusound: stream 0 state 5 -> 1 (cmd 11 wait_go=0 field=8289)
+sound: load('cd:\BIN\RADIOEE.PAC', 00000000, 000E8800) field=8293 caller=00356EB0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nustream: open slot=0 file='cd:\BIN\RADIOEE.PAC' offset=000E8800 bytes/ch=44192 channels=1 interleave=2048 pitch=1881 result=loaded
+nusound: stream 0 state 1 -> 4 (cmd 7 wait_go=1 field=8293)
+nusound: stream 0 Go Wait -> KeyOnWait (mask 00000001 field=8294)
+nusound: stream 0 state 3 -> 5 (cmd 10 wait_go=0 field=8295)
+alive: vblank pump at field 8400 -- 59.9 fields/s over the last 600 (16.68 ms/field); 0 dropped, guest clock at 100% of real time
+alive: present #8401  dropped=59  closed=0 frame_done=1 requested=0
+nustream: status field=8506 slot=0 state=5 position=FFFFFFFF eof=1
+nustream: audio slot=0 ready=1 playing=0 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=168405 audible=138462
+nusound: stream 0 state 5 -> 1 (cmd 11 wait_go=0 field=8507)
+sound: load('cd:\BIN\RADIOEE.PAC', 00000000, 000F4800) field=8511 caller=00356EB0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nustream: open slot=0 file='cd:\BIN\RADIOEE.PAC' offset=000F4800 bytes/ch=107632 channels=1 interleave=2048 pitch=1881 result=loaded
+nusound: stream 0 state 1 -> 4 (cmd 7 wait_go=1 field=8511)
+nusound: stream 0 Go Wait -> KeyOnWait (mask 00000001 field=8512)
+nusound: stream 0 state 3 -> 5 (cmd 10 wait_go=0 field=8513)
+nustream: status field=8557 slot=5 state=5 position=001DDD80 eof=0
+nustream: audio slot=5 ready=1 playing=1 paused=0 voices=43,41 loop=0016B724 mixed=4564320 audible=4563858
+nustream: status field=8806 slot=0 state=5 position=0000F090 eof=0
+nustream: audio slot=0 ready=1 playing=1 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=234720 audible=227175
+nustream: status field=8857 slot=5 state=5 position=0021B7E0 eof=0
+nustream: audio slot=5 ready=1 playing=1 paused=0 voices=43,41 loop=0016B724 mixed=4804800 audible=4804281
+alive: vblank pump at field 9000 -- 59.9 fields/s over the last 600 (16.68 ms/field); 0 dropped, guest clock at 100% of real time
+alive: present #9001  dropped=59  closed=0 frame_done=1 requested=0
+nustream: status field=9026 slot=0 state=5 position=FFFFFFFF eof=1
+nustream: audio slot=0 ready=1 playing=0 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=410158 audible=377451
+nusound: stream 0 state 5 -> 1 (cmd 11 wait_go=0 field=9027)
+sound: load('cd:\BIN\RADIOEE.PAC', 00000000, 00110000) field=9031 caller=00356EB0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nustream: open slot=0 file='cd:\BIN\RADIOEE.PAC' offset=00110000 bytes/ch=21776 channels=1 interleave=2048 pitch=1881 result=loaded
+nusound: stream 0 state 1 -> 4 (cmd 7 wait_go=1 field=9031)
+nusound: stream 0 Go Wait -> KeyOnWait (mask 00000001 field=9032)
+nusound: stream 0 state 3 -> 5 (cmd 10 wait_go=0 field=9033)
+nustream: status field=9137 slot=0 state=5 position=FFFFFFFF eof=1
+nustream: audio slot=0 ready=1 playing=0 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=82983 audible=54158
+nusound: stream 0 state 5 -> 1 (cmd 11 wait_go=0 field=9138)
+sound: load('cd:\BIN\RADIOEE.PAC', 00000000, 00116800) field=9142 caller=00356EB0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nustream: open slot=0 file='cd:\BIN\RADIOEE.PAC' offset=00116800 bytes/ch=78528 channels=1 interleave=2048 pitch=1881 result=loaded
+nusound: stream 0 state 1 -> 4 (cmd 7 wait_go=1 field=9142)
+nusound: stream 0 Go Wait -> KeyOnWait (mask 00000001 field=9143)
+nusound: stream 0 state 3 -> 5 (cmd 10 wait_go=0 field=9144)
+nustream: status field=9157 slot=5 state=5 position=00259020 eof=0
+nustream: audio slot=5 ready=1 playing=1 paused=0 voices=43,41 loop=0016B724 mixed=5044800 audible=5044281
+nusound: stream 0 state 5 -> 1 (cmd 11 wait_go=0 field=9361)
+sound: load('cd:\BIN\US\BGM.PAC', 00000005, 07802000) field=9362 caller=00356EB0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nustream: open slot=5 file='cd:\BIN\US\BGM.PAC' offset=07802000 bytes/ch=406656 channels=2 interleave=2048 pitch=3763 result=loaded
+nusound: stream 5 state 5 -> 3 (cmd 7 wait_go=0 field=9362)
+nusound: stream 5 state 3 -> 5 (cmd 10 wait_go=0 field=9363)
+present: pipe=00000294895BCC38 set=00000294895459F0 slot=1 created=1 layout=5 | rt 640x448 x1  disp 0,0 512x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 0.8000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+present: pipe=00000294895BCC38 set=0000029489546C70 slot=2427589972 created=1 layout=5 | rt 640x448 x1  disp 0,0 512x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 0.8000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+sound: load('cd:\BIN\RADIOEE.PAC', 00000000, 19C31000) field=9421 caller=00356EB0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+kernel: CreateSema(param=004819D0) -> id 17  raw[+0]=-1 [+4]=1 [+8]=0 [+12]=0 [+16]=00000000 [+20]=004819C0
+nustream: open slot=0 file='cd:\BIN\RADIOEE.PAC' offset=19C31000 bytes/ch=15328 channels=1 interleave=2048 pitch=1881 result=loaded
+nusound: stream 0 state 1 -> 4 (cmd 7 wait_go=1 field=9421)
+nusound: stream 0 Go Wait -> KeyOnWait (mask 00000001 field=9422)
+nusound: stream 0 state 3 -> 5 (cmd 10 wait_go=0 field=9423)
+nustream: status field=9437 slot=0 state=5 position=00000B50 eof=0
+nustream: audio slot=0 ready=1 playing=1 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=11040 audible=11036
+nustream: status field=9457 slot=5 state=5 position=00013500 eof=0
+nustream: audio slot=5 ready=1 playing=1 paused=0 voices=43,41 loop=FFFFFFFF mixed=75360 audible=75320
+present: pipe=00000294895BCC38 set=00000294895459F0 slot=1 created=1 layout=5 | rt 640x448 x1  disp 0,0 512x448  swap 1280x896 | scale 1.000,1.000 letterboxed=0 shaded 0,0 1280x896 | map 0.8000,1.0000,0.0000,0.0000  bound 0.000,0.000,1.000,1.000
+nustream: status field=9496 slot=0 state=5 position=FFFFFFFF eof=1
+nustream: audio slot=0 ready=1 playing=0 paused=0 voices=47,4294967295 loop=FFFFFFFF mixed=58412 audible=57894
+nusound: stream 0 state 5 -> 1 (cmd 11 wait_go=0 field=9497)
+alive: vblank pump at field 9600 -- 59.9 fields/s over the last 600 (16.68 ms/field); 0 dropped, guest clock at 100% of real time
+alive: present #9601  dropped=59  closed=0 frame_done=1 requested=0
+nustream: status field=9757 slot=5 state=5 position=00050D60 eof=0
+nustream: audio slot=5 ready=1 playing=1 paused=0 voices=43,41 loop=FFFFFFFF mixed=315360 audible=315314
+---- run summary (window closed) ----
+GS register writes  : 1001218059
+GS primitives drawn : 51610767
+GS pixels written   : 2625903
+GS host->local xfers: 1922052 (5907481056 pixels)
+GS texture cache: 30283325 hits, 423967 decodes (98.6% hit)
+GS draw state: worked out 14778839 times, reused unchanged 36857359 times (71.4%)
+GS page shadows: 615 pages held (4920 KB), 615 saved, 697849 refreshed, 162278 decodes served from one
+GS page shadows: 0 redirected pages differ from local memory, 0 are identical, 91512848 block runs read through one
+  tex tbp=3063808   32 pages: own   5  taken  27  of which  17 recovered from a shadow   (3593 decodes)
+  tex tbp=2359296   32 pages: own  14  taken  18  of which   7 recovered from a shadow   (39175 decodes)
+  tex tbp=3416064   32 pages: own  16  taken  16  of which   4 recovered from a shadow   (3572 decodes)
+  tex tbp=2711552   32 pages: own  21  taken  11  of which  11 recovered from a shadow   (4482 decodes)
+  tex tbp=4154368    5 pages: own   3  taken   2  of which   1 recovered from a shadow   (6795 decodes)
+  tex tbp=2879744    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (5741 decodes)
+  tex tbp=2881792    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (296 decodes)
+  tex tbp=2883840    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (291 decodes)
+  tex tbp=2885888    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (287 decodes)
+  tex tbp=2896128    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (145 decodes)
+  tex tbp=2898176    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (88 decodes)
+  tex tbp=2900224    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (85 decodes)
+  tex tbp=2910464    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (32 decodes)
+  tex tbp=2912512    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (24 decodes)
+  tex tbp=2914560    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (22 decodes)
+  tex tbp=2867200    4 pages: own   3  taken   1  of which   1 recovered from a shadow   (1078 decodes)
+  tex tbp=2867456    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (5870 decodes)
+  tex tbp=3145984    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (141 decodes)
+  tex tbp=3146496    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (183 decodes)
+  tex tbp=3158784    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (42 decodes)
+  tex tbp=3147520    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (152 decodes)
+  tex tbp=3160320    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (112 decodes)
+  tex tbp=3151104    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (10 decodes)
+  tex tbp=3151616    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (129 decodes)
+  tex tbp=3152128    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (10 decodes)
+  tex tbp=3159296    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (146 decodes)
+  tex tbp=3160832    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (40 decodes)
+  tex tbp=3149056    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (57 decodes)
+  tex tbp=3150080    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (56 decodes)
+  tex tbp=3170048    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (125 decodes)
+  tex tbp=3168512    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (151 decodes)
+  tex tbp=3152640    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (40 decodes)
+  tex tbp=3170560    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (118 decodes)
+  tex tbp=3169024    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (122 decodes)
+  tex tbp=3156224    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (35 decodes)
+  tex tbp=3157760    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (140 decodes)
+  tex tbp=3165952    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (145 decodes)
+  tex tbp=3179776    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (120 decodes)
+  tex tbp=3161856    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (117 decodes)
+  tex tbp=3179264    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (115 decodes)
+  tex tbp=3154688    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (113 decodes)
+  tex tbp=3173632    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (111 decodes)
+  tex tbp=3177728    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (86 decodes)
+  tex tbp=3174656    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (73 decodes)
+  tex tbp=2871552    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (5884 decodes)
+  tex tbp=2877696    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (5872 decodes)
+  tex tbp=2875648    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (5877 decodes)
+  tex tbp=2869504    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (5884 decodes)
+  tex tbp=2873600    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (5878 decodes)
+  tex tbp=2882048    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (5568 decodes)
+  tex tbp=2884096    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (5568 decodes)
+  tex tbp=2886144    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (5568 decodes)
+  tex tbp=2888192    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (5568 decodes)
+  tex tbp=2890240    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (5568 decodes)
+  tex tbp=2892288    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (5568 decodes)
+  tex tbp=2894336    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (5460 decodes)
+  tex tbp=2896384    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (5256 decodes)
+  tex tbp=2898432    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (5537 decodes)
+  tex tbp=2900480    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (5299 decodes)
+  tex tbp=2902528    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (5018 decodes)
+  tex tbp=2904576    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (5299 decodes)
+  tex tbp=2906624    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (5174 decodes)
+  tex tbp=2908672    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (5020 decodes)
+  tex tbp=2910720    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (5020 decodes)
+  tex tbp=2880000    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (125 decodes)
+  tex tbp=2912768    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (4863 decodes)
+  tex tbp=2914816    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (4863 decodes)
+  tex tbp=2935296    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (1513 decodes)
+  tex tbp=2937344    2 pages: own   1  taken   1  of which   1 recovered from a shadow   (1513 decodes)
+gs regs: 00:23017817 01:85244171 02:70597821 03:7273366 04:90196767 05:2985546 06:12534254 07:6355643 08:3779812 09:95828 0C:449008 0D:1263196 14:4231035 15:119113 18:387533 19:167705 1A:18672 34:625488 3B:67960 3D:83602 3F:676704 40:328033 41:154113 42:633366 43:1189841 46:147828 47:1897480 48:3946240 49:18672 4A:417667 4B:42709 4C:377046 4D:235665 4E:1122774 4F:215276 50:1922052 51:1922052 52:1922052 53:1922052 54:672632100
+gif tags: packed=55321758(122681119qw) reglist=5937081(13519990qw) image=1922052(336316050qw) disabled=0(0qw)
+gif walker: 0 implausible tags, 0 packets discarded mid-tag by XGKICK
+GS render targets (19): 0 917504 1376256 1146880 1720320 3801088 2359296 2457600 2555904 3145728 3211264 2490368 2621440 2752512 4120576 4112384 4145152 4153344 3375104   9503332 draws sampled one, 7449 fell back to local memory
+GS depth buffers: 1376256(slot 0) 1376256(slot 6) 2654208(slot 7) 2654208(slot 8)   18963 draws sampled one as a texture
+GS destination-alpha draw states: DATE 4276358, blend C=Ad 5134979, blend term Cd 35954796, FBA 16618922
+GS blend modifiers the renderer ignores: of 35968496 blended draws, 2196042 had COLCLAMP=0 (blend result wraps at 8 bits instead of clamping) and 0 had PABE=1 (blend only where source alpha's MSB is set).  Both are currently always-clamp, always-blend.
+GS COLCLAMP=0 blend equations (1 distinct), (A-B)*C>>7+D -- A==B means the result is just D and wrap cannot differ from clamp:
+   (Cs-0)*FIX>>7+Cd       2196042 draws
+GS field blits deinterlaced: 77596
+GS DISPFB base 917504 -> slot 1,  PMODE 66  DISPFB1 0 DISPFB2 9070
+VU lower opcodes unimplemented: 0
+VU microprogram uploads/starts/xgkicks: 43978537 / 13841201 / 13904181
+vif0 codes: 00:9 01:1 04:1 05:1 20:1 4A:2
+vif1 codes: 00:41938947 01:27343392 02:86936 03:86936 04:1 05:1 06:1 10:1283545 11:18688678 14:86935 17:13754266 20:9012 4A:388858 50:14071334 60:393216 62:3503280 64:22649592 68:9975383 69:9573156 6C:13167396 6E:13469652 70:9011
+vu1 census: 14 distinct microcode images
+  98840c1957c4f8ef  code 0000..0A40 (328 pairs)  393344 runs, 92304384 insns, 393216 kicks
+     entries: 0000(x128) 0068(x393216)
+  3e3aca578a0d2cdd  code 0000..3598 (1715 pairs)  3510076 runs, 1152236441 insns, 3496706 kicks
+     entries: 0000(x6796) 0050(x3503280)
+  702e5885c8728c3b  code 0000..3598 (1715 pairs)  632284 runs, 214384889 insns, 625488 kicks
+     entries: 0000(x6796) 0010(x625488)
+  73d3a0148db0b2e2  code 0000..3598 (1715 pairs)  2796774 runs, 984911719 insns, 2769451 kicks
+     entries: 0000(x27323) 0010(x2769451)
+  ca8f017c71dabc60  code 0000..3598 (1715 pairs)  105848 runs, 456636598 insns, 82147 kicks
+     entries: 0000(x6796) 0068(x99052)
+  904849322e8ee573  code 0000..3598 (1715 pairs)  7762 runs, 15524 insns, 0 kicks
+     entries: 0000(x7762)
+  34b2f6da0916839a  code 0000..3598 (1715 pairs)  3880 runs, 38800 insns, 0 kicks
+     entries: 0000(x3880)
+  2d2e795084784b66  code 0000..3598 (1715 pairs)  3880 runs, 38800 insns, 0 kicks
+     entries: 0000(x3880)
+  92bf1c364af22849  code 0000..3598 (1715 pairs)  2926065 runs, 1239637387 insns, 2920235 kicks
+     entries: 0000(x5830) 0010(x2920235)
+  7fd706560e5e9e54  code 0000..3598 (1715 pairs)  5830 runs, 11660 insns, 0 kicks
+     entries: 0000(x5830)
+  ad0670c0c6bbdaa5  code 0000..3598 (1715 pairs)  2915 runs, 29150 insns, 0 kicks
+     entries: 0000(x2915)
+  c8b012565eabb329  code 0000..3598 (1715 pairs)  2915 runs, 29150 insns, 0 kicks
+     entries: 0000(x2915)
+  bdb8edb3a90e5254  code 0000..3598 (1715 pairs)  3261024 runs, 1087563672 insns, 3431376 kicks
+     entries: 0000(x3042) 0010(x3257982)
+  0dad11cfc8980171  code 0000..3598 (1715 pairs)  188604 runs, 114428236 insns, 185562 kicks
+     entries: 0000(x3042) 0010(x185562)
+vu1: cannot write out/vu_programs/manifest.json
+vu1: microcode occupies 0000..35A0 (instructions 0..1716)
+vu1: MPG quadwords by 1 KB bucket:
+   0000..03FF  x5563840
+   0400..07FF  x5563840
+   0800..0BFF  x5532878
+   0C00..0FFF  x5342708
+   1000..13FF  x5166272
+   1400..17FF  x4439162
+   1800..1BFF  x4160548
+   1C00..1FFF  x3426624
+   2000..23FF  x2854370
+   2400..27FF  x446604
+   2800..2BFF  x434944
+   2C00..2FFF  x434944
+   3000..33FF  x434944
+   3400..37FF  x176696
+vu1: MSCAL start addresses by 1 KB bucket (MSCNT x13754266, all at 0):
+   0000..03FF  x86935
+   XGKICK resident at 1A18 (instruction 835), Is=VI07
+   XGKICK resident at 2248 (instruction 1097), Is=VI07
+   XGKICK resident at 2340 (instruction 1128), Is=VI07
+   XGKICK resident at 34D8 (instruction 1691), Is=VI07
+   XGKICK resident at 34F8 (instruction 1695), Is=VI08
+   XGKICK resident at 3578 (instruction 1711), Is=VI07
+vu1: 5382424734 instructions executed, 0 runs hit the guard
+vu1: vertex counts at TOP -- 13841201 activations, 393357 with a count of ZERO
+   counts (64 = 64 or more): 1:9313 2:1106 3:2277424 4:9131399 5:733937 6:519940 7:149337 8:102203 9:52944 10:342074 11:1230 12:522 13:575 14:2309 16:154 18:38811 19:995 20:853 22:427 23:1217 24:50 25:1303 26:734 27:281 30:299 34:515 36:901 37:860 40:480 42:105 43:39364 44:18 48:1 51:12 55:2 56:2 63:1 64:36146
+vu1: run lengths by power of two: 2:59625 8:27310 64:582479 128:3180138 256:8900375 512:624264 1024:209494 2048:183625 4096:65517 8192:8374
+vu1: 13698047 of 13841201 runs reached an XGKICK
+VIF1 UNPACK census (48 distinct):
+   V4-32  cmd=6C num=8   cl=4   wl=4   ----       addr=16  x63507
+   V4-32  cmd=6C num=11  cl=4   wl=4   ----       addr=0  x3170
+   V3-32  cmd=68 num=1   cl=4   wl=4   ---- +TOPS addr=0  x393216
+   S-32   cmd=60 num=3   cl=4   wl=4   ---- +TOPS addr=1  x393216
+   V4-8   cmd=6E num=5   cl=4   wl=4   ---- +TOPS addr=4  x393216
+   V4-32  cmd=6C num=1   cl=4   wl=4   ----       addr=24  x40774
+   V4-32  cmd=6C num=2   cl=4   wl=4   ----       addr=33  x6796
+   V4-32  cmd=6C num=1   cl=4   wl=4   ----       addr=26  x33980
+   V4-32  cmd=6C num=2   cl=4   wl=4   ----       addr=28  x6796
+   V4-32  cmd=6C num=3   cl=4   wl=4   ----       addr=30  x13592
+   V4-32  cmd=6C num=1   cl=4   wl=4   ----       addr=13  x6796
+   V4-32  cmd=6C num=7   cl=4   wl=4   ----       addr=0  x13592
+   V4-32  cmd=6C num=20  cl=4   wl=4   ----       addr=1004  x6796
+   V4-32  cmd=6C num=1   cl=4   wl=4   ----       addr=25  x523486
+   V4-32  cmd=6C num=1   cl=4   wl=4   ----       addr=35  x6796
+   V4-32  cmd=6C num=2   cl=4   wl=4   ---- +TOPS addr=1  x3503280
+   V2-32  cmd=64 num=1   cl=4   wl=4   ---- +TOPS addr=0  x3503280
+   S-8    cmd=62 num=4   cl=4   wl=1   ---- +TOPS addr=3  x3350234
+   V4-8   cmd=6E num=4   cl=4   wl=1   ---- +TOPS addr=5  x3350234
+   V4-32  cmd=6C num=1   cl=4   wl=1   ----       addr=25  x3496484
+   V4-32  cmd=6C num=1   cl=4   wl=1   ----       addr=35  x3496484
+   S-8    cmd=62 num=10  cl=4   wl=1   ---- +TOPS addr=3  x153046
+   V4-8   cmd=6E num=10  cl=4   wl=1   ---- +TOPS addr=5  x153046
+   V4-32  cmd=6C num=8   cl=4   wl=4   ----       addr=32  x27184
+   V4-32  cmd=6C num=1   cl=4   wl=4   ----       addr=28  x20388
+   V4-32  cmd=6C num=1   cl=4   wl=4   ----       addr=33  x6796
+   V4-32  cmd=6C num=15  cl=4   wl=4   ----       addr=0  x6796
+   V4-32  cmd=6C num=13  cl=4   wl=4   ----       addr=0  x27323
+   V4-32  cmd=6C num=2   cl=4   wl=4   ----       addr=9  x27184
+   V4-32  cmd=6C num=4   cl=4   wl=4   ----       addr=40  x516690
+   V4-32  cmd=6C num=1   cl=4   wl=4   ----       addr=27  x516690
+   V2-32  cmd=64 num=1   cl=5   wl=1   ---- +TOPS addr=0  x9573156
+   V3-32  cmd=68 num=4   cl=5   wl=1   ---- +TOPS addr=1  x5691463
+   V3-16  cmd=69 num=4   cl=5   wl=1   ---- +TOPS addr=2  x5691463
+   V4-8   cmd=6E num=4   cl=5   wl=1   ---- +TOPS addr=3  x5691463
+   V2-32  cmd=64 num=4   cl=5   wl=1   ---- +TOPS addr=4  x5691463
+   V3-32  cmd=68 num=3   cl=5   wl=1   ---- +TOPS addr=1  x2202434
+   V3-16  cmd=69 num=3   cl=5   wl=1   ---- +TOPS addr=2  x2202434
+   V4-8   cmd=6E num=3   cl=5   wl=1   ---- +TOPS addr=3  x2202434
+   V2-32  cmd=64 num=3   cl=5   wl=1   ---- +TOPS addr=4  x2202434
+   V4-32  cmd=6C num=35  cl=4   wl=4   ----       addr=16  x6796
+   V4-32  cmd=6C num=45  cl=4   wl=4   ---- +TOPS addr=0  x39364
+   V4-32  cmd=6C num=27  cl=4   wl=4   ---- +TOPS addr=0  x1256
+   V4-32  cmd=6C num=55  cl=4   wl=4   ---- +TOPS addr=0  x36644
+   V4-32  cmd=6C num=43  cl=4   wl=4   ---- +TOPS addr=0  x1660
+   V4-32  cmd=6C num=39  cl=4   wl=4   ---- +TOPS addr=0  x607
+   V4-32  cmd=6C num=25  cl=4   wl=4   ---- +TOPS addr=0  x2835
+   V4-32  cmd=6C num=13  cl=4   wl=4   ---- +TOPS addr=0  x581
+vu1: XGKICK moved 294367246 quadwords in 13904181 kicks (21.2 qw each)
+vu1: 1 [E] markers and 6 XGKICKs resident in micro memory
+   tail[1370] lo=8000033C up=000002FF  lo11=33C
+   tail[1371] lo=5A004FD4 up=000002FF  lo11=7D4
+   tail[1372] lo=8000033C up=000002FF  lo11=33C
+   tail[1373] lo=10086800 up=000002FF  lo11=000
+   tail[1374] lo=40000130 up=000002FF  lo11=130
+   tail[1375] lo=8000033C up=000002FF  lo11=33C
+   tail[1376] lo=10014804 up=000002FF  lo11=004
+   tail[1377] lo=80090870 up=000002FF  lo11=070
+   tail[1378] lo=80090870 up=000002FF  lo11=070
+   tail[1379] lo=800142F0 up=000002FF  lo11=2F0
+   tail[1380] lo=80015B70 up=000002FF  lo11=370
+   tail[1381] lo=01E10006 up=000002FF  lo11=006
+   tail[1382] lo=01E20019 up=000002FF  lo11=019
+   tail[1383] lo=01E30023 up=000002FF  lo11=023
+   tail[1384] lo=01E40000 up=000002FF  lo11=000
+   tail[1385] lo=0B094003 up=000002FF  lo11=003
+   tail[1386] lo=03E80800 up=000002FF  lo11=000
+   tail[1387] lo=03E81001 up=000002FF  lo11=001
+   tail[1388] lo=03E81802 up=000002FF  lo11=002
+   tail[1389] lo=02E82003 up=000002FF  lo11=003
+   tail[1390] lo=10084004 up=000002FF  lo11=004
+   tail[1391] lo=01E2001A up=000002FF  lo11=01A
+   micro[0] lo=01E50010 up=000002FF
+   micro[1] lo=01E60011 up=000002FF
+   micro[2] lo=01E70012 up=000002FF
+   micro[3] lo=01E80013 up=000002FF
+   micro[4] lo=01E90014 up=000002FF
+   micro[5] lo=01EA0015 up=000002FF
+PATH1 XGKICK packets: 11164879 carried geometry, 2739302 were empty (19.7% empty)
+gfxq: 111935674 records, 9562 MB queued, peak fill 5429 KB of 64 MB
+gfxq: 3 drains, 3 of them actually waited (109.7 ms total); the EE waited on a full ring 0 times (0.0 ms total)
+gfxq: the EE waited for the graphics machine to catch up on fields 235 times (2441.7 ms total), at a depth of 2
+rpc: 10 binds, 47234 calls (0 on unserviced ids)
+   80000593 cdvd-scmd2   1 calls
+   046D046D lgdev        9425 calls
+   80001300 dbcman       2 calls
+   8000131B dbcman-b     9438 calls
+   80000400 mcserv       11 calls
+   80000210 devices      9424 calls
+   4E554649 nufile       68 calls
+   000695DD nusound      9433 calls
+   81000201 nusndstr     9432 calls
+cdvd: 35 reads (8844 sectors, 17.3 MB), 26 searches (0 misses)
+---- filesystem ----
+   disc image 'C:\Users\Dan\Downloads\Ace Combat 5 - The Unsung War (USA) (En,Ja)\Ace Combat 5 - The Unsung War (USA) (En,Ja).iso': 24 files, sectors 32..2168044
+   8844 sector(s) and 43755924 byte(s) read, 0 read(s) from mod files
+---- hooks ----
+   00320098 CDoubleBuff::_Open       590626 call(s)
+      before: rn-taps (priority 100)
+   003200D8 CDoubleBuff::_Close      590626 call(s)
+      before: rn-taps (priority 100)
+   00320538 COt::_Open               562354 call(s)
+      before: rn-taps (priority 100)
+   003265E8 DrawCtrl::_Flush         9440 call(s)
+      before: rn-taps (priority 100)
+      after:  rn-taps (priority 100)
+   0031CF00 scene_Dispatch           18863 call(s)
+      before: rn-taps (priority 100)
+   0032B3F0                          0 call(s)
+      before: rn-taps (priority 100)
+   0032B5B0                          0 call(s)
+      before: rn-taps (priority 100)
+   0032B650                          0 call(s)
+      before: rn-taps (priority 100)
+   0032B6F0                          0 call(s)
+      before: rn-taps (priority 100)
+   0032B850                          0 call(s)
+      before: rn-taps (priority 100)
+   0032B928                          0 call(s)
+      before: rn-taps (priority 100)
+   0011AAF0 sun_OcclusionChain       6797 call(s)
+      after:  rn-taps (priority 100)
+   00118BC8 sun_Flare                0 call(s)
+      before: rn-fixes (priority 110)
+      after:  rn-fixes (priority 110)
+      after:  rn-taps (priority 100)
+   001B0680 sun_LensGhosts           0 call(s)
+      after:  rn-taps (priority 100)
+   0031FB88 prim_Write               1477647 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   0031FF00 prim_Rect                843 call(s)
+      before: rn-intents (priority 100)
+   0031FFB0 prim_Line                376221 call(s)
+      before: rn-intents (priority 100)
+   002D6E00 msgwin_Draw              6797 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   00134598                          0 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   00134EB0                          0 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   00141AC8                          0 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   00141EC8                          0 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   00135378                          6261 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   001354D0                          6261 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   00135928                          6261 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   00135EC0                          6261 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   0013E300                          6261 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   00136330                          6261 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   00136688                          6261 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   00136A68                          6261 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   00136E88                          6261 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   00137010                          6261 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   00137258                          6261 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   00137C10                          6261 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   00138A58                          6261 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   0013E920                          6261 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   0013FB70                          6261 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   00140780                          6261 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   0013F660                          6261 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   0013F878                          6261 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   00140A20                          6261 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   001410D0                          6261 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   00141478                          6261 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   00149298                          0 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   00139250                          6261 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   0013E6F8                          0 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   0013DBD8                          6261 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   0013DE38                          6261 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   00142A38                          6261 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   00114F20                          6797 call(s)
+      after:  rn-intents (priority 100)
+   00114A70                          6797 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   001AF720                          40778 call(s)
+      before: rn-intents (priority 100)
+   001AFE80                          20082 call(s)
+      after:  rn-intents (priority 100)
+   001CF718                          1495340 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   001CD568                          92596 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   001D1D88                          6797 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+   001D0D30                          466673 call(s)
+      before: rn-intents (priority 100)
+      after:  rn-intents (priority 100)
+rn: 9439 frames, 578575 packet ranges (61.3 per frame, peak 145), 229.9 KB per frame; 0 frames overflowed the range table
+rn: 41676689 data-carrying DMA tags: 40656300 in an emitter's range, 121360 DrawCtrl, 141345 bucket heads, 18846 unowned buffer, 13707 outside the frame, 725131 in no range (725131 of them inherited from the range that called into them)
+rn: intents -- 211622 recorded (22.4 per frame, 5.1 KB per frame), 211609 handed over with their packets, 1 never transferred, 0 refused for space; 0 claims ended by the walk leaving their bytes, 0 frames ended inside a 2D group writer
+rn: cloud planes -- 6402 packets recorded (99611 quads), 0 left emulated because a corner or the packet could not be accounted for
+rn: native sun -- occlusion chain seen in 6795 frames, flare drawn natively in 0, ghosts in 0; 0 primitives claimed; 0 without that frame's occlusion sample (the last visibility kept); 0 texture decodes refused
+rn: native sky -- 6796 domes and 6796 haze passes (51216 layers): 13197 drawn by mesh.vert (4783171 strip triangles claimed), 0 left emulated
+rn: native clipped triangles -- 20082: 20082 drawn by mesh.vert (35831 fan triangles claimed), 0 left emulated
+rn: native billboards -- 65397 cloud sprites: 65387 drawn by mesh.vert (235839 sprite pieces claimed), 0 left emulated
+rn: native world triangles -- 6402 batches (199222 triangles): 6402 drawn by mesh.vert (199222 primitives claimed), 0 left emulated
+rn: front end -- 389531 primitives: 389531 native 2D, 0 native screen passes, 0 left emulated
+rn: 2D layer -- 106136 elements (62740 accepted whole), 2130804 primitives: 1634807 accepted, 495997 kept emulated; 0 elements not closed by their end record
+rn:    kept emulated, not slot 0: 48341
+rn:    kept emulated, reads a render target: 6749
+rn:    kept emulated, writes Z: 434646
+rn:    kept emulated, destination alpha test: 6261
+rn:    495997 of the primitives kept off the 2D layer drawn as native screen passes
+rn:    screen pass front end, not 2D            495997 primitives
+rn:    screen pass DrawCtrl flush               96714 primitives
+rn:    screen pass scene fade                   6795 primitives
+rn:    screen pass impostor target clears       20385 primitives
+rn:    screen pass cloud impostor puffs         1278570 primitives
+rn:    screen pass self-shadow passes           85176 primitives
+rn:    screen pass sky passes                   28118 primitives
+rn:    screen pass sky passes (sub_114580)      6795 primitives
+rn:    screen pass sun occlusion chain          81540 primitives
+rn:    screen pass effect system                831180 primitives
+rn:    screen pass off-chain kicks (movies)     9745 primitives
+rn: native screen passes -- 2941015 primitives (2124879 sprites, 225633 merged into the one before, 617062 triangles) in 947946 mesh draws; 0 handed back for arena space; 199074 of the primitives lines and points
+---- render map: 97 emitters, 9758 frames ----
+   scene 0.0       16 frames       9506304 px  100.00% attributed  worst frame 100.00% (#4)
+   scene 12.0        1 frames        572672 px  100.00% attributed  worst frame 100.00% (#24)
+   scene 17.0        1 frames        572672 px  100.00% attributed  worst frame 100.00% (#25)
+   scene 15.0        1 frames       1145600 px  100.00% attributed  worst frame 100.00% (#1235)
+   scene 16.0        1 frames       1145600 px  100.00% attributed  worst frame 100.00% (#1313)
+   scene 18.0        2 frames       2434240 px  100.00% attributed  worst frame 100.00% (#1691)
+   scene 21.0        1 frames       1288640 px  100.00% attributed  worst frame 100.00% (#2031)
+   scene 22.0        1 frames       1145600 px  100.00% attributed  worst frame 100.00% (#2123)
+   scene 23.0        1 frames       2358207 px  100.00% attributed  worst frame 100.00% (#2465)
+   scene 1.0        1 frames       1145600 px  100.00% attributed  worst frame 100.00% (#2673)
+   scene 1.14      16 frames      11482112 px  100.00% attributed  worst frame 100.00% (#2822)
+   scene 16.5        1 frames       2676979 px  100.00% attributed  worst frame 100.00% (#1690)
+   scene 22.5        6 frames       5155200 px  100.00% attributed  worst frame 100.00% (#2167)
+   scene 23.5        1 frames       2640831 px  100.00% attributed  worst frame 100.00% (#2672)
+   scene 1.5        1 frames        946752 px  100.00% attributed  worst frame 100.00% (#2698)
+   scene 22.10      26 frames      62129158 px  100.00% attributed  worst frame 100.00% (#2439)
+   scene 17.1       34 frames      24338560 px  100.00% attributed  worst frame 100.00% (#26)
+   scene 15.1       35 frames      30358400 px  100.00% attributed  worst frame 100.00% (#1236)
+   scene 18.1       12 frames      10310400 px  100.00% attributed  worst frame 100.00% (#1692)
+   scene 21.1       35 frames      30072000 px  100.00% attributed  worst frame 100.00% (#2032)
+   scene 22.1       28 frames      24057600 px  100.00% attributed  worst frame 100.00% (#2124)
+   scene 1.1        1 frames       1575040 px  100.00% attributed  worst frame 100.00% (#2674)
+   scene 1.15       1 frames        717632 px  100.00% attributed  worst frame 100.00% (#2838)
+   scene 17.6      419 frames     512571308 px  100.00% attributed  worst frame 100.00% (#95)
+   scene 22.6        1 frames        859200 px  100.00% attributed  worst frame 100.00% (#2180)
+   scene 1.6       44 frames      34325248 px  100.00% attributed  worst frame 100.00% (#2699)
+   scene 22.11       1 frames        859200 px  100.00% attributed  worst frame 100.00% (#2173)
+   scene 17.2        1 frames        715840 px  100.00% attributed  worst frame 100.00% (#60)
+   scene 15.2       41 frames      80106250 px  100.00% attributed  worst frame 100.00% (#1271)
+   scene 16.2      175 frames     408341956 px  100.00% attributed  worst frame 100.00% (#1314)
+   scene 18.2        2 frames       1718400 px  100.00% attributed  worst frame 100.00% (#1698)
+   scene 21.2       55 frames     105290958 px  100.00% attributed  worst frame 100.00% (#2067)
+   scene 22.2        1 frames        859200 px  100.00% attributed  worst frame 100.00% (#2152)
+   scene 23.2      182 frames     424648567 px  100.00% attributed  worst frame 100.00% (#2466)
+   scene 1.2       23 frames      21745024 px  100.00% attributed  worst frame 100.00% (#2675)
+   scene 1.16      13 frames       9329216 px  100.00% attributed  worst frame 100.00% (#2839)
+   scene 17.7      360 frames     445271450 px  100.00% attributed  worst frame 100.00% (#514)
+   scene 22.7       38 frames      21797859 px    2.63% attributed  worst frame 0.00% (#2198)
+   scene 1.7        1 frames        717632 px  100.00% attributed  worst frame 100.00% (#2770)
+   scene 22.12       6 frames       5155200 px  100.00% attributed  worst frame 100.00% (#2174)
+   scene 17.3       13 frames       9305920 px  100.00% attributed  worst frame 100.00% (#61)
+   scene 15.3        1 frames       1716256 px  100.00% attributed  worst frame 100.00% (#1312)
+   scene 18.3        2 frames       1718400 px  100.00% attributed  worst frame 100.00% (#1699)
+   scene 21.3        1 frames       1811936 px  100.00% attributed  worst frame 100.00% (#2122)
+   scene 22.3       13 frames      11169600 px  100.00% attributed  worst frame 100.00% (#2153)
+   scene 1.3        1 frames        717632 px  100.00% attributed  worst frame 100.00% (#2743)
+   scene 1.17       1 frames        717632 px  100.00% attributed  worst frame 100.00% (#2852)
+   scene 17.8      360 frames     445271450 px  100.00% attributed  worst frame 100.00% (#874)
+   scene 22.8      159 frames     401764661 px  100.00% attributed  worst frame 100.00% (#2279)
+   scene 1.8        9 frames       6458688 px  100.00% attributed  worst frame 100.00% (#2771)
+   scene 1.13      42 frames      30140544 px  100.00% attributed  worst frame 100.00% (#2780)
+   scene 17.4       21 frames      17780985 px  100.00% attributed  worst frame 100.00% (#74)
+   scene 16.4      201 frames     480751528 px  100.00% attributed  worst frame 100.00% (#1489)
+   scene 18.4       78 frames      37838410 px    3.03% attributed  worst frame 0.00% (#1716)
+   scene 22.4        1 frames        859200 px  100.00% attributed  worst frame 100.00% (#2166)
+   scene 23.4       24 frames      60498397 px  100.00% attributed  worst frame 100.00% (#2648)
+   scene 1.4       26 frames      18658432 px  100.00% attributed  worst frame 100.00% (#2744)
+   scene 1.18    6799 frames   27569166966 px  100.00% attributed  worst frame 100.00% (#2853)
+   scene 17.9        1 frames       1431776 px  100.00% attributed  worst frame 100.00% (#1234)
+   scene 22.9        1 frames       2441995 px  100.00% attributed  worst frame 100.00% (#2438)
+   all scenes: 31402308716 px, 99.82% attributed to a named emitter; 87.45% of GS primitive pixels claimed by native passes (native VU1 meshes are not GS primitives and are not in this table)
+    14.9%  scene 1.18  #1    DrawCtrl::flush (display, clears)               687360 px/frame over 6798   frames  native 100%  prims t0 s67980 l0 p0  rt 0,1,2
+    14.5%  scene 1.18  #61   sub_001CFAF8+0x8E8                              668288 px/frame over 6795   frames  native 100%  prims t0 s235839 l0 p0  rt 0
+    11.9%  scene 1.18  #60   sub_001D0550+0x4C                               550417 px/frame over 6795   frames  native 100%  prims t85050 s1193520 l0 p0  rt 6,9,10,11,12,13
+     9.3%  scene 1.18  #56   sky_Render+0x10C                                454929 px/frame over 6402   frames  native 100%  prims t3750079 s0 l0 p0  rt 0
+     7.3%  scene 1.18  #94   player_Render+0xED8                             757950 px/frame over 3042   frames  native  83%  prims t13938162 s85176 l0 p0  rt 0,9,18
+     7.1%  scene 1.18  #65   mission_Render+0x310                            328296 px/frame over 6795   frames  native  15%  prims t17833097 s61825 l0 p0  rt 0,6,7,8
+     6.4%  scene 1.18  #55   sky_Render+0xC4                                 294948 px/frame over 6795   frames  native 100%  prims t1083451 s6795 l0 p0  rt 0,5
+     5.0%  scene 1.18  #93   player_Render+0x1030                            543573 px/frame over 2915   frames  native   0%  prims t2446259 s0 l0 p0  rt 0
+     5.0%  scene 1.18  #88   mission_Render+0x1084                           229376 px/frame over 6795   frames  native 100%  prims t0 s6795 l0 p0  rt 0
+     2.6%  scene 1.18  #58   sub_001CD230+0x9C                               128289 px/frame over 6402   frames  native 100%  prims t199222 s0 l0 p0  rt 0
+     1.5%  scene 1.18  #90   player_Render+0xF8                               73870 px/frame over 6261   frames  native 100%  prims t12522 s1007397 l700590 p0  rt 0,5
+     1.3%  scene 1.18  #95   sub_00225470+0x394                              136861 px/frame over 3023   frames  native 100%  prims t347504 s0 l0 p0  rt 0
+     1.1%  scene 17.6   #1    DrawCtrl::flush (display, clears)               859200 px/frame over 419    frames  native 100%  prims t0 s5028 l0 p0  rt 0,3,4
+     1.0%  scene 17.8   #1    DrawCtrl::flush (display, clears)               859200 px/frame over 360    frames  native 100%  prims t0 s4320 l0 p0  rt 0,3,4
+     1.0%  scene 17.7   #1    DrawCtrl::flush (display, clears)               859200 px/frame over 360    frames  native 100%  prims t0 s4320 l0 p0  rt 0,3,4
+     1.0%  scene 16.4   #24   sub_00289C78+0x110                             1512921 px/frame over 201    frames  native 100%  prims t50224 s22054 l72670 p0  rt 0
+     0.8%  scene 22.8   #32   sub_0028E9C0+0x30                              1674744 px/frame over 159    frames  native  95%  prims t81690 s17639 l3132450 p0  rt 0
+     0.7%  scene 23.2   #38   sub_00290DE8+0x24C                             1667668 px/frame over 140    frames  native 100%  prims t15428 s7553 l29060 p0  rt 0
+     0.7%  scene 16.2   #22   sub_00289948+0x24C                             1677946 px/frame over 133    frames  native 100%  prims t13594 s7182 l48254 p0  rt 0
+     0.5%  scene 16.4   #1    DrawCtrl::flush (display, clears)               859200 px/frame over 201    frames  native 100%  prims t0 s2412 l0 p0  rt 0,3,4
+     0.5%  scene 23.2   #1    DrawCtrl::flush (display, clears)               859200 px/frame over 182    frames  native 100%  prims t0 s2184 l0 p0  rt 0,3,4
+     0.5%  scene 16.2   #1    DrawCtrl::flush (display, clears)               859200 px/frame over 175    frames  native 100%  prims t0 s2100 l0 p0  rt 0,3,4
+     0.4%  scene 22.8   #1    DrawCtrl::flush (display, clears)               859200 px/frame over 159    frames  native 100%  prims t0 s1908 l0 p0  rt 0,3,4
+     0.4%  scene 1.18  #82   sub_00224618+0x1F8                               41285 px/frame over 3100   frames  native 100%  prims t0 s86431 l0 p0  rt 0
+     0.4%  scene 17.6   #15   sub_002B9410+0xC8                               286176 px/frame over 419    frames  native 100%  prims t838 s0 l0 p0  rt 0
+     0.3%  scene 17.8   #15   sub_002B9410+0xC8                               286176 px/frame over 360    frames  native 100%  prims t720 s0 l0 p0  rt 0
+     0.3%  scene 17.7   #15   sub_002B9410+0xC8                               286176 px/frame over 360    frames  native 100%  prims t720 s0 l0 p0  rt 0
+     0.2%  scene 1.18  #86   mission_Render+0xAB8                             12379 px/frame over 5645   frames  native 100%  prims t0 s395636 l0 p0  rt 0
+     0.2%  scene 21.2   #1    DrawCtrl::flush (display, clears)               859200 px/frame over 55     frames  native 100%  prims t0 s660 l0 p0  rt 0,3,4
+     0.1%  scene 22.10  #32   sub_0028E9C0+0x30                              1526808 px/frame over 26     frames  native 100%  prims t3664 s1378 l584 p0  rt 0
+     0.1%  scene 18.4   #3    (DMA kick outside the frame)                    482800 px/frame over 76     frames  native 100%  prims t0 s6530 l0 p0  rt 0,3
+     0.1%  scene 21.2   #29   sub_0028CE40+0x50                               666336 px/frame over 55     frames  native 100%  prims t110 s495 l0 p0  rt 0
+     0.1%  scene 23.4   #39   sub_002910E8+0xF8                              1494657 px/frame over 24     frames  native 100%  prims t4416 s1887 l4872 p0  rt 0
+     0.1%  scene 1.18  #92   player_Render+0xFE0                              12281 px/frame over 2904   frames  native   0%  prims t414970 s0 l0 p0  rt 0
+     0.1%  scene 15.2   #1    DrawCtrl::flush (display, clears)               859200 px/frame over 41     frames  native 100%  prims t0 s492 l0 p0  rt 0,3,4
+     0.1%  scene 17.7   #14   sub_002BC540+0x50                               286400 px/frame over 115    frames  native 100%  prims t0 s115 l0 p0  rt 0
+     0.1%  scene 17.6   #14   sub_002BC540+0x50                               286400 px/frame over 115    frames  native 100%  prims t0 s115 l0 p0  rt 0
+     0.1%  scene 17.8   #14   sub_002BC540+0x50                               286400 px/frame over 115    frames  native 100%  prims t0 s115 l0 p0  rt 0
+     0.1%  scene 1.18  #91   sub_0025A7B0+0x480                                5557 px/frame over 5497   frames  native 100%  prims t38552 s0 l0 p0  rt 0
+     0.1%  scene 1.6   #1    DrawCtrl::flush (display, clears)               687360 px/frame over 44     frames  native 100%  prims t0 s440 l0 p0  rt 0,1,2
+     0.1%  scene 21.1   #1    DrawCtrl::flush (display, clears)               859200 px/frame over 35     frames  native 100%  prims t0 s420 l0 p0  rt 0,3,4
+     0.1%  scene 15.1   #1    DrawCtrl::flush (display, clears)               859200 px/frame over 35     frames  native 100%  prims t0 s420 l0 p0  rt 0,3,4
+     0.1%  scene 1.13  #1    DrawCtrl::flush (display, clears)               687360 px/frame over 42     frames  native 100%  prims t0 s420 l0 p0  rt 0,1,2
+     0.1%  scene 1.18  #64   sun_OcclusionChain (writer)                       3637 px/frame over 6795   frames  native 100%  prims t0 s81540 l0 p0  rt 14,15,16,17
+     0.1%  scene 17.1   #1    DrawCtrl::flush (display, clears)               715840 px/frame over 34     frames  native 100%  prims t0 s408 l0 p0  rt 0,3,4
+     0.1%  scene 22.1   #1    DrawCtrl::flush (display, clears)               859200 px/frame over 28     frames  native 100%  prims t0 s336 l0 p0  rt 0,3,4
+     0.1%  scene 16.2   #18   sub_0028B158+0x18                               570880 px/frame over 41     frames  native 100%  prims t0 s697 l0 p0  rt 0
+     0.1%  scene 23.2   #34   sub_00291C70+0x2C                               570880 px/frame over 41     frames  native 100%  prims t0 s697 l0 p0  rt 0
+     0.1%  scene 15.2   #17   sub_00288880+0x50                               570656 px/frame over 41     frames  native 100%  prims t82 s287 l0 p0  rt 0
+     0.1%  scene 22.10  #1    DrawCtrl::flush (display, clears)               859200 px/frame over 26     frames  native 100%  prims t0 s312 l0 p0  rt 0,3,4
+     0.1%  scene 21.2   #14   sub_002BC540+0x50                               400960 px/frame over 55     frames  native 100%  prims t0 s77 l0 p0  rt 0
+     0.1%  scene 15.2   #14   sub_002BC540+0x50                               537873 px/frame over 41     frames  native 100%  prims t0 s77 l0 p0  rt 0
+     0.1%  scene 22.7   #3    (DMA kick outside the frame)                    573650 px/frame over 37     frames  native 100%  prims t0 s3215 l0 p0  rt 0,3
+     0.1%  scene 23.4   #1    DrawCtrl::flush (display, clears)               859200 px/frame over 24     frames  native 100%  prims t0 s288 l0 p0  rt 0,3,4
+     0.1%  scene 1.4   #1    DrawCtrl::flush (display, clears)               687360 px/frame over 26     frames  native 100%  prims t0 s260 l0 p0  rt 0,1,2
+     0.1%  scene 17.4   #1    DrawCtrl::flush (display, clears)               845547 px/frame over 21     frames  native 100%  prims t0 s252 l0 p0  rt 0,3,4
+     0.1%  scene 1.18  #66   mission_Render+0x40C                              2396 px/frame over 6670   frames  native   0%  prims t3591072 s0 l0 p0  rt 0
+     0.1%  scene 1.2   #1    DrawCtrl::flush (display, clears)               687360 px/frame over 23     frames  native 100%  prims t0 s230 l0 p0  rt 0,1,2
+     0.0%  scene 23.2   #36   sub_00290DE8+0x148                              286400 px/frame over 42     frames  native 100%  prims t0 s42 l0 p0  rt 0
+     0.0%  scene 16.2   #20   sub_00289948+0x148                              286400 px/frame over 42     frames  native 100%  prims t0 s42 l0 p0  rt 0
+   ... 88 more rows (PS2_RENDER_MAP=<file> writes them all)
+nufile: 68 calls, 67584 bytes read
+nusound: 9433 calls, 9737 commands, 15 distinct
+nusndstr: 15 SPU transfers, 1604080 bytes, sequence 16
+nusndstr: 9431 command lists walked, 0 desynced
+nusndstr:   cmd 1  fx-send-on    54
+nusndstr:   cmd 2  fx-send-off   21680
+nusndstr:   cmd 3  transfer      15
+nusndstr:   cmd 7  output-mode   1
+nusndstr:   cmd 10 key-on        108
+nusndstr:   cmd 11 key-off       165
+nusndstr:   cmd 12 tone-attr     74603
+nusndstr:   cmd 13 stream-vol    21668
+nusndstr:   cmd 16 effect-mode   2
+nusndstr:   cmd 17 effect-attr   18862
+nusndstr: distinct waveform addresses -- 61 valid ADPCM, 0 not, 0 null
+spu2: 1604080 bytes into sound RAM, 7816800 frames mixed, 4 voices live
+spu2: 74603 tone-attribute sets, 135 key-ons, 203 key-offs
+spu2: a voice was sounding for 5817413 of 7816800 mixed frames (74.42%), at most 20 at once
+spu2:   of those, 5817393 had a non-zero envelope and 5817393 also a non-zero volume
+spu2: voices stopped -- 91 by the envelope releasing to zero, 34 by running off a non-repeating waveform
+audio: 31267200 bytes drained by the device (162.8 s at 48000 Hz)
+pad: 9438 libpad2 reads, 9424 DBCMAN device reports
+ipu: BCLR:250 BDEC:61976 VDEC:250770 FDEC:324624 SETIQ:24 SETVQ:3 CSC:150 SETTH:3 | in 39047584 bytes, 61976 macroblocks, 0 decode errors, 0 stalls, 0 resumes
+ipu: last 48 commands, oldest first (toIPU state as each was issued):
+   BDEC  cmd=24020000  in 64 bytes, cursor byte 12 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   VDEC  cmd=30000000  in 64 bytes, cursor byte 15 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   VDEC  cmd=34000000  in 64 bytes, cursor byte 15 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   BDEC  cmd=24020000  in 64 bytes, cursor byte 15 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   VDEC  cmd=30000000  in 64 bytes, cursor byte 19 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   VDEC  cmd=34000000  in 64 bytes, cursor byte 19 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   BDEC  cmd=24020000  in 64 bytes, cursor byte 20 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   VDEC  cmd=30000000  in 64 bytes, cursor byte 26 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   VDEC  cmd=34000000  in 64 bytes, cursor byte 26 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   BDEC  cmd=24020000  in 64 bytes, cursor byte 26 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   VDEC  cmd=30000000  in 64 bytes, cursor byte 28 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   VDEC  cmd=34000000  in 64 bytes, cursor byte 28 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   BDEC  cmd=24020000  in 64 bytes, cursor byte 29 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   VDEC  cmd=30000000  in 64 bytes, cursor byte 31 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   VDEC  cmd=34000000  in 64 bytes, cursor byte 31 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   VDEC  cmd=38000000  in 64 bytes, cursor byte 31 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   FDEC  cmd=40000002  in 64 bytes, cursor byte 31 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   VDEC  cmd=38000000  in 64 bytes, cursor byte 32 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   BDEC  cmd=24020000  in 64 bytes, cursor byte 32 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   VDEC  cmd=30000000  in 64 bytes, cursor byte 36 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   VDEC  cmd=34000000  in 64 bytes, cursor byte 36 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   BDEC  cmd=24020000  in 64 bytes, cursor byte 36 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   VDEC  cmd=30000000  in 64 bytes, cursor byte 40 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   VDEC  cmd=34000000  in 64 bytes, cursor byte 40 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   BDEC  cmd=24020000  in 64 bytes, cursor byte 40 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   VDEC  cmd=30000000  in 64 bytes, cursor byte 44 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   VDEC  cmd=34000000  in 64 bytes, cursor byte 44 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   BDEC  cmd=24020000  in 64 bytes, cursor byte 44 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   VDEC  cmd=30000000  in 64 bytes, cursor byte 48 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   VDEC  cmd=34000000  in 64 bytes, cursor byte 48 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   FDEC  cmd=40000005  in 64 bytes, cursor byte 49 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   BDEC  cmd=24010000  in 64 bytes, cursor byte 49 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   VDEC  cmd=30000000  in 64 bytes, cursor byte 57 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   VDEC  cmd=34000000  in 64 bytes, cursor byte 57 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   FDEC  cmd=40000005  in 64 bytes, cursor byte 58 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   BDEC  cmd=24020000  in 64 bytes, cursor byte 59 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   VDEC  cmd=30000000  in 64 bytes, cursor byte 60 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   VDEC  cmd=34000000  in 64 bytes, cursor byte 60 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   FDEC  cmd=40000005  in 64 bytes, cursor byte 61 | toIPU chcr=00000105 mod=1 madr=00C9C640 qwc=44105
+   BDEC  cmd=24010000  in 192 bytes, cursor byte 61 | toIPU chcr=00000105 mod=1 madr=00C9C6C0 qwc=44097
+   VDEC  cmd=30000000  in 192 bytes, cursor byte 75 | toIPU chcr=00000105 mod=1 madr=00C9C6C0 qwc=44097
+   VDEC  cmd=34000000  in 192 bytes, cursor byte 75 | toIPU chcr=00000105 mod=1 madr=00C9C6C0 qwc=44097
+   FDEC  cmd=40000005  in 192 bytes, cursor byte 75 | toIPU chcr=00000105 mod=1 madr=00C9C6C0 qwc=44097
+   BDEC  cmd=24020000  in 192 bytes, cursor byte 76 | toIPU chcr=00000105 mod=1 madr=00C9C6C0 qwc=44097
+   BCLR  cmd=00000000  in 192 bytes, cursor byte 79 | toIPU chcr=00000005 mod=1 madr=00C9C6C0 qwc=44097
+   CSC   cmd=700003FF  in 128 bytes, cursor byte 0 | toIPU chcr=00000101 mod=0 madr=00DCA4C0 qwc=26872
+   CSC   cmd=70000061  in 0 bytes, cursor byte 0 | toIPU chcr=00000101 mod=0 madr=00E2A2C0 qwc=2328
+   BCLR  cmd=00000078  in 0 bytes, cursor byte 0 | toIPU chcr=00000001 mod=0 madr=00E33440 qwc=0
+dma4: last 32 CHCR writes before this, oldest first:
+   START chcr=00000101 mod=0 madr=00E33440 qwc=26880 tadr=00DC9410
+   START chcr=00000105 mod=1 madr=00C86570 qwc=49750 tadr=00DC9410
+   stop  chcr=00000005 mod=1 madr=00C87370 qwc=49526 tadr=00DC9410
+   START chcr=00000101 mod=0 madr=00E9C440 qwc=26880 tadr=00DC9410
+   START chcr=00000105 mod=1 madr=00C87310 qwc=49532 tadr=00DC9410
+   stop  chcr=00000005 mod=1 madr=00C88510 qwc=49244 tadr=00DC9410
+   START chcr=00000101 mod=0 madr=00E9C440 qwc=26880 tadr=00DC9410
+   START chcr=00000105 mod=1 madr=00C884C0 qwc=49249 tadr=00DC9410
+   stop  chcr=00000005 mod=1 madr=00C8AFC0 qwc=48561 tadr=00DC9410
+   START chcr=00000101 mod=0 madr=00DCA440 qwc=26880 tadr=00DC9410
+   START chcr=00000105 mod=1 madr=00C8AF40 qwc=48569 tadr=00DC9410
+   stop  chcr=00000005 mod=1 madr=00C8C840 qwc=48169 tadr=00DC9410
+   START chcr=00000101 mod=0 madr=00E9C440 qwc=26880 tadr=00DC9410
+   START chcr=00000105 mod=1 madr=00C8C7D0 qwc=48176 tadr=00DC9410
+   stop  chcr=00000005 mod=1 madr=00C8E150 qwc=47768 tadr=00DC9410
+   START chcr=00000101 mod=0 madr=00E9C440 qwc=26880 tadr=00DC9410
+   START chcr=00000105 mod=1 madr=00C8E0E0 qwc=47775 tadr=00DC9410
+   stop  chcr=00000005 mod=1 madr=00C8E160 qwc=47767 tadr=00DC9410
+   START chcr=00000101 mod=0 madr=0041E6C0 qwc=4 tadr=00DC9410
+   START chcr=00000105 mod=1 madr=00C8E0E0 qwc=47775 tadr=00DC9410
+   stop  chcr=00000005 mod=1 madr=00C991E0 qwc=44943 tadr=00DC9410
+   START chcr=00000101 mod=0 madr=00E33440 qwc=26880 tadr=00DC9410
+   START chcr=00000105 mod=1 madr=00C99180 qwc=44949 tadr=00DC9410
+   stop  chcr=00000005 mod=1 madr=00C99B00 qwc=44797 tadr=00DC9410
+   START chcr=00000101 mod=0 madr=00E9C440 qwc=26880 tadr=00DC9410
+   START chcr=00000105 mod=1 madr=00C99AC0 qwc=44801 tadr=00DC9410
+   stop  chcr=00000005 mod=1 madr=00C9A5C0 qwc=44625 tadr=00DC9410
+   START chcr=00000101 mod=0 madr=00E9C440 qwc=26880 tadr=00DC9410
+   START chcr=00000105 mod=1 madr=00C9A540 qwc=44633 tadr=00DC9410
+   stop  chcr=00000005 mod=1 madr=00C9C6C0 qwc=44097 tadr=00DC9410
+   START chcr=00000101 mod=0 madr=00DCA440 qwc=26880 tadr=00DC9410
+   START chcr=00000105 mod=1 madr=00C9C640 qwc=44105 tadr=00DC9410
+vk: 9698 frames, 13613227 draw calls, 129368213 vertices, 17514 texture uploads (422 cached, 83.7 MB)
+vk: 115 pipelines (96 built ahead from earlier sessions, cache on); texture images in 1 blocks of 64 MB (46.7 MB used), 0 with memory of their own
+vk: 92521 draws read back the target they were drawing into
+vk: 1184935 native mesh draws (mesh.vert), 13197 recorded with the native material (mesh.frag); 0 batches refused for arena space
+vk: 2D overlay composed on 8008 frames at 2x, 554530 draws lifted onto it, 161365 native 2D draws kept in place because the frame wrote or read slot 0 after them
+vk: 59 fields dropped (replaced by a newer one before the renderer took them)
+timers: 103246877 counter reads, 0 interrupts raised (T0 mode=0C83 comp=0, T1 mode=0083 comp=0)
+---- kernel state ----
+vblanks delivered   : 9758
+preempt offers      : 44767  (~183365632 entries, ~18791 per field)
+thread 0   status=01 prio=64  entry=00000000 waiting_sema=0
+thread 1   status=04 prio=0   entry=00339270 waiting_sema=3
+thread 2   status=04 prio=3   entry=0035A4AC waiting_sema=0
+thread 3   status=04 prio=3   entry=0035F408 waiting_sema=11
+thread 4   status=04 prio=12  entry=00363B74 waiting_sema=14
+sema   1   count=1    max=1    waiters=0
+sema   2   count=1    max=1    waiters=0
+sema   3   count=0    max=255  waiters=1
+sema   4   count=1    max=127  waiters=0
+sema   5   count=1    max=1    waiters=0
+sema   6   count=1    max=1    waiters=0
+sema   7   count=1    max=1    waiters=0
+sema   8   count=0    max=1    waiters=0
+sema   9   count=1    max=1    waiters=0
+sema   10  count=1    max=1    waiters=0
+sema   11  count=0    max=2147483647 waiters=1
+sema   12  count=1    max=1    waiters=0
+sema   13  count=1    max=1    waiters=0
+sema   14  count=0    max=1    waiters=1
+sema   15  count=1    max=1    waiters=0
+sema   16  count=0    max=1    waiters=0
+---- unhandled syscall usage ----
+---- syscall usage ----
+   syscall   2  x1
+   syscall  16  x1
+   syscall  18  x37
+   syscall  19  x37
+   syscall  20  x1
+   syscall  22  x37
+   syscall  23  x37
+   syscall  32  x4
+   syscall  34  x4
+   syscall  41  x2
+   syscall  47  x14
+   syscall  48  x1
+   syscall  50  x1
+   syscall  60  x1
+   syscall  61  x1
+   syscall  62  x2
+   syscall  64  x84
+   syscall  65  x68
+   syscall  66  x9993
+   syscall  67  x10
+   syscall  68  x9985
+   syscall  69  x21
+   syscall  71  x68
+   syscall  74  x2
+   syscall  75  x2
+   syscall  90  x3
+   syscall  91  x12
+   syscall 100  x19177
+   syscall 113  x1
+   syscall 116  x18
+   syscall 118  x15
+   syscall 119  x15
+   syscall 131  x43
+display: 9235 displayed-target transitions = 56.5/s over 163.5 s (not a simulation-speed measurement). DISPFB written 217 times, 211 of them a change of buffer.
+cpu: 122.8 s of CPU over 163.5 s wall = 0.75 cores busy (the guest spin-waits, so this is not headroom)
+---- call ring (run summary), most recent last, 64 of 4096 entries ----
+   0034F250
+        (repeated 33 more)
+   00320538  COt::_Open
+   00320098  CDoubleBuff::_Open
+   003205D0  COt::_Close
+   003200D8  CDoubleBuff::_Close
+   00320648  COt::_Relink
+   00320098  CDoubleBuff::_Open
+   003200D8  CDoubleBuff::_Close
+   00327540  DrawCtrl::_OpenVifPkt
+   00320170
+   003275C8  DrawCtrl::_CloseVifPkt
+   0032B390
+   00388A88
+        (repeated 1 more)
+   00327610
+   00388A88
+        (repeated 1 more)
+   00327540  DrawCtrl::_OpenVifPkt
+   0032B9B8
+   00320170
+   003275C8  DrawCtrl::_CloseVifPkt
+   00327540  DrawCtrl::_OpenVifPkt
+   00320170
+   003275C8  DrawCtrl::_CloseVifPkt
+   003265E8  DrawCtrl::_Flush
+   0032CB00  sceGsSyncPath
+   0032CA68  sceGsSyncV
+   0032C508  sceGsGetGParam
+   0032FE30  VSync
+   00337058  DIntr
+   003370B0  EIntr
+vk: frame written to ps2_frame.ppm (512x448)
