@@ -189,6 +189,12 @@ The input system opens one connected gamepad at startup and scans the remaining
 connected devices when the active gamepad is removed. It also handles devices
 connected after startup.
 
+## Tests
+
+`cmake --build build && ctest --test-dir build` runs `ac5_native_tests`
+(tiled image layout round-trips, palette decode, ADPCM, model shading). It
+needs only the core libraries.
+
 ## Porting rule
 
 Treat `generated/ps2_code_*.c` as behavioral evidence, not as native game

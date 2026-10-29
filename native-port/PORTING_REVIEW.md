@@ -194,6 +194,28 @@ project does not build or link any of those files.
   disk reads are synchronous, and it does not reproduce the guest/CDVD state
   machine.
 
+## Data-format modules ported from runtime evidence
+
+These pieces come from the runtime's pure-data code (layout tables and
+arithmetic, not guest CPU or hardware state) and are covered by
+`tests/native_tests.cpp` (`ctest`):
+
+- `gs_image` - the tiled page/block/pixel layout of the game's image memory
+  for 32/16/16S-bit and 8/4-bit indexed images, palette lookup (including the
+  8-bit palette bit-3/4 exchange) and RGBA8 conversion. `tiled_bit_offset` was
+  differentially checked against the original address routine over 450,000
+  pixel positions for all five formats with identical results. This is the
+  decoder the unknown `pmtex*.bin` format will need once real files are
+  available.
+- `adpcm` - the 16-byte-block sound codec (filter table, shift, loop flags).
+- `model_shading` - the plain and lit paths of the model vertex program
+  (perspective transform, fog, depth scaling, three cubed-falloff lights plus
+  ambient) as ordinary math. The environment-mapped path is not ported yet.
+
+Still blocked on supplied game files: `generated/`, `DATA.TBL`/`DATA.PAC`
+and `SLUS_208.51` are not in this checkout, so the model/texture container
+formats cannot be validated and no end-to-end asset decode exists yet.
+
 ## Current limits and next work
 
 The renderer uses per-draw texture IDs with scene-wide Vulkan descriptor

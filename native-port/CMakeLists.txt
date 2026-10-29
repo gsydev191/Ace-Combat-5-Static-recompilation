@@ -11,7 +11,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 option(AC5_BUILD_RENDERER "Build the SDL3/Vulkan native renderer" ON)
 
 add_library(ac5_asset_core STATIC
+    src/adpcm.cpp
     src/data_archive.cpp
+    src/gs_image.cpp
     src/ulz.cpp)
 add_library(ac5::asset_core ALIAS ac5_asset_core)
 set_target_properties(ac5_asset_core PROPERTIES EXPORT_NAME asset_core)
@@ -21,6 +23,7 @@ target_include_directories(ac5_asset_core PUBLIC
 target_compile_features(ac5_asset_core PUBLIC cxx_std_20)
 
 add_library(ac5_game_core STATIC
+    src/model_shading.cpp
     src/obj_loader.cpp
     src/texture_loader.cpp)
 add_library(ac5::game_core ALIAS ac5_game_core)
@@ -31,6 +34,11 @@ target_include_directories(ac5_game_core PUBLIC
 target_compile_features(ac5_game_core PUBLIC cxx_std_20)
 
 add_executable(ac5_extract src/extract_main.cpp)
+
+enable_testing()
+add_executable(ac5_native_tests tests/native_tests.cpp)
+target_link_libraries(ac5_native_tests PRIVATE ac5_asset_core ac5_game_core)
+add_test(NAME ac5_native_tests COMMAND ac5_native_tests)
 target_link_libraries(ac5_extract PRIVATE ac5_asset_core)
 
 install(TARGETS ac5_asset_core ac5_game_core
@@ -40,7 +48,10 @@ install(TARGETS ac5_asset_core ac5_game_core
 install(TARGETS ac5_extract
     RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 install(FILES
+    src/adpcm.hpp
     src/data_archive.hpp
+    src/gs_image.hpp
+    src/model_shading.hpp
     src/ulz.hpp
     src/math.hpp
     src/scene.hpp
