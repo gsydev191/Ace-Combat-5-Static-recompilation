@@ -1,0 +1,4 @@
+@PACKAGE_INIT@
+
+include("${CMAKE_CURRENT_LIST_DIR}/ac5_nativeCoreTargets.cmake")
+check_required_components(ac5_native)

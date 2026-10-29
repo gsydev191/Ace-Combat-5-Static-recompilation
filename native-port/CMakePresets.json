@@ -1,0 +1,42 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "renderer",
+      "displayName": "Native renderer and tools",
+      "description": "Build the SDL3/Vulkan sample renderer and native asset tools.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/renderer",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "AC5_BUILD_RENDERER": "ON"
+      }
+    },
+    {
+      "name": "core",
+      "displayName": "Dependency-free native core",
+      "description": "Build the archive tools and reusable C++ libraries without SDL3 or Vulkan.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/core",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "AC5_BUILD_RENDERER": "OFF"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "renderer",
+      "configurePreset": "renderer"
+    },
+    {
+      "name": "core",
+      "configurePreset": "core"
+    }
+  ]
+}

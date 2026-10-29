@@ -1,0 +1,8 @@
+build*/
+cmake-build*/
+*.exe
+*.pdb
+
+# The parent reverse-engineering repository ignores converted OBJ/PPM assets.
+!assets/demo.obj
+!assets/demo.ppm

@@ -1,0 +1,193 @@
+#include "application.hpp"
+
+#include "input.hpp"
+#include "obj_loader.hpp"
+#include "texture_loader.hpp"
+#include "vulkan_renderer.hpp"
+
+#include <SDL3/SDL.h>
+
+#include <cstdio>
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <string>
+#include <string_view>
+#include <utility>
+
+using namespace ac5;
+
+namespace {
+
+enum class DemoSceneState : std::uint8_t { Viewing, Exiting };
+enum class DemoSceneSubstate : std::uint8_t { Frame };
+
+using DemoStateMachine = SceneStateMachine<DemoSceneState, DemoSceneSubstate>;
+
+struct DemoFrame {
+    Scene& scene;
+    TransformId model_transform;
+    float delta_seconds = 0.0f;
+    FlightInput controls{};
+    float pitch_angle = 0.0f;
+    float roll_angle = 0.0f;
+    float yaw_angle = 0.0f;
+};
+
+void update_demo_scene(DemoFrame& frame, DemoStateMachine&) {
+    constexpr float demo_rotation_rate = 1.2f;
+    frame.pitch_angle += frame.controls.pitch * demo_rotation_rate * frame.delta_seconds;
+    frame.roll_angle += frame.controls.roll * demo_rotation_rate * frame.delta_seconds;
+    frame.yaw_angle += frame.controls.yaw * demo_rotation_rate * frame.delta_seconds;
+    const Mat4 pitch = Mat4::rotation_x(frame.pitch_angle);
+    const Mat4 yaw = Mat4::rotation_y(frame.yaw_angle);
+    const Mat4 roll = Mat4::rotation_z(frame.roll_angle);
+    frame.scene.set_transform(frame.model_transform,
+                              Mat4::multiply(Mat4::multiply(yaw, pitch), roll));
+}
+
+} // namespace
+
+int Application::run(int argc, char** argv) {
+    std::string model_path;
+    std::string texture_path;
+    const auto usage = [](FILE* stream) {
+        std::fprintf(stream,
+                     "usage: ac5_native [--model path.obj] [--texture image.ppm|image.tga]\n"
+                     "       ac5_native --help\n");
+    };
+    for (int i = 1; i < argc; ++i) {
+        const std::string_view argument(argv[i]);
+        if (argument == "--help" || argument == "-h") {
+            usage(stdout);
+            return 0;
+        }
+        if (argument == "--model" || argument == "--texture") {
+            if (i + 1 >= argc) {
+                std::fprintf(stderr, "missing path after %s\n", argv[i]);
+                usage(stderr);
+                return 2;
+            }
+            if (argument == "--model") model_path = argv[++i];
+            else texture_path = argv[++i];
+            continue;
+        }
+        std::fprintf(stderr, "unknown argument: %s\n", argv[i]);
+        usage(stderr);
+        return 2;
+    }
+
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_GAMEPAD)) {
+        std::fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
+        return 1;
+    }
+
+    Scene scene;
+    if (model_path.empty()) {
+        const char* base = SDL_GetBasePath();
+        model_path = base ? std::string(base) + "assets/demo.obj" : "assets/demo.obj";
+    }
+    const TransformId model_transform = scene.add_transform();
+    std::string load_error;
+    if (!load_obj_scene(model_path, scene, load_error, texture_path.empty(), model_transform)) {
+        std::fprintf(stderr, "Model load failed: %s\n", load_error.c_str());
+        SDL_Quit();
+        return 1;
+    }
+    if (!texture_path.empty()) {
+        TextureData texture;
+        if (!load_texture_image(texture_path, texture, load_error)) {
+            std::fprintf(stderr, "Texture load failed: %s\n", load_error.c_str());
+            SDL_Quit();
+            return 1;
+        }
+        scene.set_texture(std::move(texture));
+        scene.set_all_draw_textures(0);
+    }
+
+    SDL_Window* window = SDL_CreateWindow(
+        "AC5 Native", 1280, 720,
+        SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+    if (!window) {
+        std::fprintf(stderr, "SDL_CreateWindow: %s\n", SDL_GetError());
+        SDL_Quit();
+        return 1;
+    }
+
+    int result = 0;
+    {
+        VulkanRenderer renderer;
+        if (!renderer.initialize(window)) {
+            std::fprintf(stderr, "Vulkan initialization failed: %s\n",
+                         renderer.error().c_str());
+            result = 1;
+        } else {
+            DemoStateMachine scene_state{DemoSceneState::Viewing};
+            SceneDispatcher<DemoSceneState, DemoSceneSubstate, DemoFrame> dispatcher;
+            if (!dispatcher.register_handler(DemoSceneState::Viewing,
+                                             DemoSceneSubstate::Frame,
+                                             update_demo_scene)) {
+                std::fprintf(stderr, "Could not register the demo scene handler\n");
+                result = 1;
+                scene_state.request_transition(DemoSceneState::Exiting);
+            }
+            DemoFrame frame{scene, model_transform};
+            InputSystem input;
+            if (scene_state.current_state() == DemoSceneState::Viewing &&
+                !renderer.upload_scene(scene)) {
+                std::fprintf(stderr, "Mesh upload failed: %s\n", renderer.error().c_str());
+                result = 1;
+                scene_state.request_transition(DemoSceneState::Exiting);
+            }
+            scene_state.commit_transition();
+            const Camera camera{};
+            const Uint64 counter_frequency = SDL_GetPerformanceFrequency();
+            Uint64 previous_counter = SDL_GetPerformanceCounter();
+            while (scene_state.current_state() == DemoSceneState::Viewing) {
+                const Uint64 current_counter = SDL_GetPerformanceCounter();
+                const float delta_seconds = counter_frequency != 0
+                    ? std::clamp(static_cast<float>(current_counter - previous_counter) /
+                                     static_cast<float>(counter_frequency),
+                                 0.0f, 0.1f)
+                    : 0.0f;
+                previous_counter = current_counter;
+                SDL_Event event;
+                while (SDL_PollEvent(&event)) {
+                    input.handle_event(event);
+                    if (event.type == SDL_EVENT_QUIT ||
+                        (event.type == SDL_EVENT_KEY_DOWN &&
+                         event.key.key == SDLK_ESCAPE)) {
+                        scene_state.request_transition(DemoSceneState::Exiting);
+                    } else if (event.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
+                        renderer.request_resize();
+                    }
+                }
+                int pixel_width = 0, pixel_height = 0;
+                SDL_GetWindowSizeInPixels(window, &pixel_width, &pixel_height);
+                const float aspect = pixel_width > 0 && pixel_height > 0
+                    ? static_cast<float>(pixel_width) / static_cast<float>(pixel_height) : 1.0f;
+                const Mat4 view_projection = camera.view_projection(aspect);
+                frame.delta_seconds = delta_seconds;
+                frame.controls = input.sample();
+                if (scene_state.commit_transition()) break;
+                if (!dispatcher.dispatch(frame, scene_state)) {
+                    std::fprintf(stderr, "No handler for the active demo scene state\n");
+                    result = 1;
+                    break;
+                }
+                if (!renderer.draw_frame(view_projection, scene)) {
+                    std::fprintf(stderr, "Vulkan frame failed: %s\n",
+                                 renderer.error().c_str());
+                    result = 1;
+                    scene_state.request_transition(DemoSceneState::Exiting);
+                    scene_state.commit_transition();
+                }
+            }
+            renderer.wait_idle();
+        }
+    }
+
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+    return result;
+}
