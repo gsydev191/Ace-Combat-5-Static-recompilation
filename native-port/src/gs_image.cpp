@@ -186,7 +186,8 @@ std::uint32_t palette_entry(const PaletteView& pal, PixelFormat indexed, std::ui
     const bool is16 = pal.format == PixelFormat::Rgba16 || pal.format == PixelFormat::Rgba16S;
     const unsigned cx = indexed == PixelFormat::Index4 ? e % 8u : e % 16u;
     const unsigned cy = indexed == PixelFormat::Index4 ? e / 8u : e / 16u;
-    TiledImageView v{pal.memory, pal.base, 64, is16 ? PixelFormat::Rgba16 : PixelFormat::Rgba32};
+    TiledImageView v{pal.memory, pal.base, 64,
+                     is16 ? pal.format : PixelFormat::Rgba32};
     return pixel_to_rgba8(tiled_read(v, cx, cy), v.format);
 }
 
@@ -214,6 +215,25 @@ bool decode_tiled_image(const TiledImageView& image, const PaletteView* pal, std
         pal->format != PixelFormat::Rgba16 && pal->format != PixelFormat::Rgba16S) {
         error = "palette must use a 16-bit or 32-bit RGBA format";
         return false;
+    }
+    if (indexed) {
+        std::uint64_t palette_end_bit = 0;
+        const std::uint32_t entry_count = image.format == PixelFormat::Index4 ? 16u : 256u;
+        for (std::uint32_t i = 0; i < entry_count; ++i) {
+            std::uint32_t entry = i;
+            if (image.format == PixelFormat::Index8)
+                entry = (entry & ~0x18u) | ((entry & 0x08u) << 1) | ((entry & 0x10u) >> 1);
+            const std::uint32_t cx = image.format == PixelFormat::Index4 ? entry % 8u : entry % 16u;
+            const std::uint32_t cy = image.format == PixelFormat::Index4 ? entry / 8u : entry / 16u;
+            const std::uint64_t end_bit = tiled_bit_offset(pal->format, pal->base, 64, cx, cy) +
+                                          bits_per_pixel(pal->format);
+            palette_end_bit = std::max(palette_end_bit, end_bit);
+        }
+        const std::uint64_t palette_end_byte = (palette_end_bit + 7u) / 8u;
+        if (palette_end_byte > pal->memory.size()) {
+            error = "palette memory is too small for its indexed image";
+            return false;
+        }
     }
     if (image.stride == 0 || image.stride % 64u != 0) {
         error = "stride must be a multiple of 64 pixels";
