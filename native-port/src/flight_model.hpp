@@ -27,7 +27,7 @@ struct AircraftFlightInput {
 };
 
 // Advance the airborne speed/rate/attitude portion of one native flight tick.
-// Ground handling, trim/stall corrections, and terrain collision are separate.
+// Ground handling, approach-control mode, and terrain collision are separate.
 [[nodiscard]] bool advance_aircraft_flight_tick(
     const AircraftFlightRules& rules, const AircraftFlightInput& input,
     AircraftFlightState& state) noexcept;

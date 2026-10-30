@@ -124,6 +124,41 @@ std::array<double, 3> row_multiply(const std::array<double, 3>& vector,
     return result;
 }
 
+void apply_airborne_trim_and_stall(const AircraftFlightRules& rules,
+                                   double stall_factor, int ticks_per_second,
+                                   const Matrix3& body_matrix,
+                                   std::array<double, 3>& rates) {
+    std::array<double, 3> reference =
+        row_multiply({0.0, 0.0, -1.0}, body_matrix);
+    reference[1] -= 0.19999999;
+    reference = row_multiply(reference, transpose(body_matrix));
+    const double length = std::sqrt(reference[0] * reference[0] +
+                                    reference[1] * reference[1] +
+                                    reference[2] * reference[2]);
+    if (length > 0.0 && std::isfinite(length)) {
+        for (double& component : reference) component /= length;
+        const double baseline_y = -0.19999999 / std::sqrt(1.04);
+        rates[1] += ((-reference[0] * rules.trim_yaw_gain) / 100.0 * 60.0) /
+                    ticks_per_second;
+        rates[0] += (((reference[1] - baseline_y) * rules.trim_pitch_gain) /
+                     100.0 * 60.0) / ticks_per_second;
+    }
+
+    if (stall_factor > 0.5) {
+        std::array<double, 3> nose = row_multiply({0.0, 0.0, -1.0}, body_matrix);
+        const double excess = 2.0 * (stall_factor - 0.5);
+        nose[1] -= (excess * excess * rules.stall_drop_percent / 100.0 * 60.0) /
+                   ticks_per_second;
+        const std::array<double, 3> local = row_multiply(nose, transpose(body_matrix));
+        rates[0] = std::atan2(local[1],
+                              std::sqrt(local[0] * local[0] + local[2] * local[2]));
+        double yaw_rate = std::atan2(local[0], local[2]) + pi;
+        if (yaw_rate > pi) yaw_rate -= 2.0 * pi;
+        rates[1] = yaw_rate;
+        rates[2] = 0.0;
+    }
+}
+
 bool finite(const std::array<double, 3>& values) {
     return std::all_of(values.begin(), values.end(),
                        [](double value) { return std::isfinite(value); });
@@ -168,6 +203,9 @@ bool advance_aircraft_flight_tick(const AircraftFlightRules& rules,
     next.rates = {pitch.rate_radians_per_tick,
                   yaw.rate_radians_per_tick,
                   roll.rate_radians_per_tick};
+    apply_airborne_trim_and_stall(rules, next.stall_factor,
+                                  input.ticks_per_second,
+                                  euler_matrix(state.euler), next.rates);
     if (next.rates[0] != 0.0 || next.rates[1] != 0.0 || next.rates[2] != 0.0)
         next.euler = to_euler(multiply(euler_matrix(next.rates),
                                        euler_matrix(state.euler)));
