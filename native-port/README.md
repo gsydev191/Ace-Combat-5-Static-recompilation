@@ -34,7 +34,7 @@ DATA.PAC/ULZ reader live entirely in this directory. The loader currently
 supports static bundles with unambiguous part ownership and the first bundled
 aircraft texture. Unowned shape-variant chains are skipped for the neutral
 static pose. Nested aircraft LOD bundles include all five meshes and textures;
-animation and game-accurate gameplay systems remain unported.
+aircraft animation and game-accurate gameplay systems are still in progress.
 
 The portable `model_shading` library exposes the plain, lit, and environment
 vertex-program paths as value-in/value-out math. Environment mode returns the
@@ -113,16 +113,18 @@ In this mode SDL pitch, roll, and yaw controls plus throttle drive the fixed
 P to toggle the recovered approach-control law. The flight viewer keeps each
 ACM part's local transform and parent link as separate scene draws. It decodes
 and evaluates translation and Euler-rotation tracks from the recovered direct
-stick and throttle channels. Aircraft-specific authority curves, gear and
-flap state still need their companion animation configuration. Shape tracks
-switch to the nearest referenced alternate chain; retail blends between keys,
-so continuous shape morphing needs a dynamic mesh update path. The ordinary
-asset viewer remains the default when `--flight-rules` is omitted.
+stick and throttle channels. Shape tracks interpolate compatible alternate
+chains continuously through per-frame dynamic vertex buffers; meshes with
+different topology use a nearest-key fallback. Aircraft-specific authority
+curves, gear and flap state still need their companion animation configuration.
+The ordinary asset viewer remains the default when `--flight-rules` is omitted.
 The native ACM loader decodes the observed VIF position, normal, color and UV
 streams, triangle strips, chain-to-part mapping, and static part hierarchy.
 It rejects duplicate or unresolved geometry-chain ownership, and
-loads the first supported GIM from the bundle for the aircraft texture. Model
-animation remains unported. You can override OBJ material maps and bundled
+loads the first supported GIM from the bundle for the aircraft texture. ACM
+translation, rotation, and compatible shape animation are supported in flight
+mode; additional controller and state-driven animation remains open. You can
+override OBJ material maps and bundled
 ACM textures with any of `--texture path/to/image.ppm`,
 `--texture path/to/image.tga`, or `--texture path/to/image.gim`. The native GIM
 decoder handles indexed 4bpp/8bpp retail variants

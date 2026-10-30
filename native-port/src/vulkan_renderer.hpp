@@ -5,6 +5,7 @@
 #include <SDL3/SDL_vulkan.h>
 #include <vulkan/vulkan.h>
 
+#include <array>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -20,8 +21,8 @@ public:
     VulkanRenderer& operator=(const VulkanRenderer&) = delete;
 
     bool initialize(SDL_Window* window);
-    // Uploads mesh and texture data. Call again after changing any mesh or
-    // texture asset in the scene.
+    // Uploads mesh and texture data. Call again after changing static meshes,
+    // mesh topology, or textures. Dynamic mesh vertices may change per frame.
     bool upload_scene(const Scene& scene);
     // Draw items and transforms may change between frames; their IDs must refer
     // to the mesh and texture data most recently uploaded with upload_scene().
@@ -45,6 +46,12 @@ private:
         std::uint32_t index_count = 0;
         Vec3 local_center{};
         bool has_transparency = false;
+        bool dynamic = false;
+        std::array<VkBuffer, frames_in_flight> dynamic_vertex_buffers{};
+        std::array<VkDeviceMemory, frames_in_flight> dynamic_vertex_memories{};
+        std::array<void*, frames_in_flight> dynamic_vertex_mappings{};
+        std::array<bool, frames_in_flight> dynamic_vertex_coherent{};
+        VkDeviceSize dynamic_vertex_bytes = 0;
     };
 
     struct GpuTexture {

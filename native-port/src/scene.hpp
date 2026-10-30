@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <span>
 #include <stdexcept>
 #include <utility>
 #include <vector>
@@ -54,13 +55,45 @@ struct DrawItem {
 class Scene {
 public:
     MeshId add_mesh(MeshData mesh) {
+        return add_mesh(std::move(mesh), false);
+    }
+
+    // Dynamic meshes keep fixed vertex and index counts after creation. The
+    // renderer allocates one writable vertex buffer per frame in flight.
+    MeshId add_dynamic_mesh(MeshData mesh) {
+        return add_mesh(std::move(mesh), true);
+    }
+
+    [[nodiscard]] bool is_dynamic_mesh(MeshId id) const {
+        return dynamic_meshes_.at(id);
+    }
+
+    [[nodiscard]] std::span<Vertex> dynamic_vertices(MeshId id) {
+        if (!dynamic_meshes_.at(id))
+            throw std::invalid_argument("mesh is not marked dynamic");
+        return meshes_.at(id).vertices;
+    }
+
+    [[nodiscard]] std::span<const Vertex> dynamic_vertices(MeshId id) const {
+        if (!dynamic_meshes_.at(id))
+            throw std::invalid_argument("mesh is not marked dynamic");
+        return meshes_.at(id).vertices;
+    }
+
+private:
+    MeshId add_mesh(MeshData mesh, bool dynamic) {
         if (meshes_.size() > std::numeric_limits<MeshId>::max())
             throw std::length_error("scene exceeds the mesh ID limit");
         const MeshId id = static_cast<MeshId>(meshes_.size());
+        meshes_.reserve(meshes_.size() + 1);
+        dynamic_meshes_.reserve(dynamic_meshes_.size() + 1);
         meshes_.push_back(std::move(mesh));
+        dynamic_meshes_.push_back(dynamic);
         asset_revision_ = next_asset_revision();
         return id;
     }
+
+public:
 
     TransformId add_transform(Mat4 transform = Mat4::identity(),
                              TransformId parent = no_parent_transform) {
@@ -236,6 +269,7 @@ public:
     void clear_assets() {
         TextureData default_texture;
         meshes_.clear();
+        dynamic_meshes_.clear();
         draws_.clear();
         textures_.resize(1);
         textures_[0] = std::move(default_texture);
@@ -245,6 +279,7 @@ public:
     std::uint64_t asset_revision() const { return asset_revision_; }
 
     const std::vector<MeshData>& meshes() const { return meshes_; }
+    const std::vector<bool>& dynamic_meshes() const { return dynamic_meshes_; }
     const std::vector<DrawItem>& draws() const { return draws_; }
     const std::vector<TextureData>& textures() const { return textures_; }
     const std::vector<Mat4>& transforms() const { return transforms_; }
@@ -259,6 +294,7 @@ private:
     }
 
     std::vector<MeshData> meshes_;
+    std::vector<bool> dynamic_meshes_;
     std::vector<DrawItem> draws_;
     std::vector<TextureData> textures_{TextureData{}};
     std::vector<Mat4> transforms_{Mat4::identity()};

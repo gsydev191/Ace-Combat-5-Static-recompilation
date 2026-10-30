@@ -36,6 +36,7 @@ int main(int argc, char** argv) {
         std::size_t shape_variants = 0;
         std::size_t translation_tracks = 0, rotation_tracks = 0, shape_tracks = 0;
         std::size_t translation_keys = 0, rotation_keys = 0, shape_keys = 0;
+        std::size_t continuous_shape_parts = 0;
         for (const auto& track : model.translation_tracks)
             translation_keys += track.keys.size();
         for (const auto& track : model.rotation_tracks)
@@ -50,15 +51,32 @@ int main(int argc, char** argv) {
             translation_tracks += part.translation_track != ac5::AcmModelPart::no_parent;
             rotation_tracks += part.rotation_track != ac5::AcmModelPart::no_parent;
             shape_tracks += part.shape_track != ac5::AcmModelPart::no_parent;
+            if (part.shape_track != ac5::AcmModelPart::no_parent &&
+                !part.shape_variants.empty()) {
+                bool compatible = true;
+                for (const auto& variant : part.shape_variants)
+                    compatible = compatible &&
+                        variant.mesh.vertices.size() == part.mesh.vertices.size() &&
+                        variant.mesh.indices == part.mesh.indices;
+                const auto& track = model.shape_tracks[part.shape_track];
+                for (const auto& key : track.keys) {
+                    compatible = compatible && std::any_of(
+                        part.shape_variants.begin(), part.shape_variants.end(),
+                        [&key](const auto& variant) {
+                            return variant.chain_index == key.shape_index;
+                        });
+                }
+                continuous_shape_parts += compatible;
+            }
         }
         std::printf("parts: %zu\ngeometry parts: %zu\nvertices: %zu\ntriangles: %zu\n"
                     "part track references: translation %zu, rotation %zu, shape %zu\n"
-                    "shape variants: %zu\n"
+                    "shape variants: %zu, continuous-compatible parts: %zu\n"
                     "decoded tracks: translation %zu (%zu keys), rotation %zu (%zu keys), "
                     "shape %zu (%zu keys)\n",
                     model.parts.size(), geometry_parts, vertices, triangles,
                     translation_tracks, rotation_tracks, shape_tracks,
-                    shape_variants,
+                    shape_variants, continuous_shape_parts,
                     model.translation_tracks.size(), translation_keys,
                     model.rotation_tracks.size(), rotation_keys,
                     model.shape_tracks.size(), shape_keys);

@@ -167,10 +167,11 @@ project does not build or link any of those files.
   The flight viewer also has a part-preserving path that retains local meshes,
   parent indices, part kinds, track-reference indices, and translation,
   rotation, and shape animation keys. The viewer evaluates translation and
-  Euler rotation tracks using the recovered direct stick/throttle channels;
-  shape tracks select the nearest referenced alternate mesh chain. Continuous
-  vertex blending between shape keys, aircraft-specific authority/configuration
-  curves, and state-driven gear/flap channels remain open.
+  Euler rotation tracks using the recovered direct stick/throttle channels.
+  Compatible shape targets interpolate all decoded vertex attributes through
+  per-frame dynamic Vulkan vertex buffers; differing topology falls back to
+  nearest-key target selection. Aircraft-specific authority/configuration
+  curves and state-driven gear/flap channels remain open.
   `ac5_model_info --parts` reports the hierarchy and decoded track/key counts
   without opening Vulkan.
 - A Vulkan 1.3 renderer using SDL3, dynamic rendering, synchronization2,

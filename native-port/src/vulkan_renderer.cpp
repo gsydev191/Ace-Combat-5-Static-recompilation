@@ -1102,6 +1102,7 @@ bool VulkanRenderer::upload_scene(const Scene& scene) {
             return false;
         }
         GpuMesh& target = new_meshes[i];
+        target.dynamic = scene.dynamic_meshes()[i];
         target.vertex_offset = vertices.size() * sizeof(Vertex);
         target.first_index = static_cast<std::uint32_t>(indices.size());
         target.index_count = static_cast<std::uint32_t>(source.indices.size());
@@ -1112,6 +1113,8 @@ bool VulkanRenderer::upload_scene(const Scene& scene) {
             static_cast<float>((static_cast<double>(minimum.z) + maximum.z) * 0.5)};
         vertices.insert(vertices.end(), source.vertices.begin(), source.vertices.end());
         indices.insert(indices.end(), source.indices.begin(), source.indices.end());
+        if (target.dynamic)
+            target.dynamic_vertex_bytes = source.vertices.size() * sizeof(Vertex);
     }
 
     const VkDeviceSize vertex_bytes = vertices.size() * sizeof(Vertex);
@@ -1137,10 +1140,23 @@ bool VulkanRenderer::upload_scene(const Scene& scene) {
     VkDescriptorPool new_descriptor_pool = VK_NULL_HANDLE;
     auto destroy_staged = [this, &new_vertex_buffer, &new_vertex_memory,
                            &new_index_buffer, &new_index_memory, &new_textures,
-                           &new_descriptor_pool]() {
+                           &new_descriptor_pool, &new_meshes]() {
         if (new_descriptor_pool) vkDestroyDescriptorPool(device_, new_descriptor_pool, nullptr);
         new_descriptor_pool = VK_NULL_HANDLE;
         for (GpuTexture& texture : new_textures) destroy_texture(texture);
+        for (GpuMesh& mesh : new_meshes) {
+            for (std::size_t i = 0; i < frames_in_flight; ++i) {
+                if (mesh.dynamic_vertex_mappings[i] && mesh.dynamic_vertex_memories[i])
+                    vkUnmapMemory(device_, mesh.dynamic_vertex_memories[i]);
+                if (mesh.dynamic_vertex_buffers[i])
+                    vkDestroyBuffer(device_, mesh.dynamic_vertex_buffers[i], nullptr);
+                if (mesh.dynamic_vertex_memories[i])
+                    vkFreeMemory(device_, mesh.dynamic_vertex_memories[i], nullptr);
+            }
+            mesh.dynamic_vertex_mappings.fill(nullptr);
+            mesh.dynamic_vertex_buffers.fill(VK_NULL_HANDLE);
+            mesh.dynamic_vertex_memories.fill(VK_NULL_HANDLE);
+        }
         if (new_vertex_buffer) vkDestroyBuffer(device_, new_vertex_buffer, nullptr);
         if (new_vertex_memory) vkFreeMemory(device_, new_vertex_memory, nullptr);
         if (new_index_buffer) vkDestroyBuffer(device_, new_index_buffer, nullptr);
@@ -1150,6 +1166,47 @@ bool VulkanRenderer::upload_scene(const Scene& scene) {
         new_index_buffer = VK_NULL_HANDLE;
         new_index_memory = VK_NULL_HANDLE;
     };
+
+    for (std::size_t mesh_index = 0; mesh_index < new_meshes.size(); ++mesh_index) {
+        GpuMesh& mesh = new_meshes[mesh_index];
+        if (!mesh.dynamic) continue;
+        for (std::size_t frame_slot = 0; frame_slot < frames_in_flight; ++frame_slot) {
+            VkMemoryPropertyFlags selected_properties = 0;
+            if (!create_buffer(mesh.dynamic_vertex_bytes, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+                               mesh.dynamic_vertex_buffers[frame_slot],
+                               mesh.dynamic_vertex_memories[frame_slot],
+                               &selected_properties)) {
+                destroy_staged();
+                return false;
+            }
+            mesh.dynamic_vertex_coherent[frame_slot] =
+                (selected_properties & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) != 0;
+            VkResult map_result = vkMapMemory(device_,
+                mesh.dynamic_vertex_memories[frame_slot], 0, VK_WHOLE_SIZE, 0,
+                &mesh.dynamic_vertex_mappings[frame_slot]);
+            if (map_result != VK_SUCCESS) {
+                destroy_staged();
+                return fail("vkMapMemory(dynamic mesh)", map_result);
+            }
+            std::memcpy(mesh.dynamic_vertex_mappings[frame_slot],
+                        scene.meshes()[mesh_index].vertices.data(),
+                        static_cast<std::size_t>(mesh.dynamic_vertex_bytes));
+            if (!mesh.dynamic_vertex_coherent[frame_slot]) {
+                auto range = vk_struct<VkMappedMemoryRange>(
+                    VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE);
+                range.memory = mesh.dynamic_vertex_memories[frame_slot];
+                range.offset = 0;
+                range.size = VK_WHOLE_SIZE;
+                const VkResult flush_result = vkFlushMappedMemoryRanges(
+                    device_, 1, &range);
+                if (flush_result != VK_SUCCESS) {
+                    destroy_staged();
+                    return fail("vkFlushMappedMemoryRanges(dynamic mesh)", flush_result);
+                }
+            }
+        }
+    }
 
     if (!create_buffer(vertex_bytes, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
                                       VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -1331,6 +1388,55 @@ bool VulkanRenderer::draw_frame(const Mat4& view_projection, const Scene& scene)
         error_ = "scene assets changed after upload_scene; upload the scene again";
         return false;
     }
+    for (std::size_t mesh_index = 0; mesh_index < meshes_.size(); ++mesh_index) {
+        GpuMesh& gpu_mesh = meshes_[mesh_index];
+        if (!gpu_mesh.dynamic) continue;
+        const std::vector<Vertex>& vertices = scene.meshes()[mesh_index].vertices;
+        if (vertices.size() * sizeof(Vertex) != gpu_mesh.dynamic_vertex_bytes ||
+            vertices.empty()) {
+            error_ = "dynamic mesh vertex layout changed after upload_scene";
+            return false;
+        }
+        Vec3 minimum{std::numeric_limits<float>::infinity(),
+                     std::numeric_limits<float>::infinity(),
+                     std::numeric_limits<float>::infinity()};
+        Vec3 maximum{-std::numeric_limits<float>::infinity(),
+                     -std::numeric_limits<float>::infinity(),
+                     -std::numeric_limits<float>::infinity()};
+        gpu_mesh.has_transparency = false;
+        for (const Vertex& vertex : vertices) {
+            if (!std::isfinite(vertex.position.x) || !std::isfinite(vertex.position.y) ||
+                !std::isfinite(vertex.position.z) || !std::isfinite(vertex.color.x) ||
+                !std::isfinite(vertex.color.y) || !std::isfinite(vertex.color.z) ||
+                !std::isfinite(vertex.uv.x) || !std::isfinite(vertex.uv.y) ||
+                !std::isfinite(vertex.normal.x) || !std::isfinite(vertex.normal.y) ||
+                !std::isfinite(vertex.normal.z) || !std::isfinite(vertex.alpha) ||
+                !std::isfinite(vertex.light_response) ||
+                !std::isfinite(vertex.environment_uv.x) ||
+                !std::isfinite(vertex.environment_uv.y) ||
+                !std::isfinite(vertex.environment_color.x) ||
+                !std::isfinite(vertex.environment_color.y) ||
+                !std::isfinite(vertex.environment_color.z) ||
+                !std::isfinite(vertex.environment_alpha) ||
+                vertex.alpha < 0.0f || vertex.alpha > 1.0f ||
+                vertex.environment_alpha < 0.0f || vertex.environment_alpha > 1.0f ||
+                vertex.light_response < 0.0f || vertex.light_response > 1.0f) {
+                error_ = "dynamic mesh contains an invalid or non-finite vertex attribute";
+                return false;
+            }
+            gpu_mesh.has_transparency |= vertex.alpha < 1.0f;
+            minimum.x = std::min(minimum.x, vertex.position.x);
+            minimum.y = std::min(minimum.y, vertex.position.y);
+            minimum.z = std::min(minimum.z, vertex.position.z);
+            maximum.x = std::max(maximum.x, vertex.position.x);
+            maximum.y = std::max(maximum.y, vertex.position.y);
+            maximum.z = std::max(maximum.z, vertex.position.z);
+        }
+        gpu_mesh.local_center = {
+            static_cast<float>((static_cast<double>(minimum.x) + maximum.x) * 0.5),
+            static_cast<float>((static_cast<double>(minimum.y) + maximum.y) * 0.5),
+            static_cast<float>((static_cast<double>(minimum.z) + maximum.z) * 0.5)};
+    }
     for (const DrawItem& draw : scene.draws()) {
         if (draw.mesh >= meshes_.size() || draw.texture >= textures_.size() ||
             (draw.environment_texture != no_environment_texture &&
@@ -1392,6 +1498,33 @@ bool VulkanRenderer::draw_frame(const Mat4& view_projection, const Scene& scene)
     Frame& frame = frames_[frame_index_];
     VkResult result = vkWaitForFences(device_, 1, &frame.in_flight, VK_TRUE, UINT64_MAX);
     if (result != VK_SUCCESS) return fail("vkWaitForFences", result);
+
+    for (std::size_t mesh_index = 0; mesh_index < meshes_.size(); ++mesh_index) {
+        GpuMesh& mesh = meshes_[mesh_index];
+        if (!mesh.dynamic) continue;
+        const std::span<const Vertex> vertices = scene.dynamic_vertices(
+            static_cast<MeshId>(mesh_index));
+        if (vertices.size_bytes() != mesh.dynamic_vertex_bytes) {
+            error_ = "dynamic mesh vertex count changed after upload_scene";
+            return false;
+        }
+        void* mapping = mesh.dynamic_vertex_mappings[frame_index_];
+        if (!mapping) {
+            error_ = "dynamic mesh has no mapped vertex storage for this frame";
+            return false;
+        }
+        std::memcpy(mapping, vertices.data(), vertices.size_bytes());
+        if (!mesh.dynamic_vertex_coherent[frame_index_]) {
+            auto range = vk_struct<VkMappedMemoryRange>(
+                VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE);
+            range.memory = mesh.dynamic_vertex_memories[frame_index_];
+            range.offset = 0;
+            range.size = VK_WHOLE_SIZE;
+            result = vkFlushMappedMemoryRanges(device_, 1, &range);
+            if (result != VK_SUCCESS)
+                return fail("vkFlushMappedMemoryRanges(dynamic frame)", result);
+        }
+    }
 
     std::uint32_t image_index = 0;
     result = vkAcquireNextImageKHR(device_, swapchain_, UINT64_MAX,
@@ -1484,8 +1617,10 @@ bool VulkanRenderer::draw_frame(const Mat4& view_projection, const Scene& scene)
         }
         const DrawPushConstants push_constants{
             submission.view_projection_model, Mat4::normal_matrix(submission.world)};
-        const VkDeviceSize offset = mesh.vertex_offset;
-        vkCmdBindVertexBuffers(command, 0, 1, &vertex_buffer_, &offset);
+        const VkBuffer draw_vertex_buffer = mesh.dynamic
+            ? mesh.dynamic_vertex_buffers[frame_index_] : vertex_buffer_;
+        const VkDeviceSize offset = mesh.dynamic ? 0 : mesh.vertex_offset;
+        vkCmdBindVertexBuffers(command, 0, 1, &draw_vertex_buffer, &offset);
         vkCmdBindIndexBuffer(command, index_buffer_, 0, VK_INDEX_TYPE_UINT32);
         const TextureId texture = environment_pass ? draw.environment_texture : draw.texture;
         vkCmdBindDescriptorSets(command, VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -1620,6 +1755,16 @@ void VulkanRenderer::destroy_pipeline() {
 void VulkanRenderer::destroy_meshes() {
     destroy_textures();
     if (device_ != VK_NULL_HANDLE) {
+        for (GpuMesh& mesh : meshes_) {
+            for (std::size_t i = 0; i < frames_in_flight; ++i) {
+                if (mesh.dynamic_vertex_mappings[i] && mesh.dynamic_vertex_memories[i])
+                    vkUnmapMemory(device_, mesh.dynamic_vertex_memories[i]);
+                if (mesh.dynamic_vertex_buffers[i])
+                    vkDestroyBuffer(device_, mesh.dynamic_vertex_buffers[i], nullptr);
+                if (mesh.dynamic_vertex_memories[i])
+                    vkFreeMemory(device_, mesh.dynamic_vertex_memories[i], nullptr);
+            }
+        }
         if (vertex_buffer_) vkDestroyBuffer(device_, vertex_buffer_, nullptr);
         if (vertex_memory_) vkFreeMemory(device_, vertex_memory_, nullptr);
         if (index_buffer_) vkDestroyBuffer(device_, index_buffer_, nullptr);

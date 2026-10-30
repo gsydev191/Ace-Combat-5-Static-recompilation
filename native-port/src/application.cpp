@@ -43,7 +43,10 @@ struct DemoFrame {
     std::vector<TransformId> part_transforms;
     struct ShapeDraw {
         std::size_t draw_index = 0;
-        std::vector<std::pair<std::int32_t, MeshId>> variants;
+        MeshId mesh = 0;
+        bool dynamic = false;
+        std::vector<std::pair<std::int32_t, MeshData>> shapes;
+        std::vector<std::pair<std::int32_t, MeshId>> static_variants;
     };
     std::vector<ShapeDraw> shape_draws;
     float delta_seconds = 0.0f;
@@ -131,26 +134,69 @@ void update_aircraft_part_animation(DemoFrame& frame) {
         frame.scene.set_transform(frame.part_transforms[i], Mat4::multiply(
             Mat4::translation(position), local_rotation));
 
-        const DemoFrame::ShapeDraw& shape_draw = frame.shape_draws[i];
+        DemoFrame::ShapeDraw& shape_draw = frame.shape_draws[i];
         if (part.shape_track == AcmModelPart::no_parent ||
-            shape_draw.variants.empty()) continue;
+            (shape_draw.shapes.empty() && shape_draw.static_variants.empty())) continue;
         const AcmAnimationTrack& track =
             frame.animated_model->shape_tracks[part.shape_track];
         if (track.keys.empty() || track.channel >= channels.size()) continue;
         const double channel = channels[track.channel];
         const auto upper = std::lower_bound(track.keys.begin(), track.keys.end(), channel,
             [](const AcmAnimationKey& key, double value) { return key.frame < value; });
-        const AcmAnimationKey* selected = nullptr;
-        if (upper == track.keys.begin()) selected = &*upper;
-        else if (upper == track.keys.end()) selected = &track.keys.back();
+        const AcmAnimationKey* low = nullptr;
+        const AcmAnimationKey* high = nullptr;
+        double fraction = 0.0;
+        if (upper == track.keys.begin()) low = high = &*upper;
+        else if (upper == track.keys.end()) low = high = &track.keys.back();
         else {
-            const AcmAnimationKey& low = *(upper - 1);
-            selected = channel - low.frame < upper->frame - channel ? &low : &*upper;
+            low = &*(upper - 1);
+            high = &*upper;
+            fraction = (channel - low->frame) /
+                       static_cast<double>(high->frame - low->frame);
         }
-        const auto variant = std::find_if(shape_draw.variants.begin(), shape_draw.variants.end(),
-            [selected](const auto& entry) { return entry.first == selected->shape_index; });
-        if (variant != shape_draw.variants.end())
-            frame.scene.set_draw_mesh(shape_draw.draw_index, variant->second);
+        const auto find_shape = [&shape_draw](std::int32_t chain) -> const MeshData* {
+            const auto found = std::find_if(shape_draw.shapes.begin(), shape_draw.shapes.end(),
+                [chain](const auto& entry) { return entry.first == chain; });
+            return found == shape_draw.shapes.end() ? nullptr : &found->second;
+        };
+        if (shape_draw.dynamic) {
+            const MeshData* first = find_shape(low->shape_index);
+            const MeshData* second = find_shape(high->shape_index);
+            if (!first || !second || first->vertices.size() != second->vertices.size()) continue;
+            std::span<Vertex> output = frame.scene.dynamic_vertices(shape_draw.mesh);
+            if (output.size() != first->vertices.size()) continue;
+            const auto mix = [fraction](float a, float b) {
+                return static_cast<float>(a + (b - a) * fraction);
+            };
+            const auto mix_vec2 = [&mix](Vec2 a, Vec2 b) {
+                return Vec2{mix(a.x, b.x), mix(a.y, b.y)};
+            };
+            const auto mix_vec3 = [&mix](Vec3 a, Vec3 b) {
+                return Vec3{mix(a.x, b.x), mix(a.y, b.y), mix(a.z, b.z)};
+            };
+            for (std::size_t vertex = 0; vertex < output.size(); ++vertex) {
+                const Vertex& a = first->vertices[vertex];
+                const Vertex& b = second->vertices[vertex];
+                Vertex& result = output[vertex];
+                result.position = mix_vec3(a.position, b.position);
+                result.color = mix_vec3(a.color, b.color);
+                result.uv = mix_vec2(a.uv, b.uv);
+                result.normal = mix_vec3(a.normal, b.normal);
+                result.alpha = mix(a.alpha, b.alpha);
+                result.light_response = mix(a.light_response, b.light_response);
+                result.environment_uv = mix_vec2(a.environment_uv, b.environment_uv);
+                result.environment_color = mix_vec3(a.environment_color, b.environment_color);
+                result.environment_alpha = mix(a.environment_alpha, b.environment_alpha);
+            }
+        } else {
+            const AcmAnimationKey* selected = fraction < 0.5 ? low : high;
+            const auto variant = std::find_if(shape_draw.static_variants.begin(),
+                shape_draw.static_variants.end(), [selected](const auto& entry) {
+                    return entry.first == selected->shape_index;
+                });
+            if (variant != shape_draw.static_variants.end())
+                frame.scene.set_draw_mesh(shape_draw.draw_index, variant->second);
+        }
     }
 }
 
@@ -335,16 +381,42 @@ int Application::run(int argc, char** argv) {
                     const TransformId transform = scene.add_transform(local, parent);
                     part_transforms.push_back(transform);
                     if (!part.mesh.indices.empty()) {
-                        const MeshId mesh_id = scene.add_mesh(std::move(part.mesh));
-                        shape_draws[part_transforms.size() - 1].draw_index =
-                            scene.draws().size();
-                        scene.add_draw(mesh_id, TextureId{0}, Mat4::identity(), transform);
-                        for (AcmModelPart::ShapeVariant& variant : part.shape_variants) {
-                            const MeshId variant_mesh =
-                                scene.add_mesh(std::move(variant.mesh));
-                            shape_draws[part_transforms.size() - 1].variants.emplace_back(
-                                variant.chain_index, variant_mesh);
+                        DemoFrame::ShapeDraw& shape = shape_draws[part_transforms.size() - 1];
+                        shape.draw_index = scene.draws().size();
+                        bool compatible_shapes = part.shape_track != AcmModelPart::no_parent &&
+                                                 !part.shape_variants.empty();
+                        for (const AcmModelPart::ShapeVariant& variant : part.shape_variants) {
+                            compatible_shapes = compatible_shapes &&
+                                variant.mesh.vertices.size() == part.mesh.vertices.size() &&
+                                variant.mesh.indices == part.mesh.indices;
                         }
+                        if (compatible_shapes) {
+                            const AcmAnimationTrack& track =
+                                animated_model->shape_tracks[part.shape_track];
+                            for (const AcmAnimationKey& key : track.keys) {
+                                compatible_shapes = compatible_shapes &&
+                                    std::any_of(part.shape_variants.begin(),
+                                        part.shape_variants.end(),
+                                        [&key](const AcmModelPart::ShapeVariant& variant) {
+                                            return variant.chain_index == key.shape_index;
+                                        });
+                            }
+                        }
+                        if (compatible_shapes) {
+                            shape.dynamic = true;
+                            shape.mesh = scene.add_dynamic_mesh(std::move(part.mesh));
+                            for (AcmModelPart::ShapeVariant& variant : part.shape_variants)
+                                shape.shapes.emplace_back(variant.chain_index,
+                                                          std::move(variant.mesh));
+                        } else {
+                            shape.mesh = scene.add_mesh(std::move(part.mesh));
+                            for (AcmModelPart::ShapeVariant& variant : part.shape_variants) {
+                                const MeshId variant_mesh = scene.add_mesh(std::move(variant.mesh));
+                                shape.static_variants.emplace_back(variant.chain_index,
+                                                                   variant_mesh);
+                            }
+                        }
+                        scene.add_draw(shape.mesh, TextureId{0}, Mat4::identity(), transform);
                     }
                 }
                 model_loaded = !scene.draws().empty();
