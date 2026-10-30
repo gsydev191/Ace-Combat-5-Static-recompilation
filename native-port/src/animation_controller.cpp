@@ -186,6 +186,21 @@ AircraftAnimationChannels aircraft_animation_targets(
     } else {
         set(8, 50.0 - 50.0 * input.pitch * canard_curve);
     }
+    const bool channel10_slip_override =
+        (input.controller_flags & 0x1000u) != 0 &&
+        (input.model_flags & 0x100u) != 0 && input.slip > 0.0f;
+    if (channel10_slip_override) {
+        set(10, 100.0);
+    } else if ((input.controller_flags & 0x8u) != 0) {
+        const double surface10 = std::clamp(
+            -static_cast<double>(input.pitch) - input.roll, -1.0, 1.0);
+        const double surface11 = std::clamp(
+            static_cast<double>(input.roll) - input.pitch, -1.0, 1.0);
+        set(10, 50.0 + 50.0 * surface10 * authority);
+        set(11, 50.0 + 50.0 * surface11 * authority);
+    } else {
+        set(10, 50.0 + 50.0 * input.pitch * authority);
+    }
     set(12, 50.0 - 50.0 * input.roll);
     set(13, 50.0 + 50.0 * input.roll);
     set(14, 50.0 * dry + 50.0 * afterburner);
