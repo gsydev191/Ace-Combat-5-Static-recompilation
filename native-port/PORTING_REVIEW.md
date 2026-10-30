@@ -213,7 +213,8 @@ project does not build or link any of those files.
   configurable carrier scale/bias, and envelope speed cap. Terrain collision
   and marker-based alignment remain separate. `AircraftFlightFlags` exposes
   independent contact and mode bytes, and its native setters preserve
-  unrelated bits as the recovered mode setter does.
+  unrelated bits as the recovered mode setter does. Successful flight ticks
+  also apply the recovered post-physics contact-flag transitions.
 - A bounded, resumable ULZ decoder and `DATA.TBL`/`DATA.PAC` reader. The
   decoder can yield after a caller-selected number of control words, and
   `ArchiveMemberLoad` exposes that budget at the member-loading boundary. Its

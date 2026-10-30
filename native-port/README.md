@@ -254,7 +254,9 @@ position with path lag and airborne sink terms. Approach mode captures the
 reference pitch and suppresses steady trim and inverted-flight sink.
 `AircraftFlightFlags` keeps contact and mode bits as separate native bytes;
 `set_aircraft_flight_mode` and `set_aircraft_approach_control` preserve unrelated
-bits when changing modes. The ground-contact option uses the recovered
+bits when changing modes. Each successful tick advances the recovered
+command-2 contact-bit sequence after applying that tick's physics. The
+ground-contact option uses the recovered
 per-tick acceleration and maximum
 speed clamp, with caller-supplied carrier scaling and bias; it does not perform
 terrain collision or marker-based alignment.

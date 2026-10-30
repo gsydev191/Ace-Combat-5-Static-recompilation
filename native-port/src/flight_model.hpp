@@ -13,6 +13,7 @@ struct AircraftFlightFlags {
 };
 
 struct AircraftFlightState {
+    AircraftFlightFlags flags{};
     std::array<double, 3> position{0.0, 3000.0, 0.0};
     std::array<double, 3> euler{}; // body pitch, yaw, roll in radians
     std::array<double, 3> path_euler{};
@@ -29,7 +30,6 @@ struct AircraftFlightInput {
     double yaw = 0.0;
     double throttle_lever = 0.0;
     int ticks_per_second = 60;
-    AircraftFlightFlags flags{};
     bool suppress_inverted_sink = false;
     bool reset_contact_speed = false;
     double contact_acceleration_scale = 1.0;
@@ -41,6 +41,7 @@ void set_aircraft_flight_mode(AircraftFlightFlags& flags,
                               std::uint8_t command) noexcept;
 void set_aircraft_approach_control(AircraftFlightFlags& flags,
                                    bool enabled) noexcept;
+void advance_aircraft_flight_flags(AircraftFlightFlags& flags) noexcept;
 
 // Advance one native flight tick. Contact bit 0 selects the recovered scalar
 // contact-speed law; terrain collision and ground-marker alignment are separate.

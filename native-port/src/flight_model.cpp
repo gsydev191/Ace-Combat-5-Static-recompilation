@@ -238,6 +238,18 @@ void set_aircraft_approach_control(AircraftFlightFlags& flags,
         : flags.contact & static_cast<std::uint8_t>(~0x20u));
 }
 
+void advance_aircraft_flight_flags(AircraftFlightFlags& flags) noexcept {
+    if ((flags.contact & 0x0fu) == 0x0fu && (flags.mode & 1u) != 0 &&
+        (flags.mode & 2u) == 0) {
+        flags.contact = static_cast<std::uint8_t>((flags.contact & 0xf1u) | 1u);
+    } else if ((flags.contact & 0x03u) == 0x02u && (flags.mode & 1u) != 0) {
+        flags.contact = static_cast<std::uint8_t>(flags.contact | 0x0du);
+    } else if ((flags.contact & 0x03u) == 0x03u &&
+               (flags.mode & 0x03u) == 0x01u) {
+        flags.contact = static_cast<std::uint8_t>(flags.contact & 0xfdu);
+    }
+}
+
 bool advance_aircraft_flight_tick(const AircraftFlightRules& rules,
                                   const AircraftFlightInput& input,
                                   AircraftFlightState& state) noexcept {
@@ -251,9 +263,9 @@ bool advance_aircraft_flight_tick(const AircraftFlightRules& rules,
         !std::isfinite(input.contact_acceleration_scale) ||
         !std::isfinite(input.contact_acceleration_bias)) return false;
 
-    const bool ground_contact = (input.flags.contact & 1u) != 0;
-    const bool reduced_speed_mode = (input.flags.mode & 1u) != 0;
-    const bool approach_control = (input.flags.contact & 0x20u) != 0;
+    const bool ground_contact = (state.flags.contact & 1u) != 0;
+    const bool reduced_speed_mode = (state.flags.mode & 1u) != 0;
+    const bool approach_control = (state.flags.contact & 0x20u) != 0;
     const FlightSpeedInput speed_input{
         state.position[1], state.euler[0], input.throttle_lever,
         state.speed_units_per_tick, input.ticks_per_second,
@@ -335,6 +347,7 @@ bool advance_aircraft_flight_tick(const AircraftFlightRules& rules,
         !finite(next.euler) || !finite(next.rates) ||
         !std::isfinite(next.speed_units_per_tick) ||
         !std::isfinite(next.stall_factor)) return false;
+    advance_aircraft_flight_flags(next.flags);
     state = next;
     return true;
 }
