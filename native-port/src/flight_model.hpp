@@ -14,6 +14,7 @@ struct AircraftFlightState {
     double speed_units_per_tick = 0.0;
     double stall_factor = 0.0;
     double path_lag = 1.0;
+    double approach_pitch = 0.0;
 };
 
 struct AircraftFlightInput {
@@ -24,10 +25,12 @@ struct AircraftFlightInput {
     int ticks_per_second = 60;
     bool reduced_speed_mode = false;
     bool suppress_inverted_sink = false;
+    bool approach_control = false;
 };
 
-// Advance the airborne speed/rate/attitude portion of one native flight tick.
-// Ground handling, approach-control mode, and terrain collision are separate.
+// Advance one native airborne speed/rate/attitude tick. Ground handling and
+// terrain collision are separate; approach_control selects the recovered
+// approach stick law and skips steady trim.
 [[nodiscard]] bool advance_aircraft_flight_tick(
     const AircraftFlightRules& rules, const AircraftFlightInput& input,
     AircraftFlightState& state) noexcept;

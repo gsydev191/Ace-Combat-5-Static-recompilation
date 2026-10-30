@@ -237,13 +237,15 @@ airborne speed envelope, including density, climb/dive effects, spool response,
 and stall factor, from recovered rules supplied by the caller.
 `advance_flight_axis` ports the speed-dependent pitch/roll/yaw rate lookup and
 input slew law. `advance_aircraft_flight_tick` composes those scalar updates,
-applies recovered airborne trim and stall nose-drop, integrates native body
-attitude, and advances position with path lag and airborne sink terms.
+applies recovered airborne trim and stall nose-drop, supports the explicit
+approach-control stick law, integrates native body attitude, and advances
+position with path lag and airborne sink terms. Approach mode captures the
+reference pitch and suppresses steady trim and inverted-flight sink.
 `load_aircraft_flight_rules` reads the standalone 400-byte
 aircraft `.pmb` parameter file, and `ac5_flight_info` reports its decoded
 speed and axis tables (for example, `ac5_flight_info f04g.pmb`). The demo does
-not yet run this flight model; ground contact, approach-control mode, terrain
-collision, and a runtime ruleset selection UI remain future work.
+not yet run this flight model; ground contact, terrain collision, and a
+runtime ruleset selection UI remain future work.
 The input system opens one connected gamepad at startup and scans the remaining
 connected devices when the active gamepad is removed. It also handles devices
 connected after startup.

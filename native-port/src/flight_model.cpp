@@ -127,7 +127,8 @@ std::array<double, 3> row_multiply(const std::array<double, 3>& vector,
 void apply_airborne_trim_and_stall(const AircraftFlightRules& rules,
                                    double stall_factor, int ticks_per_second,
                                    const Matrix3& body_matrix,
-                                   std::array<double, 3>& rates) {
+                                   std::array<double, 3>& rates,
+                                   bool apply_trim) {
     std::array<double, 3> reference =
         row_multiply({0.0, 0.0, -1.0}, body_matrix);
     reference[1] -= 0.19999999;
@@ -135,7 +136,7 @@ void apply_airborne_trim_and_stall(const AircraftFlightRules& rules,
     const double length = std::sqrt(reference[0] * reference[0] +
                                     reference[1] * reference[1] +
                                     reference[2] * reference[2]);
-    if (length > 0.0 && std::isfinite(length)) {
+    if (apply_trim && length > 0.0 && std::isfinite(length)) {
         for (double& component : reference) component /= length;
         const double baseline_y = -0.19999999 / std::sqrt(1.04);
         rates[1] += ((-reference[0] * rules.trim_yaw_gain) / 100.0 * 60.0) /
@@ -159,6 +160,50 @@ void apply_airborne_trim_and_stall(const AircraftFlightRules& rules,
     }
 }
 
+void approach_commands(const AircraftFlightInput& input,
+                       const std::array<double, 3>& body_euler,
+                       double& captured_pitch, double& pitch_command,
+                       double& roll_command, double& yaw_command) {
+    constexpr double pitch_low = -0.09999999403953552;
+    constexpr double pitch_high = 0.09999999403953552;
+    constexpr double yaw_scale = -0.7999999523162842;
+    constexpr double roll_scale = -0.7853980660438538;
+    constexpr double outer_deadzone = 0.06981316208839417;
+    constexpr double inner_deadzone = 0.01745329052209854;
+    constexpr double roll_gain = 3.141592502593994;
+    constexpr double pitch_deadzone = 0.01745329052209854;
+    constexpr double pitch_limit = 0.06981316208839417;
+    constexpr double pitch_scale = -0.06981316208839417;
+
+    yaw_command = input.roll * yaw_scale;
+    if (!(pitch_low < input.pitch && input.pitch < pitch_high)) {
+        captured_pitch = body_euler[0];
+        pitch_command = input.pitch;
+        roll_command = 0.0;
+        return;
+    }
+
+    const double target_roll = input.roll * roll_scale;
+    const double body_roll = body_euler[2];
+    double roll_stick = 0.0;
+    if (body_roll < target_roll - outer_deadzone) roll_stick = -1.0;
+    else if (body_roll < target_roll - inner_deadzone)
+        roll_stick = (body_roll - target_roll) * 0.25 * roll_gain / 180.0;
+    else if (body_roll < target_roll + inner_deadzone) roll_stick = 0.0;
+    else if (body_roll < target_roll + outer_deadzone)
+        roll_stick = (body_roll - target_roll) * 0.25 * roll_gain / 180.0;
+    else roll_stick = 1.0;
+    roll_command = -roll_stick;
+
+    const double ratio = std::sin(body_euler[0] - captured_pitch) /
+                         std::cos(std::abs(body_roll));
+    const double pitch_error = std::asin(std::clamp(ratio, -1.0, 1.0));
+    pitch_command = 0.0;
+    if (pitch_error < 0.0) pitch_command = 1.0;
+    else if (pitch_error < pitch_deadzone) pitch_command = 0.0;
+    else if (pitch_error < pitch_limit) pitch_command = pitch_error / pitch_scale;
+}
+
 bool finite(const std::array<double, 3>& values) {
     return std::all_of(values.begin(), values.end(),
                        [](double value) { return std::isfinite(value); });
@@ -172,7 +217,8 @@ bool advance_aircraft_flight_tick(const AircraftFlightRules& rules,
     if (!finite(state.position) || !finite(state.euler) ||
         !finite(state.path_euler) || !finite(state.rates) ||
         !std::isfinite(state.speed_units_per_tick) ||
-        !std::isfinite(state.path_lag) || !std::isfinite(input.pitch) ||
+        !std::isfinite(state.path_lag) || !std::isfinite(state.approach_pitch) ||
+        !std::isfinite(input.pitch) ||
         !std::isfinite(input.roll) || !std::isfinite(input.yaw) ||
         !std::isfinite(input.throttle_lever)) return false;
 
@@ -189,15 +235,22 @@ bool advance_aircraft_flight_tick(const AircraftFlightRules& rules,
             speed.full_control_speed_units_per_tick, current_rate,
             input.ticks_per_second};
     };
+    double pitch_command = input.pitch;
+    double roll_command = -input.roll;
+    double yaw_command = input.yaw;
+    AircraftFlightState next = state;
+    if (input.approach_control)
+        approach_commands(input, state.euler, next.approach_pitch,
+                          pitch_command, roll_command, yaw_command);
     const FlightAxisOutput pitch = advance_flight_axis(
-        rules.pitch, axis_input(input.pitch, state.rates[0]));
+        rules.pitch, axis_input(pitch_command, state.rates[0]));
     const FlightAxisOutput roll = advance_flight_axis(
-        rules.roll, axis_input(-input.roll, state.rates[2]));
+        rules.roll, axis_input(roll_command, state.rates[2]));
     const FlightAxisOutput yaw = advance_flight_axis(
-        rules.yaw, axis_input(input.yaw, state.rates[1]));
+        input.approach_control ? rules.pitch : rules.yaw,
+        axis_input(yaw_command, state.rates[1]));
     if (!pitch.valid || !roll.valid || !yaw.valid) return false;
 
-    AircraftFlightState next = state;
     next.speed_units_per_tick = speed.speed_units_per_tick;
     next.stall_factor = speed.stall_factor;
     next.rates = {pitch.rate_radians_per_tick,
@@ -205,7 +258,8 @@ bool advance_aircraft_flight_tick(const AircraftFlightRules& rules,
                   roll.rate_radians_per_tick};
     apply_airborne_trim_and_stall(rules, next.stall_factor,
                                   input.ticks_per_second,
-                                  euler_matrix(state.euler), next.rates);
+                                  euler_matrix(state.euler), next.rates,
+                                  !input.approach_control);
     if (next.rates[0] != 0.0 || next.rates[1] != 0.0 || next.rates[2] != 0.0)
         next.euler = to_euler(multiply(euler_matrix(next.rates),
                                        euler_matrix(state.euler)));
@@ -217,7 +271,7 @@ bool advance_aircraft_flight_tick(const AircraftFlightRules& rules,
         {0.0, 0.0, -next.speed_units_per_tick}, euler_matrix(next.path_euler));
     velocity[1] -= next.stall_factor * next.stall_factor *
                    (input.reduced_speed_mode ? 2.5 : 5.0);
-    if (!input.suppress_inverted_sink) {
+    if (!input.suppress_inverted_sink && !input.approach_control) {
         const double normalized_roll = next.euler[2] / pi;
         velocity[1] -= normalized_roll * normalized_roll *
             (rules.speed.inverted_sink_mps * 5.12 / input.ticks_per_second);
