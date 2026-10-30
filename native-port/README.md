@@ -252,6 +252,9 @@ applies recovered airborne trim and stall nose-drop, supports the explicit
 approach-control stick law, integrates native body attitude, and advances
 position with path lag and airborne sink terms. Approach mode captures the
 reference pitch and suppresses steady trim and inverted-flight sink.
+`AircraftFlightSession` supplies the reusable 60 Hz fixed-step clock for the
+game core; it bounds catch-up to 100 ms and leaves both state and accumulated
+time unchanged if a simulated tick rejects its input.
 `AircraftFlightFlags` keeps contact and mode bits as separate native bytes;
 `set_aircraft_flight_mode` and `set_aircraft_approach_control` preserve unrelated
 bits when changing modes. Each successful tick advances the recovered

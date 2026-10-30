@@ -3,6 +3,7 @@
 #include "acm_loader.hpp"
 #include "flight_model.hpp"
 #include "flight_rules_loader.hpp"
+#include "flight_session.hpp"
 #include "input.hpp"
 #include "obj_loader.hpp"
 #include "texture_loader.hpp"
@@ -34,11 +35,11 @@ using DemoStateMachine = SceneStateMachine<DemoSceneState, DemoSceneSubstate>;
 struct DemoFrame {
     Scene& scene;
     TransformId model_transform;
+    DemoFrame(Scene& scene_ref, TransformId transform)
+        : scene(scene_ref), model_transform(transform) {}
     Camera* camera = nullptr;
-    const AircraftFlightRules* flight_rules = nullptr;
-    AircraftFlightState flight_state{};
+    std::optional<AircraftFlightSession> flight_session;
     float delta_seconds = 0.0f;
-    float simulation_accumulator = 0.0f;
     FlightInput controls{};
     float pitch_angle = 0.0f;
     float roll_angle = 0.0f;
@@ -75,42 +76,37 @@ void select_demo_lod(Scene& scene, const DemoLod& lod, const Camera& camera) {
 }
 
 void update_demo_scene(DemoFrame& frame, DemoStateMachine& scene_state) {
-    if (frame.flight_rules) {
-        constexpr float fixed_step = 1.0f / 60.0f;
-        frame.simulation_accumulator = std::min(
-            frame.simulation_accumulator + frame.delta_seconds, 0.1f);
-        const std::array<double, 3> previous_position = frame.flight_state.position;
-        while (frame.simulation_accumulator >= fixed_step) {
-            AircraftFlightInput flight_input{};
-            flight_input.pitch = frame.controls.pitch;
-            flight_input.roll = frame.controls.roll;
-            flight_input.yaw = frame.controls.yaw;
-            flight_input.throttle_lever = frame.controls.throttle;
-            flight_input.ticks_per_second = 60;
-            if (!advance_aircraft_flight_tick(
-                    *frame.flight_rules, flight_input, frame.flight_state)) {
-                std::fprintf(stderr, "Native flight tick rejected its rules or state\n");
-                scene_state.request_transition(DemoSceneState::Exiting);
-                return;
-            }
-            frame.simulation_accumulator -= fixed_step;
+    if (frame.flight_session) {
+        const std::array<double, 3> previous_position =
+            frame.flight_session->state().position;
+        AircraftFlightInput flight_input{};
+        flight_input.pitch = frame.controls.pitch;
+        flight_input.roll = frame.controls.roll;
+        flight_input.yaw = frame.controls.yaw;
+        flight_input.throttle_lever = frame.controls.throttle;
+        flight_input.ticks_per_second = 60;
+        if (!frame.flight_session->advance_frame(frame.delta_seconds, flight_input)) {
+            std::fprintf(stderr, "Native flight session rejected its rules or state\n");
+            scene_state.request_transition(DemoSceneState::Exiting);
+            return;
         }
-        const std::array<double, 3>& euler = frame.flight_state.euler;
+        const AircraftFlightState& flight_state = frame.flight_session->state();
+        const std::array<double, 3>& euler = flight_state.euler;
         const Mat4 rotation = Mat4::multiply(
             Mat4::multiply(Mat4::rotation_y(static_cast<float>(euler[1])),
                            Mat4::rotation_x(static_cast<float>(euler[0]))),
             Mat4::rotation_z(static_cast<float>(euler[2])));
         const Mat4 position = Mat4::translation({
-            static_cast<float>(frame.flight_state.position[0]),
-            static_cast<float>(frame.flight_state.position[1]),
-            static_cast<float>(frame.flight_state.position[2])});
+            static_cast<float>(flight_state.position[0]),
+            static_cast<float>(flight_state.position[1]),
+            static_cast<float>(flight_state.position[2])});
         frame.scene.set_transform(frame.model_transform,
                                   Mat4::multiply(position, rotation));
         if (frame.camera) {
             const Vec3 movement{
-                static_cast<float>(frame.flight_state.position[0] - previous_position[0]),
-                static_cast<float>(frame.flight_state.position[1] - previous_position[1]),
-                static_cast<float>(frame.flight_state.position[2] - previous_position[2])};
+                static_cast<float>(flight_state.position[0] - previous_position[0]),
+                static_cast<float>(flight_state.position[1] - previous_position[1]),
+                static_cast<float>(flight_state.position[2] - previous_position[2])};
             frame.camera->position.x += movement.x;
             frame.camera->position.y += movement.y;
             frame.camera->position.z += movement.z;
@@ -299,9 +295,10 @@ int Application::run(int argc, char** argv) {
             }
             DemoFrame frame{scene, model_transform};
             if (flight_rules) {
-                frame.flight_rules = &*flight_rules;
-                frame.flight_state.speed_units_per_tick =
+                AircraftFlightState flight_state{};
+                flight_state.speed_units_per_tick =
                     flight_rules->speed.cruise_kmh * 1.4222219 / 60.0;
+                frame.flight_session.emplace(*flight_rules, flight_state);
             }
             InputSystem input;
             if (scene_state.current_state() == DemoSceneState::Viewing &&
@@ -318,7 +315,8 @@ int Application::run(int argc, char** argv) {
                 camera.far_plane = 20000.0f;
             }
             if (flight_rules) {
-                camera.target = {0.0f, static_cast<float>(frame.flight_state.position[1]), 0.0f};
+                camera.target = {0.0f, static_cast<float>(
+                    frame.flight_session->state().position[1]), 0.0f};
                 camera.position = {0.0f, camera.target.y + 8.0f, -115.0f};
                 frame.camera = &camera;
             }

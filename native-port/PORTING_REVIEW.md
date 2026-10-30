@@ -217,6 +217,8 @@ project does not build or link any of those files.
   also apply the recovered post-physics contact-flag transitions.
   `advance_aircraft_carrier_tick` preserves the carrier wrapper's hold window,
   throttle gate, contact acceleration modifiers, and special flag timing.
+  `AircraftFlightSession` owns the bounded fixed-step clock in the dependency-
+  free game core, leaving the SDL/Vulkan application as an input/render adapter.
 - A bounded, resumable ULZ decoder and `DATA.TBL`/`DATA.PAC` reader. The
   decoder can yield after a caller-selected number of control words, and
   `ArchiveMemberLoad` exposes that budget at the member-loading boundary. Its
