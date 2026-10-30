@@ -195,6 +195,9 @@ project does not build or link any of those files.
   rotation, and shape tracks. The separate `0x1000` runtime override bit is
   not inferred by the viewer; both channel-16 and channel-17 override branches
   now accept the shared native controller value corresponding to `+0x20`.
+  Channel 20 follows its ACM model-flag gate: `0x10000` selects the aircraft
+  speed curve, `0x20000` selects the `+0x20` controller value, and other
+  variants leave it neutral pending the stateful path.
   `ac5_model_info --parts` reports the hierarchy and decoded track/key counts
   without opening Vulkan.
 - A Vulkan 1.3 renderer using SDL3, dynamic rendering, synchronization2,

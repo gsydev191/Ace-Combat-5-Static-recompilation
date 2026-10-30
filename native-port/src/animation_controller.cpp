@@ -241,7 +241,11 @@ AircraftAnimationChannels aircraft_animation_targets(
     set(16, 50.0 + 50.0 * channel16_value);
     set(17, 50.0 + 50.0 * channel17_value);
     set(18, 50.0 + 50.0 * sweep);
-    set(20, 50.0 + 50.0 * channel20);
+    if ((input.model_flags & 0x10000u) != 0) {
+        set(20, 50.0 + 50.0 * channel20);
+    } else if ((input.model_flags & 0x20000u) != 0) {
+        set(20, 50.0 + 50.0 * input.controller_override);
+    }
     for (std::size_t channel = 25; channel <= 27; ++channel)
         set(channel, input.gear_down ? 50.0 : 100.0);
     return channels;
