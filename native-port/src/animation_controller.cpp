@@ -146,7 +146,33 @@ AircraftAnimationChannels aircraft_animation_targets(
     const auto set = [&channels](std::size_t index, double value) {
         channels[index] = static_cast<float>(std::clamp(value, 1.0, 100.0));
     };
-    set(1, 50.0 - 50.0 * input.pitch * authority);
+    if ((input.controller_flags & 0x1u) != 0) {
+        double surface1 = -static_cast<double>(input.pitch);
+        double surface2 = surface1;
+        if ((input.model_flags & 0x2u) != 0) {
+            surface1 -= input.yaw;
+            surface2 = static_cast<double>(input.yaw) - input.pitch;
+        } else if ((input.model_flags & 0x1u) != 0) {
+            surface1 -= input.roll;
+            surface2 = static_cast<double>(input.roll) - input.pitch;
+        } else if ((input.model_flags & 0x80u) != 0) {
+            surface1 -= static_cast<double>(input.yaw) + input.roll;
+            surface2 = static_cast<double>(input.yaw) - input.pitch + input.roll;
+        } else if ((input.model_flags & 0x200u) != 0) {
+            surface1 -= input.slip;
+            surface2 = surface1;
+        }
+        set(1, 50.0 + 50.0 *
+            std::clamp(surface1, -1.0, 1.0) * authority);
+        set(2, 50.0 + 50.0 *
+            std::clamp(surface2, -1.0, 1.0) * authority);
+    } else {
+        const double surface1 = (input.controller_flags & 0x200000u) != 0
+            ? static_cast<double>(input.slip) - input.pitch
+            : -static_cast<double>(input.pitch);
+        set(1, 50.0 + 50.0 *
+            std::clamp(surface1, -1.0, 1.0) * authority);
+    }
     set(3, 50.0 + 50.0 * input.yaw);
     // These branches follow the recovered CPlAnimCtrl flag priority. Native
     // pitch/roll/slip feed its matching controller channels at +4/+8/+1c;
