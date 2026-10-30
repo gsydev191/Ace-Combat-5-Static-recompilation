@@ -12,7 +12,9 @@
 #include <filesystem>
 #include <fstream>
 #include <limits>
+#include <new>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -549,6 +551,7 @@ bool load_materials(const std::filesystem::path& obj_path, const ParsedObj& obj,
 } // namespace
 
 bool load_obj(const std::string& path, MeshData& mesh, std::string& error) {
+    try {
     ParsedObj parsed;
     if (!parse_obj(path, parsed, error)) return false;
     MeshData combined;
@@ -571,10 +574,18 @@ bool load_obj(const std::string& path, MeshData& mesh, std::string& error) {
     }
     mesh = std::move(combined);
     return true;
+    } catch (const std::bad_alloc&) {
+        error = "OBJ import allocation failed: " + path;
+        return false;
+    } catch (const std::length_error&) {
+        error = "OBJ import exceeds the platform's container limits: " + path;
+        return false;
+    }
 }
 
 bool load_obj_scene(const std::string& path, Scene& scene, std::string& error,
                     bool load_material_textures, TransformId transform) {
+    try {
     ParsedObj parsed;
     if (!parse_obj(path, parsed, error)) return false;
     const std::filesystem::path obj_path = path_from_utf8(path);
@@ -621,6 +632,13 @@ bool load_obj_scene(const std::string& path, Scene& scene, std::string& error,
     }
     scene.append_assets(std::move(loaded));
     return true;
+    } catch (const std::bad_alloc&) {
+        error = "OBJ scene import allocation failed: " + path;
+        return false;
+    } catch (const std::length_error&) {
+        error = "OBJ scene import exceeds the platform's container limits: " + path;
+        return false;
+    }
 }
 
 } // namespace ac5
