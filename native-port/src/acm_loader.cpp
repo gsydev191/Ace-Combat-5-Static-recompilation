@@ -58,52 +58,77 @@ bool is_acm(std::span<const std::uint8_t> bytes) {
            bytes[2] == 'M' && bytes[3] == 0;
 }
 
-bool first_bundle_model(std::span<const std::uint8_t> file,
-                        std::span<const std::uint8_t>& model,
-                        std::string& error) {
-    if (is_acm(file)) {
-        model = file;
-        return true;
-    }
+struct BundleSlot {
+    std::uint32_t index = 0;
+    std::span<const std::uint8_t> bytes;
+};
 
+struct ModelSelection {
+    std::span<const std::uint8_t> model;
+    std::span<const std::uint8_t> texture;
+};
+
+bool read_bundle_slots(std::span<const std::uint8_t> file,
+                       std::vector<BundleSlot>& slots) {
     std::uint32_t count = 0;
     if (!read_u32(file, 0, count) || count == 0 || count > max_parts_or_chains ||
-        count > (file.size() - std::min<std::size_t>(file.size(), 4)) / 4) {
-        error = "model file is neither an ACM block nor a valid sparse bundle";
+        file.size() < 4 || count > (file.size() - 4) / 4)
         return false;
-    }
     const std::size_t table_end = 4 + static_cast<std::size_t>(count) * 4;
-    std::uint32_t first_offset = 0;
-    if (!read_u32(file, 4, first_offset) || first_offset < table_end ||
-        first_offset >= file.size()) {
-        error = "model bundle has no valid first slot";
-        return false;
-    }
-    std::size_t end = file.size();
-    for (std::uint32_t i = 1; i < count; ++i) {
+    std::vector<std::pair<std::uint32_t, std::uint32_t>> offsets;
+    offsets.reserve(count);
+    for (std::uint32_t i = 0; i < count; ++i) {
         std::uint32_t offset = 0;
-        if (!read_u32(file, 4 + static_cast<std::size_t>(i) * 4, offset)) {
-            error = "model bundle offset table is truncated";
-            return false;
-        }
-        if (offset != 0 && offset < end) {
-            if (offset <= first_offset || offset < table_end || offset > file.size()) {
-                error = "model bundle offsets are invalid";
-                return false;
+        if (!read_u32(file, 4 + static_cast<std::size_t>(i) * 4, offset)) return false;
+        if (offset == 0) continue;
+        if (offset < table_end || offset >= file.size()) return false;
+        offsets.emplace_back(offset, i);
+    }
+    std::sort(offsets.begin(), offsets.end());
+    slots.clear();
+    slots.reserve(offsets.size());
+    for (std::size_t i = 0; i < offsets.size();) {
+        const std::size_t begin = offsets[i].first;
+        std::size_t next = i + 1;
+        while (next < offsets.size() && offsets[next].first == begin) ++next;
+        const std::size_t end = next < offsets.size() ? offsets[next].first : file.size();
+        if (end <= begin) return false;
+        for (; i < next; ++i)
+            slots.push_back({offsets[i].second, file.subspan(begin, end - begin)});
+    }
+    return !slots.empty();
+}
+
+bool find_model(std::span<const std::uint8_t> file, ModelSelection& selection,
+                unsigned depth = 0) {
+    if (is_acm(file)) {
+        selection.model = file;
+        return true;
+    }
+    if (depth >= 4) return false;
+    std::vector<BundleSlot> slots;
+    if (!read_bundle_slots(file, slots)) return false;
+    for (const BundleSlot& slot : slots) {
+        if (is_acm(slot.bytes)) {
+            selection.model = slot.bytes;
+            for (const BundleSlot& sibling : slots) {
+                if (sibling.index >= 6 && sibling.index > slot.index &&
+                    sibling.bytes.size() >= 4 && sibling.bytes[0] == 'G' &&
+                    sibling.bytes[1] == 'I' && sibling.bytes[2] == 'M' &&
+                    sibling.bytes[3] == 0) {
+                    selection.texture = sibling.bytes;
+                    break;
+                }
             }
-            end = offset;
+            return true;
+        }
+        ModelSelection nested;
+        if (find_model(slot.bytes, nested, depth + 1)) {
+            selection = nested;
+            return true;
         }
     }
-    if (end <= first_offset) {
-        error = "model bundle first slot is empty";
-        return false;
-    }
-    model = file.subspan(first_offset, end - first_offset);
-    if (!is_acm(model)) {
-        error = "model bundle first slot is not an ACM mesh";
-        return false;
-    }
-    return true;
+    return false;
 }
 
 struct Part {
@@ -548,48 +573,24 @@ bool load_acm_bundle_texture(const std::string& path, TextureData& texture,
     found = false;
     std::vector<std::uint8_t> file;
     if (!read_model_file(path, file, error)) return false;
-    if (is_acm(file)) return true;
-    std::uint32_t count = 0;
-    if (!read_u32(file, 0, count) || count == 0 || count > max_parts_or_chains ||
-        count > (file.size() - std::min<std::size_t>(file.size(), 4)) / 4) {
-        error = "model bundle has an invalid slot table: " + path;
-        return false;
-    }
-    const std::size_t table_end = 4 + static_cast<std::size_t>(count) * 4;
-    for (std::uint32_t slot = 6; slot < count; ++slot) {
-        std::uint32_t offset = 0;
-        if (!read_u32(file, 4 + static_cast<std::size_t>(slot) * 4, offset)) {
-            error = "model bundle texture offset is truncated: " + path;
-            return false;
-        }
-        if (offset == 0) continue;
-        if (offset < table_end || offset > file.size()) {
-            error = "model bundle texture offset is invalid: " + path;
-            return false;
-        }
-        std::size_t end = file.size();
-        for (std::uint32_t other = 0; other < count; ++other) {
-            std::uint32_t candidate = 0;
-            if (!read_u32(file, 4 + static_cast<std::size_t>(other) * 4, candidate)) {
-                error = "model bundle slot table is truncated: " + path;
-                return false;
-            }
-            if (candidate > offset && candidate < end) end = candidate;
-        }
-        if (end <= offset || end - offset < 4) continue;
-        const auto bytes = std::span<const std::uint8_t>(file).subspan(offset, end - offset);
-        if (bytes[0] != 'G' || bytes[1] != 'I' || bytes[2] != 'M' || bytes[3] != 0)
-            continue;
+    try {
+        ModelSelection selected;
+        if (!find_model(file, selected) || selected.texture.empty()) return true;
         TextureData decoded;
-        if (!decode_gim(bytes, decoded, error, true)) {
+        if (!decode_gim(selected.texture, decoded, error, true)) {
             error += " in model bundle: " + path;
             return false;
         }
         texture = std::move(decoded);
         found = true;
         return true;
+    } catch (const std::bad_alloc&) {
+        error = "ACM bundle texture allocation failed: " + path;
+        return false;
+    } catch (const std::length_error&) {
+        error = "ACM bundle texture exceeds the platform's vector limit: " + path;
+        return false;
     }
-    return true;
 }
 
 bool load_acm_model(const std::string& path, MeshData& mesh, std::string& error) {
@@ -597,7 +598,12 @@ bool load_acm_model(const std::string& path, MeshData& mesh, std::string& error)
     if (!read_model_file(path, file, error)) return false;
     try {
         std::span<const std::uint8_t> block;
-        if (!first_bundle_model(file, block, error)) return false;
+        ModelSelection selected;
+        if (!find_model(file, selected)) {
+            error = "model file contains no ACM block in a supported bundle: " + path;
+            return false;
+        }
+        block = selected.model;
         MeshData decoded;
         if (!parse_acm(block, decoded, error)) return false;
         mesh = std::move(decoded);
