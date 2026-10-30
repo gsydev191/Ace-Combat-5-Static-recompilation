@@ -552,28 +552,28 @@ bool load_materials(const std::filesystem::path& obj_path, const ParsedObj& obj,
 
 bool load_obj(const std::string& path, MeshData& mesh, std::string& error) {
     try {
-    ParsedObj parsed;
-    if (!parse_obj(path, parsed, error)) return false;
-    MeshData combined;
-    for (const ObjSubmesh& submesh : parsed.submeshes) {
-        if (combined.vertices.size() > std::numeric_limits<std::uint32_t>::max() -
-                                           submesh.mesh.vertices.size()) {
-            error = "combined OBJ exceeds the 32-bit vertex limit: " + path;
-            return false;
-        }
-        const auto base = static_cast<std::uint32_t>(combined.vertices.size());
-        combined.vertices.insert(combined.vertices.end(), submesh.mesh.vertices.begin(),
-                                 submesh.mesh.vertices.end());
-        for (std::uint32_t index : submesh.mesh.indices) {
-            if (index > std::numeric_limits<std::uint32_t>::max() - base) {
-                error = "combined OBJ index overflows 32-bit range: " + path;
+        ParsedObj parsed;
+        if (!parse_obj(path, parsed, error)) return false;
+        MeshData combined;
+        for (const ObjSubmesh& submesh : parsed.submeshes) {
+            if (combined.vertices.size() > std::numeric_limits<std::uint32_t>::max() -
+                                               submesh.mesh.vertices.size()) {
+                error = "combined OBJ exceeds the 32-bit vertex limit: " + path;
                 return false;
             }
-            combined.indices.push_back(base + index);
+            const auto base = static_cast<std::uint32_t>(combined.vertices.size());
+            combined.vertices.insert(combined.vertices.end(), submesh.mesh.vertices.begin(),
+                                     submesh.mesh.vertices.end());
+            for (std::uint32_t index : submesh.mesh.indices) {
+                if (index > std::numeric_limits<std::uint32_t>::max() - base) {
+                    error = "combined OBJ index overflows 32-bit range: " + path;
+                    return false;
+                }
+                combined.indices.push_back(base + index);
+            }
         }
-    }
-    mesh = std::move(combined);
-    return true;
+        mesh = std::move(combined);
+        return true;
     } catch (const std::bad_alloc&) {
         error = "OBJ import allocation failed: " + path;
         return false;
@@ -586,52 +586,52 @@ bool load_obj(const std::string& path, MeshData& mesh, std::string& error) {
 bool load_obj_scene(const std::string& path, Scene& scene, std::string& error,
                     bool load_material_textures, TransformId transform) {
     try {
-    ParsedObj parsed;
-    if (!parse_obj(path, parsed, error)) return false;
-    const std::filesystem::path obj_path = path_from_utf8(path);
-    std::unordered_map<std::string, ObjMaterial> materials;
-    if (!load_materials(obj_path, parsed, load_material_textures, materials, error)) return false;
+        ParsedObj parsed;
+        if (!parse_obj(path, parsed, error)) return false;
+        const std::filesystem::path obj_path = path_from_utf8(path);
+        std::unordered_map<std::string, ObjMaterial> materials;
+        if (!load_materials(obj_path, parsed, load_material_textures, materials, error)) return false;
 
-    Scene loaded;
-    for (std::size_t i = 0; i < scene.transforms().size(); ++i) {
-        if (i == 0) loaded.set_transform(0, scene.transform(0));
-        else loaded.add_transform(scene.transform(static_cast<TransformId>(i)),
-                                  scene.transform_parent(static_cast<TransformId>(i)));
-    }
-    if (transform >= loaded.transforms().size()) {
-        error = "OBJ scene transform is not in the destination scene: " + path;
-        return false;
-    }
-    std::unordered_map<std::string, TextureId> texture_ids;
-    for (ObjSubmesh& submesh : parsed.submeshes) {
-        TextureId texture_id = 0;
-        const auto material = materials.find(submesh.material);
-        if (material != materials.end() && !material->second.diffuse_map.empty()) {
-            const std::string key = path_to_utf8(material->second.diffuse_map.lexically_normal());
-            const auto existing = texture_ids.find(key);
-            if (existing != texture_ids.end()) {
-                texture_id = existing->second;
-            } else {
-                TextureData texture;
-                const std::string texture_path = path_to_utf8(material->second.diffuse_map);
-                if (!load_texture_image(texture_path, texture, error)) return false;
-                texture_id = loaded.add_texture(std::move(texture));
-                texture_ids.emplace(key, texture_id);
-            }
+        Scene loaded;
+        for (std::size_t i = 0; i < scene.transforms().size(); ++i) {
+            if (i == 0) loaded.set_transform(0, scene.transform(0));
+            else loaded.add_transform(scene.transform(static_cast<TransformId>(i)),
+                                      scene.transform_parent(static_cast<TransformId>(i)));
         }
-        if (material != materials.end()) {
-            for (Vertex& vertex : submesh.mesh.vertices) {
-                vertex.color.x *= material->second.diffuse.x;
-                vertex.color.y *= material->second.diffuse.y;
-                vertex.color.z *= material->second.diffuse.z;
-                vertex.alpha *= material->second.opacity;
-            }
+        if (transform >= loaded.transforms().size()) {
+            error = "OBJ scene transform is not in the destination scene: " + path;
+            return false;
         }
-        const MeshId mesh_id = loaded.add_mesh(std::move(submesh.mesh));
-        loaded.add_draw(mesh_id, texture_id, Mat4::identity(), transform);
-    }
-    scene.append_assets(std::move(loaded));
-    return true;
+        std::unordered_map<std::string, TextureId> texture_ids;
+        for (ObjSubmesh& submesh : parsed.submeshes) {
+            TextureId texture_id = 0;
+            const auto material = materials.find(submesh.material);
+            if (material != materials.end() && !material->second.diffuse_map.empty()) {
+                const std::string key = path_to_utf8(material->second.diffuse_map.lexically_normal());
+                const auto existing = texture_ids.find(key);
+                if (existing != texture_ids.end()) {
+                    texture_id = existing->second;
+                } else {
+                    TextureData texture;
+                    const std::string texture_path = path_to_utf8(material->second.diffuse_map);
+                    if (!load_texture_image(texture_path, texture, error)) return false;
+                    texture_id = loaded.add_texture(std::move(texture));
+                    texture_ids.emplace(key, texture_id);
+                }
+            }
+            if (material != materials.end()) {
+                for (Vertex& vertex : submesh.mesh.vertices) {
+                    vertex.color.x *= material->second.diffuse.x;
+                    vertex.color.y *= material->second.diffuse.y;
+                    vertex.color.z *= material->second.diffuse.z;
+                    vertex.alpha *= material->second.opacity;
+                }
+            }
+            const MeshId mesh_id = loaded.add_mesh(std::move(submesh.mesh));
+            loaded.add_draw(mesh_id, texture_id, Mat4::identity(), transform);
+        }
+        scene.append_assets(std::move(loaded));
+        return true;
     } catch (const std::bad_alloc&) {
         error = "OBJ scene import allocation failed: " + path;
         return false;
