@@ -24,6 +24,7 @@ struct AircraftAnimationInput {
     float roll = 0.0f;
     float yaw = 0.0f;
     float slip = 0.0f;
+    float controller_override = 0.0f;
     float throttle_lever = 0.0f;
     double speed_kmh = 0.0;
     bool gear_down = false;

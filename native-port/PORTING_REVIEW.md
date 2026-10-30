@@ -193,7 +193,8 @@ project does not build or link any of those files.
   from populated animation channel slots 2, 4, 9, 11, and 25-27; the native
   viewer derives those bits from the union of decoded ACM translation,
   rotation, and shape tracks. The separate `0x1000` runtime override bit is
-  not inferred by the viewer.
+  not inferred by the viewer; both channel-16 and channel-17 override branches
+  now accept the shared native controller value corresponding to `+0x20`.
   `ac5_model_info --parts` reports the hierarchy and decoded track/key counts
   without opening Vulkan.
 - A Vulkan 1.3 renderer using SDL3, dynamic rendering, synchronization2,

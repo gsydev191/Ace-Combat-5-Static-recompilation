@@ -136,6 +136,13 @@ AircraftAnimationChannels aircraft_animation_targets(
         ? reverse_speed_curve(speed, config[9], config[10]) : 0.0;
     const double channel20 = rules.available
         ? reverse_speed_curve(speed, config[15], config[16]) : 0.0;
+    const double channel16_value = (input.model_flags & 0x4000u) != 0
+        ? std::max(channel16, static_cast<double>(input.controller_override))
+        : channel16;
+    const double channel17_value = (input.controller_flags & 0x1000u) != 0
+        ? std::max(secondary_flap,
+                   static_cast<double>(input.controller_override))
+        : secondary_flap;
     const double sweep = rules.available && config[14] > config[13]
         ? std::clamp((speed - config[13]) / (config[14] - config[13]), 0.0, 1.0)
         : 0.0;
@@ -231,8 +238,8 @@ AircraftAnimationChannels aircraft_animation_targets(
     set(13, 50.0 + 50.0 * input.roll);
     set(14, 50.0 * dry + 50.0 * afterburner);
     set(15, 50.0 + 50.0 * brake);
-    set(16, 50.0 + 50.0 * channel16);
-    set(17, 50.0 + 50.0 * secondary_flap);
+    set(16, 50.0 + 50.0 * channel16_value);
+    set(17, 50.0 + 50.0 * channel17_value);
     set(18, 50.0 + 50.0 * sweep);
     set(20, 50.0 + 50.0 * channel20);
     for (std::size_t channel = 25; channel <= 27; ++channel)
