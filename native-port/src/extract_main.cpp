@@ -6,6 +6,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -28,6 +29,10 @@ bool parse_index(const char* text, std::size_t& value) {
 
 bool write_file(const std::filesystem::path& path,
                 const std::vector<std::uint8_t>& data, std::string& error) {
+    if (data.size() > static_cast<std::uint64_t>(std::numeric_limits<std::streamsize>::max())) {
+        error = "output file exceeds the platform's writable stream size: " + path_to_utf8(path);
+        return false;
+    }
     std::error_code ec;
     if (!path.parent_path().empty()) {
         std::filesystem::create_directories(path.parent_path(), ec);

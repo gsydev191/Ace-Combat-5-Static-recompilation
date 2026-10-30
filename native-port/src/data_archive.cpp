@@ -40,8 +40,12 @@ bool read_exact(const std::filesystem::path& path, std::uint64_t offset,
         error = "cannot open file: " + path_to_utf8(path);
         return false;
     }
-    if (offset > static_cast<std::uint64_t>(std::numeric_limits<std::streamoff>::max())) {
-        error = "file offset is too large: " + path_to_utf8(path);
+    const std::uint64_t max_offset =
+        static_cast<std::uint64_t>(std::numeric_limits<std::streamoff>::max());
+    const std::uint64_t read_size = static_cast<std::uint64_t>(output.size());
+    if (offset > max_offset || read_size > max_offset - offset ||
+        read_size > static_cast<std::uint64_t>(std::numeric_limits<std::streamsize>::max())) {
+        error = "file range is too large: " + path_to_utf8(path);
         return false;
     }
     if (output.empty()) return true;
@@ -141,6 +145,11 @@ bool DataArchive::open(const std::filesystem::path& table_path,
     const std::uint64_t expected_size = 8ull + 12ull * count;
     if (expected_size != static_cast<std::uint64_t>(table_size)) {
         error = "DATA.TBL size does not match its member count";
+        return false;
+    }
+    if (expected_size - 8u >
+        static_cast<std::uint64_t>(std::numeric_limits<std::streamsize>::max())) {
+        error = "DATA.TBL records exceed the platform's readable stream size";
         return false;
     }
     if (count > (std::numeric_limits<std::size_t>::max() / sizeof(MemberEntry))) {
