@@ -157,7 +157,8 @@ project does not build or link any of those files.
   flush non-coherent host-visible memory when required by the selected device.
 - Native `Mat4`, `Camera`, `Scene`, `SceneStateMachine`, `MeshData`, `Vertex`, and `TextureData` types, plus
   OBJ/MTL, P3/P6 PPM, and true-color TGA importers for converted assets. OBJ material sections
-  become separate scene draws and `map_Kd` images are loaded as textures. The
+  become separate scene draws, `Kd` multiplies vertex color, scalar `d` and
+  `Tr` set vertex opacity, and `map_Kd` images are loaded as textures. The
   scene uses shared transform IDs for entity-level movement, ordered parent
   transforms for articulated pivots, and local per-draw matrices for
   parts/materials. The parent ordering rule prevents cycles and resolves world
@@ -223,8 +224,9 @@ allocation and a vertex-color/diffuse-lighting pipeline. Scene meshes are
 concatenated and uploaded in one staging batch into device-local vertex and
 index buffers; per-mesh offsets preserve individual draw ranges. Textures
 generate a GPU mip chain when the selected sRGB format supports linear blits,
-otherwise they use one level. MTL support currently handles only simple
-`map_Kd` paths to PPM or uncompressed/RLE true-color TGA images. The sampler enables anisotropic filtering up to
+otherwise they use one level. MTL support handles `Kd`, scalar `d` dissolve,
+scalar `Tr` transparency, and simple `map_Kd` paths to PPM or uncompressed/RLE
+true-color TGA images. The sampler enables anisotropic filtering up to
 16x when the device supports it. AC5 format decoding remains future work. The
 OBJ importer is an interchange path, not an AC5 format decoder. The archive
 tool extracts original files but does not decode packed aircraft models,
