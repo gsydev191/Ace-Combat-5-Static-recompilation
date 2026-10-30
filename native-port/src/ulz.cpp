@@ -1,6 +1,8 @@
 #include "ulz.hpp"
 
 #include <algorithm>
+#include <new>
+#include <stdexcept>
 #include <utility>
 
 namespace ac5 {
@@ -47,7 +49,17 @@ bool UlzDecoder::begin(std::span<const std::uint8_t> packed, std::string& error)
         return false;
     }
 
-    output_.reserve(output_size_);
+    try {
+        output_.reserve(output_size_);
+    } catch (const std::bad_alloc&) {
+        error = "ULZ output allocation failed";
+        failed_ = true;
+        return false;
+    } catch (const std::length_error&) {
+        error = "ULZ output size exceeds the platform's vector limit";
+        failed_ = true;
+        return false;
+    }
     distance_mask_ = (1u << shift_) - 1u;
     initialized_ = true;
     finished_ = output_size_ == 0;

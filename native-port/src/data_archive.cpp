@@ -7,7 +7,9 @@
 #include <array>
 #include <fstream>
 #include <limits>
+#include <new>
 #include <span>
+#include <stdexcept>
 #include <sstream>
 #include <utility>
 
@@ -68,12 +70,32 @@ bool ArchiveMemberLoad::begin(const std::filesystem::path& path,
     initialized_ = false;
     finished_ = false;
     failed_ = false;
-    packed_.resize(packed_size);
+    try {
+        packed_.resize(packed_size);
+    } catch (const std::bad_alloc&) {
+        error = "DATA.PAC member allocation failed";
+        failed_ = true;
+        return false;
+    } catch (const std::length_error&) {
+        error = "DATA.PAC member size exceeds the platform's vector limit";
+        failed_ = true;
+        return false;
+    }
     if (!read_exact(path, offset, packed_, error)) {
         failed_ = true;
         return false;
     }
-    if (!decoder_.begin(packed_, error)) {
+    try {
+        if (!decoder_.begin(packed_, error)) {
+            failed_ = true;
+            return false;
+        }
+    } catch (const std::bad_alloc&) {
+        error = "ULZ decoder allocation failed";
+        failed_ = true;
+        return false;
+    } catch (const std::length_error&) {
+        error = "ULZ decoder size exceeds the platform's vector limit";
         failed_ = true;
         return false;
     }
@@ -157,13 +179,23 @@ bool DataArchive::open(const std::filesystem::path& table_path,
         return false;
     }
 
-    std::vector<std::uint8_t> records(static_cast<std::size_t>(count) * 12u);
+    std::vector<std::uint8_t> records;
+    std::vector<MemberEntry> members;
+    try {
+        records.resize(static_cast<std::size_t>(count) * 12u);
+        members.resize(count);
+    } catch (const std::bad_alloc&) {
+        error = "DATA.TBL record allocation failed";
+        return false;
+    } catch (const std::length_error&) {
+        error = "DATA.TBL record count exceeds the platform's vector limit";
+        return false;
+    }
     if (!table.read(reinterpret_cast<char*>(records.data()),
                     static_cast<std::streamsize>(records.size()))) {
         error = "cannot read DATA.TBL records";
         return false;
     }
-    std::vector<MemberEntry> members(count);
     const std::size_t sizes_at = static_cast<std::size_t>(count) * 8u;
     for (std::size_t i = 0; i < count; ++i) {
         members[i] = {read_u32_le(records.data() + i * 8u),
