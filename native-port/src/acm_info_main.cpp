@@ -33,6 +33,7 @@ int main(int argc, char** argv) {
             return 1;
         }
         std::size_t vertices = 0, triangles = 0, geometry_parts = 0;
+        std::size_t shape_variants = 0;
         std::size_t translation_tracks = 0, rotation_tracks = 0, shape_tracks = 0;
         std::size_t translation_keys = 0, rotation_keys = 0, shape_keys = 0;
         for (const auto& track : model.translation_tracks)
@@ -45,16 +46,19 @@ int main(int argc, char** argv) {
             vertices += part.mesh.vertices.size();
             triangles += part.mesh.indices.size() / 3;
             geometry_parts += !part.mesh.indices.empty();
+            shape_variants += part.shape_variants.size();
             translation_tracks += part.translation_track != ac5::AcmModelPart::no_parent;
             rotation_tracks += part.rotation_track != ac5::AcmModelPart::no_parent;
             shape_tracks += part.shape_track != ac5::AcmModelPart::no_parent;
         }
         std::printf("parts: %zu\ngeometry parts: %zu\nvertices: %zu\ntriangles: %zu\n"
                     "part track references: translation %zu, rotation %zu, shape %zu\n"
+                    "shape variants: %zu\n"
                     "decoded tracks: translation %zu (%zu keys), rotation %zu (%zu keys), "
                     "shape %zu (%zu keys)\n",
                     model.parts.size(), geometry_parts, vertices, triangles,
                     translation_tracks, rotation_tracks, shape_tracks,
+                    shape_variants,
                     model.translation_tracks.size(), translation_keys,
                     model.rotation_tracks.size(), rotation_keys,
                     model.shape_tracks.size(), shape_keys);

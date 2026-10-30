@@ -41,6 +41,11 @@ struct DemoFrame {
     std::optional<AircraftFlightSession> flight_session;
     std::optional<AcmPartModel> animated_model;
     std::vector<TransformId> part_transforms;
+    struct ShapeDraw {
+        std::size_t draw_index = 0;
+        std::vector<std::pair<std::int32_t, MeshId>> variants;
+    };
+    std::vector<ShapeDraw> shape_draws;
     float delta_seconds = 0.0f;
     FlightInput controls{};
     float pitch_angle = 0.0f;
@@ -125,6 +130,27 @@ void update_aircraft_part_animation(DemoFrame& frame) {
             rotation_z, Mat4::multiply(rotation_y, rotation_x));
         frame.scene.set_transform(frame.part_transforms[i], Mat4::multiply(
             Mat4::translation(position), local_rotation));
+
+        const DemoFrame::ShapeDraw& shape_draw = frame.shape_draws[i];
+        if (part.shape_track == AcmModelPart::no_parent ||
+            shape_draw.variants.empty()) continue;
+        const AcmAnimationTrack& track =
+            frame.animated_model->shape_tracks[part.shape_track];
+        if (track.keys.empty() || track.channel >= channels.size()) continue;
+        const double channel = channels[track.channel];
+        const auto upper = std::lower_bound(track.keys.begin(), track.keys.end(), channel,
+            [](const AcmAnimationKey& key, double value) { return key.frame < value; });
+        const AcmAnimationKey* selected = nullptr;
+        if (upper == track.keys.begin()) selected = &*upper;
+        else if (upper == track.keys.end()) selected = &track.keys.back();
+        else {
+            const AcmAnimationKey& low = *(upper - 1);
+            selected = channel - low.frame < upper->frame - channel ? &low : &*upper;
+        }
+        const auto variant = std::find_if(shape_draw.variants.begin(), shape_draw.variants.end(),
+            [selected](const auto& entry) { return entry.first == selected->shape_index; });
+        if (variant != shape_draw.variants.end())
+            frame.scene.set_draw_mesh(shape_draw.draw_index, variant->second);
     }
 }
 
@@ -274,6 +300,7 @@ int Application::run(int argc, char** argv) {
     std::optional<AircraftFlightRules> flight_rules;
     std::optional<AcmPartModel> animated_model;
     std::vector<TransformId> part_transforms;
+    std::vector<DemoFrame::ShapeDraw> shape_draws;
     if (!flight_rules_path.empty()) {
         if (!acm_model) {
             std::fprintf(stderr, "--flight-rules requires an ACM aircraft model\n");
@@ -294,6 +321,7 @@ int Application::run(int argc, char** argv) {
             animated_model.emplace();
             if (load_acm_part_model(model_path, *animated_model, load_error)) {
                 part_transforms.reserve(animated_model->parts.size());
+                shape_draws.resize(animated_model->parts.size());
                 for (AcmModelPart& part : animated_model->parts) {
                     const Mat4 rotate_x = Mat4::rotation_x(part.rotation.x);
                     const Mat4 rotate_y = Mat4::rotation_y(part.rotation.y);
@@ -308,7 +336,15 @@ int Application::run(int argc, char** argv) {
                     part_transforms.push_back(transform);
                     if (!part.mesh.indices.empty()) {
                         const MeshId mesh_id = scene.add_mesh(std::move(part.mesh));
+                        shape_draws[part_transforms.size() - 1].draw_index =
+                            scene.draws().size();
                         scene.add_draw(mesh_id, TextureId{0}, Mat4::identity(), transform);
+                        for (AcmModelPart::ShapeVariant& variant : part.shape_variants) {
+                            const MeshId variant_mesh =
+                                scene.add_mesh(std::move(variant.mesh));
+                            shape_draws[part_transforms.size() - 1].variants.emplace_back(
+                                variant.chain_index, variant_mesh);
+                        }
                     }
                 }
                 model_loaded = !scene.draws().empty();
@@ -406,6 +442,7 @@ int Application::run(int argc, char** argv) {
             DemoFrame frame{scene, model_transform};
             frame.animated_model = std::move(animated_model);
             frame.part_transforms = std::move(part_transforms);
+            frame.shape_draws = std::move(shape_draws);
             if (flight_rules) {
                 AircraftFlightState flight_state{};
                 flight_state.speed_units_per_tick =

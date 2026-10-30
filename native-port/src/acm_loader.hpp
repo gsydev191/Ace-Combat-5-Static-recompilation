@@ -31,6 +31,11 @@ struct AcmModelPart {
     Vec3 position{};
     Vec3 rotation{};
     MeshData mesh;
+    struct ShapeVariant {
+        std::int32_t chain_index = -1;
+        MeshData mesh;
+    };
+    std::vector<ShapeVariant> shape_variants;
 };
 
 struct AcmAnimationKey {

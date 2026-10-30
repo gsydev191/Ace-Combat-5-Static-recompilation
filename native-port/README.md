@@ -114,9 +114,10 @@ P to toggle the recovered approach-control law. The flight viewer keeps each
 ACM part's local transform and parent link as separate scene draws. It decodes
 and evaluates translation and Euler-rotation tracks from the recovered direct
 stick and throttle channels. Aircraft-specific authority curves, gear and
-flap state, and shape-track mesh morphs still need their companion animation
-configuration and alternate-chain support. The ordinary asset viewer remains
-the default when `--flight-rules` is omitted.
+flap state still need their companion animation configuration. Shape tracks
+switch to the nearest referenced alternate chain; retail blends between keys,
+so continuous shape morphing needs a dynamic mesh update path. The ordinary
+asset viewer remains the default when `--flight-rules` is omitted.
 The native ACM loader decodes the observed VIF position, normal, color and UV
 streams, triangle strips, chain-to-part mapping, and static part hierarchy.
 It rejects duplicate or unresolved geometry-chain ownership, and

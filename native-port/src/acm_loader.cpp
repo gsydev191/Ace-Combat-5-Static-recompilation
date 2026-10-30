@@ -703,6 +703,26 @@ bool parse_acm(std::span<const std::uint8_t> block, MeshData& mesh,
         for (std::uint32_t i = 0; i < chain_count; ++i) owners[i] = i;
     }
 
+    std::vector<std::vector<std::uint32_t>> shape_targets(chain_count);
+    if (part_model) {
+        for (std::uint32_t part_index = 0; part_index < part_count; ++part_index) {
+            const std::uint32_t track_index =
+                decoded_model.parts[part_index].shape_track;
+            if (track_index == AcmModelPart::no_parent) continue;
+            for (const AcmAnimationKey& key :
+                 decoded_model.shape_tracks[track_index].keys) {
+                if (key.shape_index < 0 ||
+                    static_cast<std::uint32_t>(key.shape_index) >= chain_count) {
+                    error = "ACM shape animation key references a missing mesh chain";
+                    return false;
+                }
+                auto& targets = shape_targets[static_cast<std::size_t>(key.shape_index)];
+                if (std::find(targets.begin(), targets.end(), part_index) == targets.end())
+                    targets.push_back(part_index);
+            }
+        }
+    }
+
     std::vector<std::uint32_t> chain_offsets(chain_count);
     for (std::uint32_t i = 0; i < chain_count; ++i) {
         if (!read_u32(block, table_end + static_cast<std::size_t>(i) * 4,
@@ -717,8 +737,8 @@ bool parse_acm(std::span<const std::uint8_t> block, MeshData& mesh,
     MeshData decoded;
     const Mat4 identity = Mat4::identity();
     for (std::uint32_t i = 0; i < chain_count; ++i) {
-        // Unowned chains are shape alternatives, not part of the neutral mesh.
-        if (owners[i] == no_link) continue;
+        // Unowned chains are decoded only when a shape track references them.
+        if (owners[i] == no_link && shape_targets[i].empty()) continue;
         const std::size_t start = chains_start + chain_offsets[i];
         if (start > block.size() || block.size() - start < 16) {
             error = "ACM DMA chain header is truncated";
@@ -740,12 +760,23 @@ bool parse_acm(std::span<const std::uint8_t> block, MeshData& mesh,
             error = "ACM DMA chain payload overlaps the next chain or exceeds the block";
             return false;
         }
-        if (qwc != 0) {
+        if (qwc != 0 && owners[i] != no_link) {
             const std::uint32_t owner = owners[i];
             const Mat4& transform = part_model ? identity : world[owner];
             MeshData& destination = part_model ? decoded_model.parts[owner].mesh : decoded;
             if (!parse_vif_chain(block, start, static_cast<std::size_t>(end64),
                                  transform, destination, error)) return false;
+        }
+        if (qwc != 0 && part_model) {
+            for (const std::uint32_t target_part : shape_targets[i]) {
+                AcmModelPart::ShapeVariant variant;
+                variant.chain_index = static_cast<std::int32_t>(i);
+                if (!parse_vif_chain(block, start, static_cast<std::size_t>(end64),
+                                     identity, variant.mesh, error)) return false;
+                if (!variant.mesh.indices.empty())
+                    decoded_model.parts[target_part].shape_variants.push_back(
+                        std::move(variant));
+            }
         }
     }
     const bool has_geometry = part_model
