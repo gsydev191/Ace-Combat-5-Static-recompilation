@@ -105,7 +105,9 @@ It stages only the new model assets, avoiding a copy of existing scene geometry.
 Transforms can form a parent hierarchy by referencing an earlier transform;
 the ordering rule prevents cycles, and the renderer resolves the world matrices
 once per frame. Transform changes do not invalidate uploaded geometry or
-textures.
+textures. `Scene::clear_assets()` releases meshes, draws, and imported textures
+while preserving transforms, and invalidates the renderer's uploaded asset
+revision so the replacement state must upload its assets before drawing.
 
 The `ac5_extract`, `ac5_asset_core`, and `ac5_game_core` targets are independent
 of SDL3 and Vulkan. Configure with `-DAC5_BUILD_RENDERER=OFF` to build the

@@ -195,6 +195,18 @@ public:
         asset_revision_ = next_asset_revision();
     }
 
+    // Drop scene assets while retaining entity transforms for the next state.
+    // A renderer that uploaded the old assets will reject drawing until the
+    // replacement scene assets have been uploaded.
+    void clear_assets() {
+        TextureData default_texture;
+        meshes_.clear();
+        draws_.clear();
+        textures_.resize(1);
+        textures_[0] = std::move(default_texture);
+        asset_revision_ = next_asset_revision();
+    }
+
     std::uint64_t asset_revision() const { return asset_revision_; }
 
     const std::vector<MeshData>& meshes() const { return meshes_; }
