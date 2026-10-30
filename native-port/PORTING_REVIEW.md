@@ -155,11 +155,14 @@ project does not build or link any of those files.
 - A bounds-checked native ACM/VIF static mesh loader for standalone ACM blocks
   and `.mpl`/`.bin` model bundles. It converts decoded triangle strips to indexed
   `MeshData`, uses the ACM pre-order child counts and chain-owner indices to
-  place geometry, and leaves material textures and animation for later work.
+  place geometry, and loads the first indexed GIM found in the bundle. Model
+  animation and additional material slots remain future work.
   On the extracted F-4G selection bundle it produces 5,538 vertices and 2,920
   triangles with assembled bounds of about 59 x 26 x 96 game units, matching
-  the measured reference model. The F-16 player bundle has four chains without
-  verified part owners and is rejected until that mapping is understood.
+  the measured reference model. The F-16 selection bundle produces 4,108
+  vertices and 2,172 triangles with assembled bounds of about 49 x 26 x 79
+  game units. The separate F-16 player bundle has four chains without verified
+  part owners and is rejected until that mapping is understood.
 - A Vulkan 1.3 renderer using SDL3, dynamic rendering, synchronization2,
   indexed textured meshes, push-constant transforms, per-image depth
   attachments, resize-aware swapchain recreation, and staging uploads that

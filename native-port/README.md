@@ -198,14 +198,16 @@ The extractor can write a decoded member or one inner file by index:
 ac5_extract DATA.TBL DATA.PAC 251 251.bin
 ac5_extract DATA.TBL DATA.PAC 251 0 aircraft.obj
 ac5_extract --named DATA.TBL DATA.PAC pac_names.txt 251 plmodel/f04eo.mpl aircraft.mpl
+ac5_extract --named DATA.TBL DATA.PAC pac_names.txt 619 selplane/f16cosel.bin f16cosel.bin
+ac5_native --model f16cosel.bin
 ac5_extract --all DATA.TBL DATA.PAC pac_names.txt extracted
 ```
 
 On Windows, the native app and extractor convert the Unicode process command
 line to UTF-8 before interpreting file paths.
 
-The extracted bytes remain in their original game format; the OBJ renderer
-path currently consumes converted OBJ meshes. Name lookup accepts the
+The extractor preserves original file formats; the renderer can consume OBJ
+meshes and supported static ACM aircraft bundles directly. Name lookup accepts the
 `member index path` text format and compares paths without case sensitivity.
 Bulk extraction writes one directory per member and uses `__ac5_slots/index`
 paths when no safe archive path is known or when multiple slots collide by
