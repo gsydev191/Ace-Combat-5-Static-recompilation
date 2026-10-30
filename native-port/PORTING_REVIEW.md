@@ -215,6 +215,8 @@ project does not build or link any of those files.
   independent contact and mode bytes, and its native setters preserve
   unrelated bits as the recovered mode setter does. Successful flight ticks
   also apply the recovered post-physics contact-flag transitions.
+  `advance_aircraft_carrier_tick` preserves the carrier wrapper's hold window,
+  throttle gate, contact acceleration modifiers, and special flag timing.
 - A bounded, resumable ULZ decoder and `DATA.TBL`/`DATA.PAC` reader. The
   decoder can yield after a caller-selected number of control words, and
   `ArchiveMemberLoad` exposes that budget at the member-loading boundary. Its

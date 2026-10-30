@@ -260,6 +260,9 @@ ground-contact option uses the recovered
 per-tick acceleration and maximum
 speed clamp, with caller-supplied carrier scaling and bias; it does not perform
 terrain collision or marker-based alignment.
+`advance_aircraft_carrier_tick` adds the carrier hold window, two-second
+throttle gate, reset behavior, and carrier acceleration adjustments while
+preserving the source tick's delayed contact-flag transitions.
 `load_aircraft_flight_rules` reads the standalone 400-byte
 aircraft `.pmb` parameter file, and `ac5_flight_info` reports its decoded
 speed and axis tables (for example, `ac5_flight_info f04g.pmb`). Terrain

@@ -352,4 +352,41 @@ bool advance_aircraft_flight_tick(const AircraftFlightRules& rules,
     return true;
 }
 
+bool advance_aircraft_carrier_tick(const AircraftFlightRules& rules,
+                                   const AircraftFlightInput& input,
+                                   AircraftFlightState& state) noexcept {
+    if (input.ticks_per_second != 30 && input.ticks_per_second != 60)
+        return false;
+
+    const bool carrier_hold = (state.flags.contact & 0x03u) == 0x03u &&
+                              (state.flags.mode & 0x02u) != 0;
+    const bool within_hold = carrier_hold &&
+        state.carrier_hold_ticks < 2 * input.ticks_per_second;
+    AircraftFlightInput tick_input = input;
+    const AircraftFlightFlags original_flags = state.flags;
+    std::uint8_t next_hold_ticks = state.carrier_hold_ticks;
+
+    if (within_hold) {
+        tick_input.throttle_lever = 0.0;
+        if (input.throttle_lever == 1.0) {
+            if (next_hold_ticks < 2 * input.ticks_per_second)
+                ++next_hold_ticks;
+        } else {
+            tick_input.reset_contact_speed = true;
+        }
+        if (!advance_aircraft_flight_tick(rules, tick_input, state)) return false;
+        state.flags = original_flags;
+        state.carrier_hold_ticks = next_hold_ticks;
+        return true;
+    }
+
+    const bool carrier_prehold = (state.flags.contact & 0x03u) == 0x01u &&
+                                 (state.flags.mode & 0x02u) != 0;
+    if (carrier_hold || carrier_prehold)
+        tick_input.contact_acceleration_scale = 1.2;
+    if (carrier_prehold)
+        tick_input.contact_acceleration_bias = -2.0;
+    return advance_aircraft_flight_tick(rules, tick_input, state);
+}
+
 } // namespace ac5

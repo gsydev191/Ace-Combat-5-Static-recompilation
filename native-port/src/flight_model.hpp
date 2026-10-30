@@ -22,6 +22,7 @@ struct AircraftFlightState {
     double stall_factor = 0.0;
     double path_lag = 1.0;
     double approach_pitch = 0.0;
+    std::uint8_t carrier_hold_ticks = 0;
 };
 
 struct AircraftFlightInput {
@@ -46,6 +47,12 @@ void advance_aircraft_flight_flags(AircraftFlightFlags& flags) noexcept;
 // Advance one native flight tick. Contact bit 0 selects the recovered scalar
 // contact-speed law; terrain collision and ground-marker alignment are separate.
 [[nodiscard]] bool advance_aircraft_flight_tick(
+    const AircraftFlightRules& rules, const AircraftFlightInput& input,
+    AircraftFlightState& state) noexcept;
+
+// Port the carrier launch hold wrapper, including its temporary throttle
+// suppression, contact acceleration tuning, and delayed flag transitions.
+[[nodiscard]] bool advance_aircraft_carrier_tick(
     const AircraftFlightRules& rules, const AircraftFlightInput& input,
     AircraftFlightState& state) noexcept;
 
