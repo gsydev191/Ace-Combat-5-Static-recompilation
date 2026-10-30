@@ -206,8 +206,9 @@ project does not build or link any of those files.
   from `CParamPlaneBin::_Read` and the aircraft setup routine. `ac5_flight_info`
   shows the decoded F-4G tables directly from a local extracted parameter file.
 - `advance_aircraft_flight_tick` composes the native speed and axis routines
-  and integrates body attitude with the generated routine's Euler-matrix order.
-  Ground-contact speed, trim/stall corrections, and position remain separate.
+  and integrates body attitude and airborne position with the generated
+  routine's Euler-matrix order and path-attitude lag. Ground-contact speed,
+  steady trim, stall nose-drop, and terrain collision remain separate.
 - A bounded, resumable ULZ decoder and `DATA.TBL`/`DATA.PAC` reader. The
   decoder can yield after a caller-selected number of control words, and
   `ArchiveMemberLoad` exposes that budget at the member-loading boundary. Its

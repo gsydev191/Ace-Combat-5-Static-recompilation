@@ -240,8 +240,8 @@ input slew law. `advance_aircraft_flight_tick` composes those scalar updates and
 integrates native body attitude. `load_aircraft_flight_rules` reads the standalone 400-byte
 aircraft `.pmb` parameter file, and `ac5_flight_info` reports its decoded
 speed and axis tables (for example, `ac5_flight_info f04g.pmb`). The demo does
-not yet run this flight model; contact handling, trim, position, and a runtime
-ruleset selection UI remain future work.
+not yet run this flight model; contact handling, trim/stall corrections,
+terrain collision, and a runtime ruleset selection UI remain future work.
 The input system opens one connected gamepad at startup and scans the remaining
 connected devices when the active gamepad is removed. It also handles devices
 connected after startup.
