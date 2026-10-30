@@ -19,6 +19,9 @@ struct Vertex {
     Vec2 uv;
     Vec3 normal{0.0f, 0.0f, 1.0f};
     float alpha = 1.0f;
+    Vec2 environment_uv{}; // reflection UV before perspective interpolation
+    Vec3 environment_color{}; // normalized modulation color for the environment pass
+    float environment_alpha = 0.0f; // normalized blend alpha; zero disables its contribution
 };
 
 struct TextureData {
@@ -35,6 +38,7 @@ struct MeshData {
 using MeshId = std::uint32_t;
 using TextureId = std::uint32_t;
 using TransformId = std::uint32_t;
+inline constexpr TextureId no_environment_texture = std::numeric_limits<TextureId>::max();
 inline constexpr TransformId no_parent_transform = std::numeric_limits<TransformId>::max();
 
 struct DrawItem {
@@ -42,6 +46,7 @@ struct DrawItem {
     TextureId texture;
     Mat4 model;
     TransformId transform;
+    TextureId environment_texture = no_environment_texture;
 };
 
 class Scene {
@@ -131,6 +136,12 @@ public:
         for (DrawItem& draw : draws_) draw.texture = texture;
     }
 
+    void set_environment_texture(std::size_t draw_index, TextureId texture) {
+        if (texture != no_environment_texture && texture >= textures_.size())
+            throw std::out_of_range("environment texture is not in the scene");
+        draws_.at(draw_index).environment_texture = texture;
+    }
+
     // Merge a staged asset-only scene. Its transform table must match this
     // scene; texture zero maps to this scene's white texture.
     void append_assets(Scene&& staged) {
@@ -146,6 +157,8 @@ public:
         for (const DrawItem& draw : staged.draws_) {
             if (draw.mesh >= staged.meshes_.size() ||
                 draw.texture >= staged.textures_.size() ||
+                (draw.environment_texture != no_environment_texture &&
+                 draw.environment_texture >= staged.textures_.size()) ||
                 draw.transform >= transforms_.size())
                 throw std::invalid_argument("staged scene contains an invalid draw");
         }
@@ -175,6 +188,10 @@ public:
             draw.mesh = static_cast<MeshId>(mesh_base + draw.mesh);
             if (draw.texture != 0)
                 draw.texture = static_cast<TextureId>(texture_base + draw.texture);
+            if (draw.environment_texture != no_environment_texture &&
+                draw.environment_texture != 0)
+                draw.environment_texture = static_cast<TextureId>(
+                    texture_base + draw.environment_texture);
             draws_.push_back(draw);
         }
         if (!staged.meshes_.empty() || staged.textures_.size() > 1)

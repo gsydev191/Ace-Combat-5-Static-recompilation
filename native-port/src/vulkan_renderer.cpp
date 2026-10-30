@@ -28,6 +28,7 @@ struct DrawSubmission {
     Mat4 world;
     Mat4 view_projection_model;
     float depth;
+    bool transparent;
 };
 
 bool finite_matrix(const Mat4& matrix) {
@@ -481,9 +482,10 @@ bool VulkanRenderer::create_depth_resources() {
 }
 
 bool VulkanRenderer::create_pipeline() {
-    std::vector<std::uint32_t> vertex_code, fragment_code;
+    std::vector<std::uint32_t> vertex_code, fragment_code, environment_fragment_code;
     if (!read_shader("mesh.vert.spv", vertex_code, error_) ||
-        !read_shader("mesh.frag.spv", fragment_code, error_)) return false;
+        !read_shader("mesh.frag.spv", fragment_code, error_) ||
+        !read_shader("environment.frag.spv", environment_fragment_code, error_)) return false;
     auto create_shader = [this](const std::vector<std::uint32_t>& code, VkShaderModule& module) {
         auto info = vk_struct<VkShaderModuleCreateInfo>(VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO);
         info.codeSize = code.size() * sizeof(std::uint32_t);
@@ -492,7 +494,10 @@ bool VulkanRenderer::create_pipeline() {
         return result == VK_SUCCESS || fail("vkCreateShaderModule", result);
     };
     VkShaderModule vertex = VK_NULL_HANDLE, fragment = VK_NULL_HANDLE;
-    if (!create_shader(vertex_code, vertex) || !create_shader(fragment_code, fragment)) {
+    VkShaderModule environment_fragment = VK_NULL_HANDLE;
+    if (!create_shader(vertex_code, vertex) || !create_shader(fragment_code, fragment) ||
+        !create_shader(environment_fragment_code, environment_fragment)) {
+        if (environment_fragment) vkDestroyShaderModule(device_, environment_fragment, nullptr);
         if (vertex) vkDestroyShaderModule(device_, vertex, nullptr);
         if (fragment) vkDestroyShaderModule(device_, fragment, nullptr);
         return false;
@@ -511,6 +516,7 @@ bool VulkanRenderer::create_pipeline() {
         const VkResult layout_result = vkCreateDescriptorSetLayout(
             device_, &descriptor_layout, nullptr, &texture_set_layout_);
         if (layout_result != VK_SUCCESS) {
+            vkDestroyShaderModule(device_, environment_fragment, nullptr);
             vkDestroyShaderModule(device_, fragment, nullptr);
             vkDestroyShaderModule(device_, vertex, nullptr);
             return fail("vkCreateDescriptorSetLayout(texture)", layout_result);
@@ -528,6 +534,7 @@ bool VulkanRenderer::create_pipeline() {
     layout_info.pPushConstantRanges = &draw_constants;
     VkResult result = vkCreatePipelineLayout(device_, &layout_info, nullptr, &pipeline_layout_);
     if (result != VK_SUCCESS) {
+        vkDestroyShaderModule(device_, environment_fragment, nullptr);
         vkDestroyShaderModule(device_, fragment, nullptr);
         vkDestroyShaderModule(device_, vertex, nullptr);
         return fail("vkCreatePipelineLayout", result);
@@ -547,12 +554,15 @@ bool VulkanRenderer::create_pipeline() {
         VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO);
     static_assert(std::is_standard_layout_v<Vertex>);
     VkVertexInputBindingDescription vertex_binding{0, sizeof(Vertex), VK_VERTEX_INPUT_RATE_VERTEX};
-    std::array<VkVertexInputAttributeDescription, 5> attributes{{
+    std::array<VkVertexInputAttributeDescription, 8> attributes{{
         {0, 0, VK_FORMAT_R32G32B32_SFLOAT, static_cast<std::uint32_t>(offsetof(Vertex, position))},
         {1, 0, VK_FORMAT_R32G32B32_SFLOAT, static_cast<std::uint32_t>(offsetof(Vertex, color))},
         {2, 0, VK_FORMAT_R32G32_SFLOAT, static_cast<std::uint32_t>(offsetof(Vertex, uv))},
         {3, 0, VK_FORMAT_R32G32B32_SFLOAT, static_cast<std::uint32_t>(offsetof(Vertex, normal))},
-        {4, 0, VK_FORMAT_R32_SFLOAT, static_cast<std::uint32_t>(offsetof(Vertex, alpha))}}};
+        {4, 0, VK_FORMAT_R32_SFLOAT, static_cast<std::uint32_t>(offsetof(Vertex, alpha))},
+        {5, 0, VK_FORMAT_R32G32_SFLOAT, static_cast<std::uint32_t>(offsetof(Vertex, environment_uv))},
+        {6, 0, VK_FORMAT_R32G32B32_SFLOAT, static_cast<std::uint32_t>(offsetof(Vertex, environment_color))},
+        {7, 0, VK_FORMAT_R32_SFLOAT, static_cast<std::uint32_t>(offsetof(Vertex, environment_alpha))}}};
     vertex_input.vertexBindingDescriptionCount = 1;
     vertex_input.pVertexBindingDescriptions = &vertex_binding;
     vertex_input.vertexAttributeDescriptionCount = static_cast<std::uint32_t>(attributes.size());
@@ -620,6 +630,13 @@ bool VulkanRenderer::create_pipeline() {
         result = vkCreateGraphicsPipelines(device_, VK_NULL_HANDLE, 1, &pipeline_info,
                                            nullptr, &transparent_pipeline_);
     }
+    if (result == VK_SUCCESS) {
+        depth.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+        stages[1].module = environment_fragment;
+        result = vkCreateGraphicsPipelines(device_, VK_NULL_HANDLE, 1, &pipeline_info,
+                                           nullptr, &environment_pipeline_);
+    }
+    vkDestroyShaderModule(device_, environment_fragment, nullptr);
     vkDestroyShaderModule(device_, fragment, nullptr);
     vkDestroyShaderModule(device_, vertex, nullptr);
     if (result != VK_SUCCESS) {
@@ -1014,6 +1031,8 @@ bool VulkanRenderer::upload_scene(const Scene& scene) {
     }
     for (const DrawItem& draw : scene.draws()) {
         if (draw.mesh >= scene.meshes().size() || draw.texture >= scene.textures().size() ||
+            (draw.environment_texture != no_environment_texture &&
+             draw.environment_texture >= scene.textures().size()) ||
             draw.transform >= scene.transforms().size()) {
             error_ = "scene draw references an invalid mesh, texture, or transform";
             return false;
@@ -1049,7 +1068,14 @@ bool VulkanRenderer::upload_scene(const Scene& scene) {
                 !std::isfinite(vertex.uv.x) || !std::isfinite(vertex.uv.y) ||
                 !std::isfinite(vertex.normal.x) || !std::isfinite(vertex.normal.y) ||
                 !std::isfinite(vertex.normal.z) || !std::isfinite(vertex.alpha) ||
-                vertex.alpha < 0.0f || vertex.alpha > 1.0f) {
+                !std::isfinite(vertex.environment_uv.x) ||
+                !std::isfinite(vertex.environment_uv.y) ||
+                !std::isfinite(vertex.environment_color.x) ||
+                !std::isfinite(vertex.environment_color.y) ||
+                !std::isfinite(vertex.environment_color.z) ||
+                !std::isfinite(vertex.environment_alpha) ||
+                vertex.alpha < 0.0f || vertex.alpha > 1.0f ||
+                vertex.environment_alpha < 0.0f || vertex.environment_alpha > 1.0f) {
                 error_ = "scene mesh contains an invalid or non-finite vertex attribute";
                 return false;
             }
@@ -1304,6 +1330,8 @@ bool VulkanRenderer::draw_frame(const Mat4& view_projection, const Scene& scene)
     }
     for (const DrawItem& draw : scene.draws()) {
         if (draw.mesh >= meshes_.size() || draw.texture >= textures_.size() ||
+            (draw.environment_texture != no_environment_texture &&
+             draw.environment_texture >= textures_.size()) ||
             draw.transform >= scene.transforms().size()) {
             error_ = "scene draw references an unavailable mesh, texture, or transform";
             return false;
@@ -1339,9 +1367,10 @@ bool VulkanRenderer::draw_frame(const Mat4& view_projection, const Scene& scene)
                 world.value[9] * mesh.local_center.z + world.value[13],
             world.value[2] * mesh.local_center.x + world.value[6] * mesh.local_center.y +
                 world.value[10] * mesh.local_center.z + world.value[14]};
+        const bool transparent = textures_[draw.texture].has_transparency || mesh.has_transparency;
         DrawSubmission submission{&draw, world, view_projection_model,
-                                  projected_depth(view_projection, center)};
-        if (textures_[draw.texture].has_transparency || mesh.has_transparency)
+                                  projected_depth(view_projection, center), transparent};
+        if (transparent)
             transparent_draws.push_back(submission);
         else
             opaque_draws.push_back(submission);
@@ -1438,30 +1467,39 @@ bool VulkanRenderer::draw_frame(const Mat4& view_projection, const Scene& scene)
     VkRect2D scissor{{0, 0}, swapchain_extent_};
     vkCmdSetViewport(command, 0, 1, &viewport);
     vkCmdSetScissor(command, 0, 1, &scissor);
-    const auto record_draw = [this, command, &view_projection](
-                                const DrawSubmission& submission) {
+    const auto record_draw = [this, command](const DrawSubmission& submission,
+                                             bool environment_pass) {
         const DrawItem& draw = *submission.item;
         const GpuMesh& mesh = meshes_[draw.mesh];
+        if (environment_pass) {
+            vkCmdBindPipeline(command, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                              environment_pipeline_);
+        } else {
+            vkCmdBindPipeline(command, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                              submission.transparent ? transparent_pipeline_ : pipeline_);
+        }
         const DrawPushConstants push_constants{
             submission.view_projection_model, Mat4::normal_matrix(submission.world)};
         const VkDeviceSize offset = mesh.vertex_offset;
         vkCmdBindVertexBuffers(command, 0, 1, &vertex_buffer_, &offset);
         vkCmdBindIndexBuffer(command, index_buffer_, 0, VK_INDEX_TYPE_UINT32);
+        const TextureId texture = environment_pass ? draw.environment_texture : draw.texture;
         vkCmdBindDescriptorSets(command, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 pipeline_layout_, 0, 1,
-                                &textures_[draw.texture].descriptor_set, 0, nullptr);
+                                &textures_[texture].descriptor_set, 0, nullptr);
         vkCmdPushConstants(command, pipeline_layout_, VK_SHADER_STAGE_VERTEX_BIT,
                            0, sizeof(push_constants), &push_constants);
         vkCmdDrawIndexed(command, mesh.index_count, 1, mesh.first_index, 0, 0);
     };
-    if (!opaque_draws.empty()) {
-        vkCmdBindPipeline(command, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_);
-        for (const DrawSubmission& draw : opaque_draws) record_draw(draw);
-    }
-    if (!transparent_draws.empty()) {
-        vkCmdBindPipeline(command, VK_PIPELINE_BIND_POINT_GRAPHICS, transparent_pipeline_);
-        for (const DrawSubmission& draw : transparent_draws) record_draw(draw);
-    }
+    const auto record_draws = [&record_draw](const std::vector<DrawSubmission>& draws) {
+        for (const DrawSubmission& draw : draws) {
+            record_draw(draw, false);
+            if (draw.item->environment_texture != no_environment_texture)
+                record_draw(draw, true);
+        }
+    };
+    record_draws(opaque_draws);
+    record_draws(transparent_draws);
     vkCmdEndRendering(command);
 
     auto to_present = vk_struct<VkImageMemoryBarrier2>(VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2);
@@ -1567,9 +1605,11 @@ void VulkanRenderer::destroy_pipeline() {
     if (device_ == VK_NULL_HANDLE) return;
     if (pipeline_) vkDestroyPipeline(device_, pipeline_, nullptr);
     if (transparent_pipeline_) vkDestroyPipeline(device_, transparent_pipeline_, nullptr);
+    if (environment_pipeline_) vkDestroyPipeline(device_, environment_pipeline_, nullptr);
     if (pipeline_layout_) vkDestroyPipelineLayout(device_, pipeline_layout_, nullptr);
     pipeline_ = VK_NULL_HANDLE;
     transparent_pipeline_ = VK_NULL_HANDLE;
+    environment_pipeline_ = VK_NULL_HANDLE;
     pipeline_layout_ = VK_NULL_HANDLE;
 }
 

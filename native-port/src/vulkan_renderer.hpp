@@ -100,6 +100,7 @@ private:
     VkPipelineLayout pipeline_layout_ = VK_NULL_HANDLE;
     VkPipeline pipeline_ = VK_NULL_HANDLE;
     VkPipeline transparent_pipeline_ = VK_NULL_HANDLE;
+    VkPipeline environment_pipeline_ = VK_NULL_HANDLE;
     VkDescriptorSetLayout texture_set_layout_ = VK_NULL_HANDLE;
     VkDescriptorPool texture_descriptor_pool_ = VK_NULL_HANDLE;
     std::vector<GpuTexture> textures_;

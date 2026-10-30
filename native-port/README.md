@@ -20,6 +20,12 @@ enumeration and the device portability subset for layered Vulkan platforms.
 Native vertices and textures carry alpha into the shader; transparent meshes
 are sorted by transformed bounds center and blended back-to-front with depth
 writes disabled, while opaque meshes retain depth writes.
+Draws can also select an environment texture for a depth-tested blended second
+pass. Set it with `Scene::set_environment_texture`; vertices provide reflection
+UVs, modulation color, and alpha in their environment fields. Convert game STQ
+coordinates to `u = s / q`, `v = t / q` before assigning `environment_uv`; the
+shader then perspective-interpolates those UVs across the triangle. The sample
+does not yet populate these fields from decoded AC5 materials.
 Scene replacement uploads are staged in separate Vulkan buffers, textures,
 and descriptors; a failed upload leaves the previously uploaded scene usable.
 OBJ/MTL and PPM/TGA importers,
@@ -31,8 +37,9 @@ assets or contain game-accurate gameplay systems.
 The portable `model_shading` library exposes the plain, lit, and environment
 vertex-program paths as value-in/value-out math. Environment mode returns the
 lit base-pass vertex result and separate reflective UV/color data for a second
-pass; the sample renderer does not yet bind decoded game material state to
-these outputs.
+pass; the native scene and Vulkan renderer can draw that pass when supplied
+with environment vertex data and a texture. The sample does not yet populate
+those fields from decoded game material state.
 
 The native math uses column-major, right-handed matrices. Its perspective
 projection uses Vulkan's zero-to-one depth range and inverts Y for a

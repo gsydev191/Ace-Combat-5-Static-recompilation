@@ -214,8 +214,10 @@ arithmetic, not guest CPU or hardware state) and are covered by
   and a second pass with transformed reflection coordinates and capped
   reflection color, following the environment path in
   `runtime/src/rn/rn_vp_model.c`. The Vulkan sample does not yet consume this game-specific
-  shading output; wiring it requires decoded model/material data and matching
-  render passes.
+  shading output automatically; scene draws can select an environment texture
+  and use vertex environment coordinates/color in a blended depth-tested pass.
+  Wiring the game-specific output requires decoded model/material data and
+  conversion of its STQ/color values into the native vertex representation.
 
 The generated code is present as behavioral reference. `DATA.TBL`, `DATA.PAC`,
 and `SLUS_208.51` are not in this checkout, so the model/texture container

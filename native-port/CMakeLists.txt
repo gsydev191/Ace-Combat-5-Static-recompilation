@@ -154,7 +154,7 @@ if(AC5_BUILD_RENDERER)
     set(SHADER_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/shaders")
     file(MAKE_DIRECTORY "${SHADER_OUTPUT_DIR}")
     set(SHADER_OUTPUTS)
-    foreach(SHADER mesh.vert mesh.frag)
+    foreach(SHADER mesh.vert mesh.frag environment.frag)
         set(OUTPUT "${SHADER_OUTPUT_DIR}/${SHADER}.spv")
         add_custom_command(
             OUTPUT "${OUTPUT}"
