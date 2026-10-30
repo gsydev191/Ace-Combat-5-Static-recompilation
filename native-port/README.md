@@ -40,8 +40,9 @@ lit base-pass vertex result and separate reflective UV/color data for a second
 pass; the native scene and Vulkan renderer can draw that pass when supplied
 with environment vertex data and a texture. The sample does not yet populate
 those fields from decoded game material state. `model_mesh_adapter.hpp` bridges
-the shading result to a native `Vertex`: it dehomogenizes STQ and normalizes
-the 0–255 modulation channels for the Vulkan shader.
+shading results to a native `Vertex`: it applies already-lit base colors
+without a second demo-lighting pass, and dehomogenizes environment STQ while
+normalizing its 0–255 modulation channels.
 
 The native math uses column-major, right-handed matrices. Its perspective
 projection uses Vulkan's zero-to-one depth range and inverts Y for a

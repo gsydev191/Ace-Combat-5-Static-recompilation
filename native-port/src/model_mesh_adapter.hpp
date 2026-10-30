@@ -8,6 +8,19 @@
 
 namespace ac5 {
 
+// Use already-lit model vertex colors without applying the renderer's demo
+// diffuse light a second time. Vertex opacity stays a separate material
+// property because model-program GS alpha is not necessarily opacity.
+inline void apply_model_base_shading(Vertex& vertex,
+                                     const ModelVertexOut& shaded) noexcept {
+    const auto channel = [](std::int32_t value) {
+        return static_cast<float>(std::clamp(value, 0, 255)) / 255.0f;
+    };
+    vertex.color = {channel(shaded.rgba[0]), channel(shaded.rgba[1]),
+                    channel(shaded.rgba[2])};
+    vertex.light_response = 0.0f;
+}
+
 // Copy the environment pass outputs from the portable model vertex program
 // into the native Vulkan vertex representation. The model program emits
 // projective STQ, while the native shader expects normalized UVs and applies

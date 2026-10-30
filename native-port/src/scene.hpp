@@ -19,6 +19,7 @@ struct Vertex {
     Vec2 uv;
     Vec3 normal{0.0f, 0.0f, 1.0f};
     float alpha = 1.0f;
+    float light_response = 1.0f; // zero for colors already lit by model_shading
     Vec2 environment_uv{}; // reflection UV before perspective interpolation
     Vec3 environment_color{}; // normalized modulation color for the environment pass
     float environment_alpha = 0.0f; // normalized blend alpha; zero disables its contribution

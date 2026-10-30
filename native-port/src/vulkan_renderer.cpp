@@ -554,7 +554,7 @@ bool VulkanRenderer::create_pipeline() {
         VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO);
     static_assert(std::is_standard_layout_v<Vertex>);
     VkVertexInputBindingDescription vertex_binding{0, sizeof(Vertex), VK_VERTEX_INPUT_RATE_VERTEX};
-    std::array<VkVertexInputAttributeDescription, 8> attributes{{
+    std::array<VkVertexInputAttributeDescription, 9> attributes{{
         {0, 0, VK_FORMAT_R32G32B32_SFLOAT, static_cast<std::uint32_t>(offsetof(Vertex, position))},
         {1, 0, VK_FORMAT_R32G32B32_SFLOAT, static_cast<std::uint32_t>(offsetof(Vertex, color))},
         {2, 0, VK_FORMAT_R32G32_SFLOAT, static_cast<std::uint32_t>(offsetof(Vertex, uv))},
@@ -562,7 +562,8 @@ bool VulkanRenderer::create_pipeline() {
         {4, 0, VK_FORMAT_R32_SFLOAT, static_cast<std::uint32_t>(offsetof(Vertex, alpha))},
         {5, 0, VK_FORMAT_R32G32_SFLOAT, static_cast<std::uint32_t>(offsetof(Vertex, environment_uv))},
         {6, 0, VK_FORMAT_R32G32B32_SFLOAT, static_cast<std::uint32_t>(offsetof(Vertex, environment_color))},
-        {7, 0, VK_FORMAT_R32_SFLOAT, static_cast<std::uint32_t>(offsetof(Vertex, environment_alpha))}}};
+        {7, 0, VK_FORMAT_R32_SFLOAT, static_cast<std::uint32_t>(offsetof(Vertex, environment_alpha))},
+        {8, 0, VK_FORMAT_R32_SFLOAT, static_cast<std::uint32_t>(offsetof(Vertex, light_response))}}};
     vertex_input.vertexBindingDescriptionCount = 1;
     vertex_input.pVertexBindingDescriptions = &vertex_binding;
     vertex_input.vertexAttributeDescriptionCount = static_cast<std::uint32_t>(attributes.size());
@@ -1074,8 +1075,10 @@ bool VulkanRenderer::upload_scene(const Scene& scene) {
                 !std::isfinite(vertex.environment_color.y) ||
                 !std::isfinite(vertex.environment_color.z) ||
                 !std::isfinite(vertex.environment_alpha) ||
+                !std::isfinite(vertex.light_response) ||
                 vertex.alpha < 0.0f || vertex.alpha > 1.0f ||
-                vertex.environment_alpha < 0.0f || vertex.environment_alpha > 1.0f) {
+                vertex.environment_alpha < 0.0f || vertex.environment_alpha > 1.0f ||
+                vertex.light_response < 0.0f || vertex.light_response > 1.0f) {
                 error_ = "scene mesh contains an invalid or non-finite vertex attribute";
                 return false;
             }
