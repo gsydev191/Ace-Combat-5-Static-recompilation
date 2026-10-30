@@ -197,8 +197,11 @@ project does not build or link any of those files.
 - `advance_airborne_speed` ports the scalar envelope in generated routine
   `0x0016D408`: altitude density scaling, climb/dive speed changes, throttle
   target selection, spool response, and stall factor. It consumes explicit
-  native parameter and state values; contact acceleration, angular rates, and
-  world displacement remain separate work.
+  native parameter and state values; contact acceleration and world
+  displacement remain separate work.
+- `advance_flight_axis` ports the table interpolation, stall/full-control rate
+  ramp, and input-dependent slew from generated routine `0x0016B828`. It returns
+  native radians-per-tick state without requiring the guest aircraft structure.
 - A bounded, resumable ULZ decoder and `DATA.TBL`/`DATA.PAC` reader. The
   decoder can yield after a caller-selected number of control words, and
   `ArchiveMemberLoad` exposes that budget at the member-loading boundary. Its

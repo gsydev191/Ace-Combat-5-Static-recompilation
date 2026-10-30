@@ -93,9 +93,92 @@ FlightSpeedOutput advance_airborne_speed(const FlightSpeedRules& rules,
             ? (full_control_speed - output.speed_units_per_tick) /
                 (full_control_speed - stall_speed)
             : 0.0;
+    output.stall_speed_units_per_tick = stall_speed;
+    output.full_control_speed_units_per_tick = full_control_speed;
     output.valid = std::isfinite(output.speed_units_per_tick) &&
                    std::isfinite(output.target_units_per_tick) &&
-                   std::isfinite(output.stall_factor);
+                   std::isfinite(output.stall_factor) &&
+                   std::isfinite(output.stall_speed_units_per_tick) &&
+                   std::isfinite(output.full_control_speed_units_per_tick);
+    return output;
+}
+
+FlightAxisOutput advance_flight_axis(const FlightAxisRules& rules,
+                                     const FlightAxisInput& input) noexcept {
+    FlightAxisOutput output{};
+    const std::array values{
+        input.stick, input.speed_units_per_tick,
+        input.stall_speed_units_per_tick, input.full_control_speed_units_per_tick,
+        input.current_rate_radians_per_tick, rules.low_input_gain_percent,
+        rules.full_input_gain_percent};
+    if (!std::all_of(values.begin(), values.end(),
+                     [](double value) { return std::isfinite(value); }) ||
+        !std::all_of(rules.breakpoints_kmh.begin(), rules.breakpoints_kmh.end(),
+                     [](double value) { return std::isfinite(value); }) ||
+        !std::all_of(rules.rates_degrees_per_second.begin(),
+                     rules.rates_degrees_per_second.end(),
+                     [](double value) { return std::isfinite(value); }) ||
+        (input.ticks_per_second != 30 && input.ticks_per_second != 60) ||
+        std::abs(input.stick) > 1.0 ||
+        input.stall_speed_units_per_tick < 0.0 ||
+        input.full_control_speed_units_per_tick <= input.stall_speed_units_per_tick ||
+        rules.low_input_gain_percent < 0.0 || rules.full_input_gain_percent < 0.0 ||
+        std::adjacent_find(rules.breakpoints_kmh.begin(), rules.breakpoints_kmh.end(),
+            [](double lhs, double rhs) { return lhs >= rhs; }) !=
+                rules.breakpoints_kmh.end())
+        return output;
+
+    double rate_degrees_per_second = 0.0;
+    if (input.speed_units_per_tick >= input.stall_speed_units_per_tick) {
+        if (input.speed_units_per_tick < input.full_control_speed_units_per_tick) {
+            const double fraction = (input.speed_units_per_tick -
+                                     input.stall_speed_units_per_tick) /
+                                    (input.full_control_speed_units_per_tick -
+                                     input.stall_speed_units_per_tick);
+            rate_degrees_per_second = rules.rates_degrees_per_second.front() * fraction;
+        } else {
+            const double units_per_kmh = 1.4222219 / input.ticks_per_second;
+            const double first_breakpoint = rules.breakpoints_kmh.front() * units_per_kmh;
+            if (input.speed_units_per_tick <= first_breakpoint) {
+                rate_degrees_per_second = rules.rates_degrees_per_second.front();
+            } else {
+                std::size_t upper = 1;
+                while (upper < rules.breakpoints_kmh.size() &&
+                       input.speed_units_per_tick >=
+                           rules.breakpoints_kmh[upper] * units_per_kmh)
+                    ++upper;
+                if (upper == rules.breakpoints_kmh.size()) {
+                    rate_degrees_per_second = rules.rates_degrees_per_second.back();
+                } else {
+                    const std::size_t lower = upper - 1;
+                    const double low_speed = rules.breakpoints_kmh[lower] * units_per_kmh;
+                    const double high_speed = rules.breakpoints_kmh[upper] * units_per_kmh;
+                    const double fraction = (input.speed_units_per_tick - low_speed) /
+                                            (high_speed - low_speed);
+                    rate_degrees_per_second =
+                        rules.rates_degrees_per_second[lower] +
+                        (rules.rates_degrees_per_second[upper] -
+                         rules.rates_degrees_per_second[lower]) * fraction;
+                }
+            }
+        }
+    }
+
+    constexpr double radians_per_degree = 0.017453292519943295;
+    const double target = input.stick * rate_degrees_per_second *
+                          radians_per_degree / input.ticks_per_second;
+    const double base_gain = rules.low_input_gain_percent / 100.0 *
+                             60.0 / input.ticks_per_second;
+    const double full_gain = rules.full_input_gain_percent / 100.0 *
+                             60.0 / input.ticks_per_second;
+    const double slew = base_gain + (full_gain - base_gain) * std::abs(input.stick);
+    output.target_rate_radians_per_tick = target;
+    output.rate_radians_per_tick = input.current_rate_radians_per_tick +
+        (target - input.current_rate_radians_per_tick) * slew;
+    output.rate_degrees_per_second = rate_degrees_per_second;
+    output.valid = std::isfinite(output.rate_radians_per_tick) &&
+                   std::isfinite(output.target_rate_radians_per_tick) &&
+                   std::isfinite(output.rate_degrees_per_second);
     return output;
 }
 

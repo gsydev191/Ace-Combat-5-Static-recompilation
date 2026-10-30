@@ -234,8 +234,10 @@ available in `FlightInput` for the flight model that has not been ported yet.
 `map_engine_lever` ports the generated throttle routine's split into dry power,
 afterburner, and airbrake channels. `advance_airborne_speed` ports the scalar
 airborne speed envelope, including density, climb/dive effects, spool response,
-and stall factor, from recovered rules supplied by the caller. The demo does
-not yet simulate those outputs or load the aircraft ruleset.
+and stall factor, from recovered rules supplied by the caller.
+`advance_flight_axis` ports the speed-dependent pitch/roll/yaw rate lookup and
+input slew law. The demo does not yet simulate these outputs or load the
+aircraft ruleset.
 The input system opens one connected gamepad at startup and scans the remaining
 connected devices when the active gamepad is removed. It also handles devices
 connected after startup.
