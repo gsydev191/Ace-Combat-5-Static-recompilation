@@ -4,6 +4,7 @@
 #include "scene_state_machine.hpp"
 
 #include <atomic>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -32,6 +33,11 @@ struct TextureData {
     std::vector<std::uint8_t> rgba{255, 255, 255, 255};
 };
 
+struct SceneLighting {
+    Vec3 direction{0.35f, 0.55f, 1.0f};
+    float ambient = 0.22f;
+};
+
 struct MeshData {
     std::vector<Vertex> vertices;
     std::vector<std::uint32_t> indices;
@@ -54,6 +60,19 @@ struct DrawItem {
 
 class Scene {
 public:
+    const SceneLighting& lighting() const { return lighting_; }
+
+    void set_lighting(SceneLighting lighting) {
+        const float length_squared = lighting.direction.x * lighting.direction.x +
+                                     lighting.direction.y * lighting.direction.y +
+                                     lighting.direction.z * lighting.direction.z;
+        if (!std::isfinite(length_squared) || length_squared <= 1.0e-12f ||
+            !std::isfinite(lighting.ambient) || lighting.ambient < 0.0f ||
+            lighting.ambient > 1.0f)
+            throw std::invalid_argument("scene lighting has invalid direction or ambient value");
+        lighting_ = lighting;
+    }
+
     MeshId add_mesh(MeshData mesh) {
         return add_mesh(std::move(mesh), false);
     }
@@ -297,6 +316,7 @@ private:
     std::vector<bool> dynamic_meshes_;
     std::vector<DrawItem> draws_;
     std::vector<TextureData> textures_{TextureData{}};
+    SceneLighting lighting_{};
     std::vector<Mat4> transforms_{Mat4::identity()};
     std::vector<TransformId> transform_parents_{no_parent_transform};
     std::uint64_t asset_revision_ = next_asset_revision();

@@ -27,6 +27,8 @@ public:
     // Draw items and transforms may change between frames; their IDs must refer
     // to the mesh and texture data most recently uploaded with upload_scene().
     // Asset changes are detected and require another upload_scene() call.
+    // A frame-fence reset or queue-submit failure is terminal for this renderer
+    // instance; inspect error() and destroy the renderer instead of retrying.
     bool draw_frame(const Mat4& view_projection, const Scene& scene);
     void request_resize() { resize_requested_ = true; }
     void wait_idle();
@@ -71,6 +73,7 @@ private:
     bool create_swapchain();
     bool create_depth_resources();
     bool create_pipeline();
+    bool upload_scene_impl(const Scene& scene);
     bool upload_texture(const TextureData& texture, GpuTexture& gpu_texture);
     bool create_texture_descriptors(std::vector<GpuTexture>& textures,
                                    VkDescriptorPool& descriptor_pool);
@@ -132,6 +135,7 @@ private:
     Frame frames_[frames_in_flight]{};
     std::uint32_t frame_index_ = 0;
     bool resize_requested_ = false;
+    bool frame_submission_failed_ = false;
     std::string error_;
 };
 

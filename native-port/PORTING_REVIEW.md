@@ -4,6 +4,19 @@ This is a review note for the source checkout. References to `generated/`,
 `runtime/`, and `config/` describe read-only source material. The native
 project does not build or link any of those files.
 
+The standalone boundary was checked against `native-port/CMakeLists.txt` and
+the source/include tree: its targets compile only files under `native-port/src`
+and shaders under `native-port/shaders`; there are no includes or links to the
+parent project's `generated/`, `runtime/`, `config/`, or `third_party/` trees.
+The `core` preset builds the C++20 archive/game libraries and CLI tools without
+SDL3 or Vulkan. The optional renderer uses installed SDL3, Vulkan 1.3, and
+`glslc`; Windows command-line parsing links the system `shell32` library.
+These are explicit toolchain/platform requirements rather than dependencies on
+the source checkout. The installed core package was consumed by a separate
+CMake project linking the exported `ac5::game_core` target. Both the `core` and
+`renderer` presets built successfully in this workspace; their test executable
+was compiled but not run.
+
 ## Findings
 
 1. `generated/ps2_code_0000.c` through `ps2_code_0042.c` are MIPS translations
@@ -178,6 +191,14 @@ project does not build or link any of those files.
   bundle-slot path. The extracted F-4G model bundle has indexed GIMs in slots 8
   and 9 at 512x512 and 128x128; those aircraft texture slots remain distinct
   from the placed-model PM texture scheme.
+  A direct extraction of M01A's standalone `m01a_sea.gim` is 8,304 bytes: its
+  128x128 4-bit image plane, 16-byte palette block header, and 64-byte RGBA
+  palette account for the complete file, so this image contains no embedded
+  mip levels. M01A's PM texture bundle separately contains two 256x256 full-
+  resolution images at nested slots `1/0` and `1/1`; these are distinct
+  material textures, not a lower-resolution mip pair. The available sample
+  evidence therefore supports the current GPU-generated mip chain for each
+  imported texture, but does not establish PM texture-slot LOD selection.
   On the extracted F-4G selection bundle it produces 5,538 vertices and 2,920
   triangles with assembled bounds of about 59 x 26 x 96 game units, matching
   the measured reference model. The F-16 selection bundle produces 4,108
@@ -228,18 +249,29 @@ project does not build or link any of those files.
   renderer. Controller flag `0x1000` also drives channel 24 to its full
   endpoint; its source remains unavailable in the native viewer.
   `ac5_model_info --parts` reports the hierarchy and decoded track/key counts
-  without opening Vulkan. It now also prints the eight raw part-table words for
-  every part, including records without geometry. An extracted F-4G bundle has
+  without opening Vulkan. It now also prints the eight raw part-table words,
+  local position, and Euler rotation for every part, including records without
+  geometry. An extracted F-4G bundle has
   62 part records but only 31 geometry parts; the other records include
   repeated upper bits in word 4 and `0xffffffff` chain sentinels. Those raw
   values give further reverse-engineering evidence. For placed-model files
   specifically, word 3 is used as a PM texture slot by the opt-in native
   material path; this interpretation is validated against M01A, M02A, and
   M03A but remains unverified for other bundle families.
+  The F-4G `P`-tagged records include multiple mirrored and centerline points,
+  including some parented beneath animated gear parts. Their tag alone does
+  not establish which points are missile or gun launch origins, so projectile
+  spawning remains at the aircraft origin until the retail selection path is
+  mapped.
 - A Vulkan 1.3 renderer using SDL3, dynamic rendering, synchronization2,
   indexed textured meshes, push-constant transforms, per-image depth
   attachments, resize-aware swapchain recreation, and staging uploads that
   flush non-coherent host-visible memory when required by the selected device.
+  It selects an sRGB nonlinear swapchain format to keep direct transparent
+  attachment blending in linear light and reports an explicit initialization
+  error when the surface offers no supported sRGB format. A failed frame-fence
+  reset or queue submission marks the renderer unusable so a later call cannot
+  hang on an unsignaled fence or stale acquire semaphore.
 - Native `Mat4`, `Camera`, `Scene`, `SceneStateMachine`, `MeshData`, `Vertex`, and `TextureData` types, plus
   OBJ/MTL, P3/P6 PPM, and true-color TGA importers for converted assets. OBJ material sections
   become separate scene draws, `Kd` multiplies vertex color, scalar `d` and
@@ -293,7 +325,10 @@ project does not build or link any of those files.
   Its per-tick callback now advances flight animation from each post-physics
   state, so speed-dependent channels follow the same fixed ticks as flight;
   animation, gear, approach-mode, weapon, and projectile state is staged until
-  the frame's flight ticks all succeed.
+  the frame's flight ticks all succeed. The application now checks projectile
+  advancement and supported gun/missile launches inside that staged callback;
+  an invalid projectile state aborts the entire frame commit instead of being
+  silently ignored.
 - A bounded, resumable ULZ decoder and `DATA.TBL`/`DATA.PAC` reader. The
   decoder can yield after a caller-selected number of control words, and
   `ArchiveMemberLoad` exposes that budget at the member-loading boundary. Its
@@ -337,7 +372,17 @@ arithmetic, not guest CPU or hardware state) and are covered by
   `model_mesh_adapter.hpp` converts the shading output's projective STQ and
   integer modulation channels into the native vertex representation and marks
   base-pass colors as pre-lit so the demo diffuse light is skipped. Wiring the
-  game-specific output still requires decoded model/material data.
+  game-specific output still requires decoded render state. The reference
+  `rn_vp_model.c` reads clip rows, three light-direction rows, the light-color
+  transform, environment rows, fog values, and mode/depth flags from VU state;
+  those values are not carried by the ACM vertex streams parsed here. The next
+  grounded step is tracing the render-state producer and material mode that
+  populate those VU registers before connecting the adapter to ACM draws.
+  `rn_vp_model.c`'s setup path reconstructs matrices from VU memory blocks at
+  `0x10`, `0x14`, `0x20`, `0x24`, and `0x28`, stores the combined clip rows at
+  `0x30`, and selects plain/lit/environment mode from VU flags `0x08`/`0x02`.
+  These are per-draw VU command inputs, so the next trace must follow the game
+  render caller that emits those blocks rather than the ACM file parser.
 
 The generated code is present as behavioral reference. Game archives are not
 checked into this repository; local copies in Downloads were used read-only to
@@ -367,6 +412,23 @@ importer remains an interchange path. Ambiguous ACM part ownership, mip-level
 selection for PM textures, other texture formats, and broader model animation
 remain open.
 
+The dependency-free `heightfield_mesh` module now converts finite row-major
+world-height samples into indexed native `MeshData`, with normalized UVs,
+upward-facing winding, and normals derived from neighboring samples. It gives
+future terrain decoders a renderer-ready geometry stage. The viewer's
+`--heightmap` path loads a supported PPM/TGA/GIM image and maps its red channel
+to centered elevations with configurable scale and sample spacing; an optional
+`--texture` supplies terrain color. AC5 terrain/GS record decoding, tile
+adjacency and LOD, material selection, and terrain collision remain separate
+work; no game-specific field layout is inferred by this helper.
+
+Scene upload builds replacement mesh, texture, and descriptor resources before
+replacing the active scene. A scoped cleanup now releases staged Vulkan handles
+when CPU allocation fails partway through upload, and the public upload API
+reports allocation and length failures through its error string instead of
+letting those exceptions escape. The old uploaded scene remains live when
+replacement creation fails.
+
 Textures containing non-opaque alpha and meshes containing non-opaque vertex
 alpha use a separate blended Vulkan pipeline. Opaque draws retain depth writes;
 transparent draws are sorted by the transformed mesh bounds center and rendered
@@ -381,19 +443,83 @@ routines have been mapped to native state. Archive files remain outside the
 repository; the source checkout contains only the filename index and native
 format code.
 
+The generated `player_Render` entry (`0x0012BEB0`) is a large orchestration
+routine, not a self-contained model renderer. Its early calls include
+`0x001343E0`, `0x00133E00` (HUD), and `0x001344D0`; later branches call
+`0x0012D580`, `0x0012DA70`, and `0x00131850`. The two short helpers
+`0x001343E0`/`0x001344D0` resolve object data through offset `+0x430`, submit
+it to shared scene helpers, then branch on packed state at `+0x4DA`. This
+establishes that player rendering delegates model/object state through shared
+helpers, but does not identify the VU constant producer. The next useful trace
+point is the shared scene submission path (`0x00131850` and its callees) and
+its caller-side matrix/state preparation; the generated renderer runtime can
+explain consumption but must not become a native-port dependency.
+
+Tracing those callees shows that `0x001343E0`/`0x001344D0` first resolve the
+`+0x430` object through `0x001D5FA0`/`0x001D5FB8`; both wrappers tail-call
+`0x0031F2B0`, with the second wrapper adding `0x30` to its lookup base. They
+then call `0x003211A8`, `0x001D6E70`, and `0x001D70F8`. `0x001D6E70` writes a
+small descriptor structure containing tagged values such as `0x10000008` and
+`0x50000008`, initializes associated arrays, and dispatches by an input index.
+The shared `0x00131850` path additionally calls `0x001EAD78` to look up an
+indexed record, zeroes temporary four-vector blocks, and invokes vector-copy/
+conversion helpers `0x00328998`/`0x00328B28`. This is enough to distinguish
+object lookup and renderer-command preparation from the VU model interpreter,
+but the exact descriptor fields and the producer of VU blocks `0x10`-`0x30`
+remain unresolved. The next trace should follow the returned object data into
+`0x0031F2B0` and the record consumer after `0x001D6E70` to identify the native
+matrix/material source.
+
+`0x0031F2B0` has now been inspected: it reads the word at object offset `+0x0C`
+and, when nonzero, decodes byte/halfword fields from that referenced record
+(offsets including `+0x02`, `+0x03`, `+0x08`, `+0x0A`, `+0x0C`, and `+0x0E`).
+It packs those values into several temporary records using renderer tag words
+such as `0x10000006` and `0x50000006`, then repeats similar conversion for
+object words at `+0x10`, `+0x14`, `+0x18`, `+0x1C`, and `+0x20`. This confirms
+`0x0031F2B0` is translating compact object data into command records; it does
+not itself expose a native-ready material or world matrix. Identifying the
+referenced record schema and command consumer is still needed before mapping
+any of these fields onto the native scene API.
+
+The native Vulkan path no longer hardcodes the viewer's diffuse light in
+`mesh.frag`. `Scene::set_lighting` accepts a finite nonzero direction and an
+ambient factor in `[0, 1]`; the renderer passes these values in a 128-byte
+push-constant block, the Vulkan minimum. The current values remain viewer
+defaults, not recovered game constants. Per-vertex `light_response == 0`
+continues to preserve colors produced by the separate portable model-shading
+adapter. A zero or overflowed transformed normal now contributes ambient light
+only instead of normalizing a degenerate vector in GLSL. Shader loading also
+bounds SPIR-V allocation and checks its magic word before creating Vulkan
+modules. A future game scene can set lighting once per scene without adding
+PS2 runtime state or dependencies.
+
 Player fire input is connected to the viewer when flight rules and aircraft
 weapon slots are loaded. The recovered
 `Mpl::_Control` pad table uses logical action `0x0c` for the selected missile or
 special weapon and `0x0d` for the gun; these are configurable actions, so the
 native Space/Ctrl bindings are platform policy rather than fixed retail button
 equivalents. The gun uses the aircraft's slot-8 record for its `0.15 s` shot
-interval, muzzle speed, spread, and gravity, and decrements the aircraft's gun
-ammunition per shot. Missile firing depends on slot-9 data, two alternating
-pylons, per-pylon reload timers, and an optional lock target. The standalone
+interval, muzzle speed, and gravity, and decrements the aircraft's gun
+ammunition per shot. Slot-8 spread is decoded and reported, but the native
+projectile path does not yet apply dispersion; its generated random/state
+behavior has not been isolated. The generated gun edge reaches
+`func_00109718`, which selects and fills a shot record before calling
+`func_00349DA0`; that wrapper only forwards into `func_00352EC0`, which in turn
+delegates to the 110-instruction `func_00353460` generic effect/object path.
+That downstream routine allocates or updates pooled records and dispatches to
+multiple helpers. Its `func_00352D38`/`func_00352DC8` writers copy fields into
+fixed-layout records and advance a global guest allocator counter through the
+GP-relative address `r28 - 0x2768`; those writes establish a guest object-pool
+boundary, not native projectile kinematics. The call chain does not establish
+a standalone dispersion formula. Missile firing depends on slot-9 data, two
+alternating pylons, per-pylon reload timers, and an optional lock target. The standalone
 `weapon_controller` module models weapon switching, gun cadence/ammunition,
 alternating standard-missile pylons, per-pylon reload timers, and ordinary
 special-weapon pylon events. It accepts portable rules and emits native shot
-events without linking runtime code. The ACM loader decodes the aircraft
+events without linking runtime code. The projectile layer accepts gun and
+standard-missile events only; it rejects special shots instead of borrowing
+standard-missile speed, gravity, and guidance values. Special-weapon projectile
+parameters and behavior remain open. The ACM loader decodes the aircraft
 loadout/gun/missile slots, and `ac5_model_info --weapons` reports the decoded
 values for extracted aircraft bundles. Weapon state advances on fixed flight
 ticks, and the viewer reports ammunition and emitted event counts in its
@@ -402,8 +528,22 @@ per-tick displacement velocity (including path lag and vertical sink), adds the
 decoded launch speed along body forward, applies the weapon gravity value, and
 renders through the existing dynamic-mesh path. Its 128 slots recycle shots
 after a 12-second native presentation lifetime; that lifetime is not recovered
-retail behavior. Pylon-specific launch offsets, missile homing, target
-acquisition, collision, and damage remain open. Special-weapon ids `8` and
+retail behavior. Projectile advancement processes the full requested interval
+up to that lifetime in 1/60-second substeps, clipping the last step to each
+shot's remaining lifetime and checking that swept segment for impact before
+expiring it. Long caller updates do not silently discard simulation time.
+Standard missiles can now receive an
+optional target point at
+launch; target assignment checks the decoded seeker half-angle, and guidance
+turning is capped by the decoded missile turn rate. A native API can refresh an
+already assigned guidance point for a moving target; the viewer does not yet
+acquire targets or call that API. A separate game-core overload sweeps each
+substep's projectile segment against caller-owned spherical target bounds,
+deactivates the first-hit projectile, and returns target id, projectile slot,
+shot kind, and impact position. Target ownership, hit volumes, and damage
+remain caller responsibilities; the viewer does not wire target bounds, and
+this generic collision API is not a recovered retail rule. Pylon-specific
+launch offsets and retail collision/damage behavior remain open. Special-weapon ids `8` and
 `0x13` are surfaced as unsupported sequences instead of being treated as
 ordinary single-pylon launches.
 
@@ -442,3 +582,106 @@ special rounds (weapon 11), a 0.15-second gun interval, and a 1,000 km/h
 missile launch speed. Since an `.mpl` contains the model rather than the full
 aircraft member, `ac5_native` now accepts `--weapon-rules` separately from
 `--model` and `--flight-rules`.
+
+The older loose-file map preview inputs `m01a.mti`/`.mtd`/`.mtc` form a 64×64
+inspection grid with 875 tile records and four indexed mip levels. They remain
+supported as an asset preview, but they are not the full mission terrain
+layers. The decompressed M01A container has a 256×256 tile-index raster in
+subfiles 5/6, a tile pool/palette in 7/8, and 513×513 height and color grids
+assembled from overlapping 33×33 blocks. Native code now decodes those actual
+mission layers directly from the standalone DATA archive format; the archive
+container is handled by the native `DataArchive` reader, without PS2 runtime
+code.
+
+The generated `runtime/src/rn/rn_vp_terrain.c` adapter is additional behavioral
+evidence for the native terrain path. It receives terrain patch records with
+either four coarse vertices or ten records for a 3×3 patch whose five edge
+records can morph toward neighbor heights. The dependency-free
+`morph_ac5_terrain_patch` helper now ports the ten-record path's edge indices,
+neighbor pairs, clip-depth thresholds, and linear blend. It preserves the
+source behavior before the near threshold and at or beyond the far threshold;
+an intermediate record blends toward its two-neighbor average. The helper
+accepts already-built positions and clip-W values, so MII decoding, patch
+selection, camera matrix generation, and the four-record coarse path remain
+separate. Each input height is read from the
+second 32-bit lane as signed integer bits, converted with zero fractional shift,
+and multiplied by `80.0f`; it is not a normalized byte converted directly to
+world units. Patch origin is added to fixed local X/Z templates, and UV offsets
+are applied separately. The ten-record path also uses the terrain depth range
+to blend edge heights toward adjacent samples. This is enough to preserve the
+observed patch-height units and LOD seam behavior in a portable renderer, but
+the `.mii` stream and runtime code that selects patches and populates those
+lanes still need to be decoded before the native port can reconstruct a
+complete mission terrain. The native `decode_ac5_terrain_height_lanes`
+helper now applies this signed-integer ×80 conversion transactionally and
+checks float range before handing elevations to `build_heightfield_mesh`.
+The earlier 32-byte-row interpretation of standalone `.mhd` files was
+incorrect: matching file lengths to 32-byte rows and a 16-byte tail was only
+arithmetic coincidence. The DATA.PAC name table identifies map subfiles 0/1
+as `.mha` selector grid and `.mhd` height-block pool. M01A's `.mha` is 256
+bytes, and its 11 selected blocks occupy 11×1089 bytes plus five trailing
+bytes in the 11,984-byte `.mhd`; extraction from DATA.PAC member 3 produced a
+byte-identical `.mhd` to the existing local asset. Each 33×33 block overlaps
+its neighbors by one row and column, yielding a 513×513 grid. The native
+`decode_ac5_mha_mhd_heightfield` assembles it and applies the observed ×80
+height scale; `--heightmap` accepts either filename and loads its companion.
+World spacing is 1,024 units, with vertex 256 at the map origin.
+
+The former claim that `.mii` might be a height-validity mask was also wrong.
+Map files 2/3/4 are `.mia` selector grid, `.mii` 33×33 color-index blocks, and
+`.mid` RGBA palette. `decode_ac5_mission_terrain` now expands that registered
+color layer into per-vertex RGBA8 using the GS 0..128 full-scale convention,
+and the Vulkan mission mesh applies it as a vertex tint. The mission mesh now
+uses generated parity-selected diagonals. The native mission query handles the
+regular path and `0x800` class; it explicitly reports `0x400` as unsupported
+until its raw-pool address and interpolation branches are translated.
+The native viewer builds stride-1, 2, 4, and 8 full-extent heightfield meshes
+through `build_heightfield_mesh_lod` and selects among them by camera distance.
+`sample_heightfield_surface` now queries the same triangle diagonal and
+piecewise-planar interpolation used by those meshes, providing a renderer-free
+terrain elevation boundary for future native flight and ground systems. It
+does not claim mission alignment, collision response, or recovered terrain
+spacing; those inputs still need to come from decoded mission data.
+These are native renderer LOD levels, not a claim to reproduce the retail
+terrain patch scheduler; the generated routine's 4/10-record patch choice and
+edge morphing still need mission patch topology and neighbor data.
+
+The mission `.mtd` header stores a tile count, a 32-byte data offset, and
+offsets for three following mip levels. Mission 01 confirms 875 indexed
+64-by-64 tiles followed by matching 32-by-32, 16-by-16, and 8-by-8 levels;
+the 1,024-byte `.mtc` companion is a 256-entry RGBA32 GS palette. `.mti` files
+contain 64-entry rows of 16-bit words whose low 10 bits reference those tiles.
+`decode_ac5_map_texture_set` validates and decodes the level-zero records into
+a 2,304-pixel-wide atlas with four-pixel clamped gutters around each tile,
+plus the original `.mti` words. `--map-textures` displays those tile indices as
+a flat preview grid; its cell scale is for inspection only. The upper six bits
+are preserved but their class meanings remain open. The decompressed mission
+container has a separate 256-by-256 tile-index raster in files 5/6, alongside
+height block grid/data in files 0/1 and the tile pool/palette in files 7/8.
+`decode_ac5_mission_terrain` now assembles these into a 513-by-513 heightfield
+and a matching 256-by-256 map with decoded atlas. Block overlap is one sample
+per 33-by-33 height block; spacing is 1,024 world units and the 513-sample
+grid is centered at vertex (256, 256). Tile cells are 2,048 world units, so
+the tile raster covers the heightfield at two height cells per tile. This
+establishes mission height/index alignment without the PS2 runtime. The native
+`build_ac5_mission_terrain_mesh` emits atlas UVs per tile, continuous
+height-derived normals, alternates cell diagonals by the generated query's
+XOR parity, and uses the recovered `0x800` tile flag to place zero-height
+terrain. The separate `.mii` vertex color layer is decoded and
+applied as a tint. The mission object also retains the raw `.mha` selector grid
+and `.mhd` pool because the generated query addresses height samples within
+selected 33-by-33 blocks, including even-coordinate samples for `0x400` tiles.
+Its per-cell class comes separately from `.mta` selecting a 512-byte `.mti`
+block and the local 16-by-16 tile coordinate selecting a 16-bit entry; the
+native `surface.map_entries` stores that assembled 256-by-256 class raster.
+`sample_ac5_mission_terrain_height` ports the
+generated 1,024-unit parity-selected triangles, 512-cell coordinate wrapping,
+and `0x800` zero-height return.
+The `0x400` branch uses conditional raw-pool addresses and multiple
+interpolation regions, so the native query reports that tile class as
+unsupported instead of returning an approximation. The raw selector/pool data
+is retained for its translation. Other tile classes and retail patch
+scheduling/edge morphing remain open.
+`ac5_native --mission-terrain DATA.TBL DATA.PAC <member>` now exposes this
+asset path in the Vulkan viewer; the ordinary demo and extracted-file modes
+remain independently selectable.

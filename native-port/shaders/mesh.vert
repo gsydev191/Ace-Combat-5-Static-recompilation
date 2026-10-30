@@ -21,6 +21,7 @@ layout(location = 7) out float light_response;
 layout(push_constant) uniform DrawConstants {
     mat4 view_projection_model;
     vec4 normal_columns[3];
+    vec4 lighting;
 } draw_constants;
 
 void main() {

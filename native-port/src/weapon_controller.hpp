@@ -82,6 +82,7 @@ struct AircraftWeaponTick {
 
 [[nodiscard]] bool initialize_aircraft_weapons(
     const AircraftWeaponRules& rules, AircraftWeaponState& state) noexcept;
+// Invalid rules or state produce an empty tick and leave state unchanged.
 [[nodiscard]] AircraftWeaponTick advance_aircraft_weapons(
     const AircraftWeaponRules& rules, const AircraftWeaponInput& input,
     AircraftWeaponState& state) noexcept;

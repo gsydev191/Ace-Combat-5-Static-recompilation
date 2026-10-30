@@ -17,6 +17,8 @@ add_library(ac5_asset_core STATIC
     src/adpcm.cpp
     src/data_archive.cpp
     src/gs_image.cpp
+    src/map_texture.cpp
+    src/mission_terrain.cpp
     src/ulz.cpp)
 add_library(ac5::asset_core ALIAS ac5_asset_core)
 set_target_properties(ac5_asset_core PROPERTIES EXPORT_NAME asset_core)
@@ -40,6 +42,8 @@ add_library(ac5_game_core STATIC
     src/flight_session.hpp
     src/flight_rules_loader.cpp
     src/flight_rules_loader.hpp
+    src/heightfield_mesh.cpp
+    src/heightfield_mesh.hpp
     src/model_shading.cpp
     src/model_mesh_adapter.hpp
     src/obj_loader.cpp
@@ -56,6 +60,7 @@ target_include_directories(ac5_game_core PUBLIC
     "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>"
     "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/ac5_native>")
 target_compile_features(ac5_game_core PUBLIC cxx_std_20)
+target_link_libraries(ac5_game_core PUBLIC ac5_asset_core)
 
 add_executable(ac5_extract src/extract_main.cpp)
 add_executable(ac5_model_info src/acm_info_main.cpp)
@@ -70,6 +75,8 @@ add_test(NAME ac5_native_tests COMMAND ac5_native_tests)
 target_link_libraries(ac5_extract PRIVATE ac5_asset_core)
 if(WIN32)
     target_link_libraries(ac5_extract PRIVATE shell32)
+    target_link_libraries(ac5_model_info PRIVATE shell32)
+    target_link_libraries(ac5_flight_info PRIVATE shell32)
 endif()
 
 install(TARGETS ac5_asset_core ac5_game_core
@@ -87,6 +94,8 @@ install(FILES
     src/adpcm.hpp
     src/data_archive.hpp
     src/gs_image.hpp
+    src/map_texture.hpp
+    src/mission_terrain.hpp
     src/model_mesh_adapter.hpp
     src/model_shading.hpp
     src/ulz.hpp
@@ -100,6 +109,7 @@ install(FILES
     src/flight_model.hpp
     src/flight_session.hpp
     src/flight_rules_loader.hpp
+    src/heightfield_mesh.hpp
     src/animation_controller.hpp
     src/obj_loader.hpp
     src/projectile_mesh.hpp
@@ -144,7 +154,7 @@ if(AC5_BUILD_RENDERER)
         "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/ac5_native>")
     target_compile_features(ac5_vulkan_renderer PUBLIC cxx_std_20)
     target_link_libraries(ac5_vulkan_renderer
-        PUBLIC Vulkan::Vulkan SDL3::SDL3)
+        PUBLIC ac5_game_core Vulkan::Vulkan SDL3::SDL3)
     add_library(ac5_platform STATIC src/input.cpp)
     add_library(ac5::platform ALIAS ac5_platform)
     set_target_properties(ac5_platform PROPERTIES EXPORT_NAME platform)
@@ -152,7 +162,7 @@ if(AC5_BUILD_RENDERER)
         "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>"
         "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/ac5_native>")
     target_compile_features(ac5_platform PUBLIC cxx_std_20)
-    target_link_libraries(ac5_platform PUBLIC SDL3::SDL3)
+    target_link_libraries(ac5_platform PUBLIC ac5_game_core SDL3::SDL3)
     add_executable(ac5_native
         src/main.cpp
         src/application.cpp)

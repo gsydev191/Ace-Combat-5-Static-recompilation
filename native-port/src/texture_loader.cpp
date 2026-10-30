@@ -279,6 +279,7 @@ bool load_tga(const std::string& path, TextureData& texture, std::string& error)
 
 bool decode_gim(std::span<const std::uint8_t> bytes, TextureData& texture,
                 std::string& error, bool force_opaque) {
+    error.clear();
     return decode_gim_impl(bytes, texture, error, force_opaque);
 }
 
@@ -286,6 +287,7 @@ bool decode_gim_indexed_with_palette(std::span<const std::uint8_t> bytes,
                                     std::span<const std::uint8_t> rgba_palette,
                                     TextureData& texture, std::string& error,
                                     bool force_opaque) {
+    error.clear();
     if (bytes.size() < 0x20 || bytes[0] != 'G' || bytes[1] != 'I' ||
         bytes[2] != 'M' || bytes[3] != 0 || rgba_palette.size() < 256u * 4u) {
         error = "indexed GIM or shared RGBA palette is invalid";
@@ -338,6 +340,7 @@ bool decode_gim_indexed_with_palette(std::span<const std::uint8_t> bytes,
 }
 
 bool load_gim(const std::string& path, TextureData& texture, std::string& error) {
+    error.clear();
     std::ifstream input(path_from_utf8(path), std::ios::binary);
     if (!input) {
         error = "cannot open GIM texture: " + path;
@@ -372,6 +375,7 @@ bool load_gim(const std::string& path, TextureData& texture, std::string& error)
 }
 
 bool load_ppm(const std::string& path, TextureData& texture, std::string& error) {
+    error.clear();
     std::ifstream input(path_from_utf8(path), std::ios::binary);
     if (!input) {
         error = "cannot open PPM texture: " + path;
@@ -463,6 +467,7 @@ bool load_ppm(const std::string& path, TextureData& texture, std::string& error)
 
 bool load_texture_image(const std::string& path, TextureData& texture,
                         std::string& error) {
+    error.clear();
     std::string extension = path_from_utf8(path).extension().string();
     std::transform(extension.begin(), extension.end(), extension.begin(),
                    [](unsigned char c) { return static_cast<char>(std::tolower(c)); });

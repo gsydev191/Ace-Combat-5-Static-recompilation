@@ -83,6 +83,12 @@ void InputSystem::handle_event(const SDL_Event& event) {
         case SDL_GAMEPAD_BUTTON_NORTH:
             (pressed ? weapon_switch_pressed_ : weapon_switch_released_) = true;
             break;
+        case SDL_GAMEPAD_BUTTON_WEST:
+            (pressed ? gear_toggle_pressed_ : gear_toggle_released_) = true;
+            break;
+        case SDL_GAMEPAD_BUTTON_DPAD_UP:
+            (pressed ? approach_control_pressed_ : approach_control_released_) = true;
+            break;
         default: break;
         }
     }
@@ -131,6 +137,10 @@ FlightInput InputSystem::sample() {
             SDL_GetGamepadButton(gamepad_, SDL_GAMEPAD_BUTTON_EAST);
         input.weapon_switch.held = input.weapon_switch.held ||
             SDL_GetGamepadButton(gamepad_, SDL_GAMEPAD_BUTTON_NORTH);
+        input.gear_toggle.held = input.gear_toggle.held ||
+            SDL_GetGamepadButton(gamepad_, SDL_GAMEPAD_BUTTON_WEST);
+        input.approach_control.held = input.approach_control.held ||
+            SDL_GetGamepadButton(gamepad_, SDL_GAMEPAD_BUTTON_DPAD_UP);
     }
     const auto pressed_edge = [](bool held, bool previously_held,
                                  bool event_pressed) {

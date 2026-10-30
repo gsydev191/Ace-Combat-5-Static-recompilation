@@ -551,6 +551,7 @@ bool load_materials(const std::filesystem::path& obj_path, const ParsedObj& obj,
 } // namespace
 
 bool load_obj(const std::string& path, MeshData& mesh, std::string& error) {
+    error.clear();
     try {
         ParsedObj parsed;
         if (!parse_obj(path, parsed, error)) return false;
@@ -585,6 +586,7 @@ bool load_obj(const std::string& path, MeshData& mesh, std::string& error) {
 
 bool load_obj_scene(const std::string& path, Scene& scene, std::string& error,
                     bool load_material_textures, TransformId transform) {
+    error.clear();
     try {
         ParsedObj parsed;
         if (!parse_obj(path, parsed, error)) return false;

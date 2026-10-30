@@ -53,6 +53,7 @@ float gear_channel(AircraftAnimationChannels& channels, std::size_t index,
 bool decode_aircraft_animation_rules(std::span<const std::uint8_t> bytes,
                                      AircraftAnimationRules& rules,
                                      std::string& error) {
+    error.clear();
     if (bytes.size() != 20 * sizeof(float)) {
         error = "aircraft animation config must contain exactly 20 float32 values";
         return false;
@@ -85,6 +86,7 @@ bool decode_aircraft_animation_rules(std::span<const std::uint8_t> bytes,
 bool load_aircraft_animation_rules(const std::string& path,
                                    AircraftAnimationRules& rules,
                                    std::string& error) {
+    error.clear();
     std::ifstream input(path_from_utf8(path), std::ios::binary);
     if (!input) {
         error = "cannot open aircraft animation config: " + path;

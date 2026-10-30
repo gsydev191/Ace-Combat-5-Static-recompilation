@@ -179,7 +179,11 @@ int main(int argc, char** argv) {
             std::printf(" chain %u source [", part.source_words[2]);
             for (std::size_t word = 0; word < part.source_words.size(); ++word)
                 std::printf("%s%08x", word == 0 ? "" : " ", part.source_words[word]);
-            std::printf("]: %zu triangles\n", part.mesh.indices.size() / 3);
+            std::printf("]: %zu triangles, local position [%.4f %.4f %.4f], "
+                        "rotation [%.4f %.4f %.4f]\n",
+                        part.mesh.indices.size() / 3,
+                        part.position.x, part.position.y, part.position.z,
+                        part.rotation.x, part.rotation.y, part.rotation.z);
         }
         return 0;
     }

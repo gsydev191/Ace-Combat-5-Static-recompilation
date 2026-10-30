@@ -58,6 +58,48 @@ void push_shot(AircraftWeaponTick& output, AircraftShotKind kind,
         output.shots[output.shot_count++] = {kind, pylon};
 }
 
+bool valid_weapon_rules(const AircraftWeaponRules& rules) noexcept {
+    return std::isfinite(rules.gun_interval_seconds) &&
+        std::isfinite(rules.gun_spread_degrees) &&
+        std::isfinite(rules.gun_gravity_mps2) &&
+        std::isfinite(rules.standard_reload_seconds) &&
+        std::isfinite(rules.missile_gravity_mps2) &&
+        std::isfinite(rules.missile_turn_rate_degrees_per_second) &&
+        std::isfinite(rules.special_reload_seconds) &&
+        rules.gun_interval_seconds >= 0.0f &&
+        rules.gun_spread_degrees >= 0.0f && rules.gun_gravity_mps2 >= 0.0f &&
+        rules.standard_reload_seconds >= 0.0f &&
+        rules.missile_gravity_mps2 >= 0.0f &&
+        rules.missile_turn_rate_degrees_per_second >= 0.0f &&
+        rules.special_reload_seconds >= 0.0f &&
+        (rules.standard_pylon_mask & ~0x03u) == 0 &&
+        (rules.special_pylon_mask & ~0x0fu) == 0;
+}
+
+bool valid_weapon_state(const AircraftWeaponRules& rules,
+                        const AircraftWeaponState& state) noexcept {
+    const bool valid_slot = state.selected == AircraftWeaponSlot::Standard ||
+                            state.selected == AircraftWeaponSlot::Special;
+    const bool valid_status =
+        state.status == AircraftWeaponStatus::StandardReady ||
+        state.status == AircraftWeaponStatus::SpecialReady ||
+        state.status == AircraftWeaponStatus::StandardEmpty ||
+        state.status == AircraftWeaponStatus::SpecialEmpty ||
+        state.status == AircraftWeaponStatus::GunEmpty;
+    const bool rules_have_unlimited_gun =
+        rules.gun_ammunition == unlimited_ammunition_sentinel;
+    const bool valid_gun_ammunition =
+        state.unlimited_gun_ammunition == rules_have_unlimited_gun &&
+        (state.unlimited_gun_ammunition
+            ? state.gun_ammunition == unlimited_ammunition_sentinel
+            : state.gun_ammunition <= rules.gun_ammunition);
+    return valid_slot && valid_status &&
+        state.next_standard_pylon < 2 && state.next_special_pylon < 4 &&
+        valid_gun_ammunition &&
+        state.missile_ammunition <= rules.missile_ammunition &&
+        state.special_ammunition <= rules.special_ammunition;
+}
+
 } // namespace
 
 bool decode_aircraft_weapon_rules(
@@ -110,22 +152,7 @@ bool decode_aircraft_weapon_rules(
 
 bool initialize_aircraft_weapons(const AircraftWeaponRules& rules,
                                  AircraftWeaponState& state) noexcept {
-    if (!std::isfinite(rules.gun_interval_seconds) ||
-        !std::isfinite(rules.gun_spread_degrees) ||
-        !std::isfinite(rules.gun_gravity_mps2) ||
-        !std::isfinite(rules.standard_reload_seconds) ||
-        !std::isfinite(rules.missile_gravity_mps2) ||
-        !std::isfinite(rules.missile_turn_rate_degrees_per_second) ||
-        !std::isfinite(rules.special_reload_seconds) ||
-        rules.gun_interval_seconds < 0.0f ||
-        rules.gun_spread_degrees < 0.0f || rules.gun_gravity_mps2 < 0.0f ||
-        rules.standard_reload_seconds < 0.0f ||
-        rules.missile_gravity_mps2 < 0.0f ||
-        rules.missile_turn_rate_degrees_per_second < 0.0f ||
-        rules.special_reload_seconds < 0.0f ||
-        (rules.standard_pylon_mask & ~0x03u) != 0 ||
-        (rules.special_pylon_mask & ~0x0fu) != 0)
-        return false;
+    if (!valid_weapon_rules(rules)) return false;
 
     AircraftWeaponState initialized{};
     initialized.gun_ammunition = rules.gun_ammunition;
@@ -144,6 +171,8 @@ AircraftWeaponTick advance_aircraft_weapons(
     const AircraftWeaponRules& rules, const AircraftWeaponInput& input,
     AircraftWeaponState& state) noexcept {
     AircraftWeaponTick output{};
+    if (!valid_weapon_rules(rules) || !valid_weapon_state(rules, state))
+        return output;
     if (state.gun_cooldown_ticks != 0) --state.gun_cooldown_ticks;
     reduce_cooldowns(state.standard_pylon_cooldowns);
     reduce_cooldowns(state.special_pylon_cooldowns);

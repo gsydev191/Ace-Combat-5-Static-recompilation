@@ -77,13 +77,24 @@ struct Mat4 {
             vertical_fov_radians <= 0.0f || vertical_fov_radians >= 3.14159265f ||
             aspect <= 0.0f || near_plane <= 0.0f || far_plane <= near_plane)
             return identity();
+        const double f = 1.0 / std::tan(static_cast<double>(vertical_fov_radians) * 0.5);
+        const double depth_range = static_cast<double>(near_plane) - far_plane;
+        const std::array<double, 4> coefficients{
+            f / aspect, -f,
+            static_cast<double>(far_plane) / depth_range,
+            (static_cast<double>(far_plane) * near_plane) / depth_range};
+        if (!std::all_of(coefficients.begin(), coefficients.end(), [](double value) {
+                return std::isfinite(value) &&
+                       std::abs(value) <= std::numeric_limits<float>::max();
+            }))
+            return identity();
+
         Mat4 out{};
-        const float f = 1.0f / std::tan(vertical_fov_radians * 0.5f);
-        out.value[0] = f / aspect;
-        out.value[5] = -f;
-        out.value[10] = far_plane / (near_plane - far_plane);
+        out.value[0] = static_cast<float>(coefficients[0]);
+        out.value[5] = static_cast<float>(coefficients[1]);
+        out.value[10] = static_cast<float>(coefficients[2]);
         out.value[11] = -1.0f;
-        out.value[14] = (far_plane * near_plane) / (near_plane - far_plane);
+        out.value[14] = static_cast<float>(coefficients[3]);
         return out;
     }
 

@@ -910,6 +910,7 @@ bool read_model_file(const std::string& path, std::vector<std::uint8_t>& file,
 
 bool load_acm_lod_bundle(const std::string& path, AcmLodBundle& lods,
                          bool& found, std::string& error) {
+    error.clear();
     found = false;
     std::vector<std::uint8_t> file;
     if (!read_model_file(path, file, error)) return false;
@@ -993,6 +994,7 @@ bool load_acm_lod_bundle(const std::string& path, AcmLodBundle& lods,
 
 bool load_acm_bundle_texture(const std::string& path, TextureData& texture,
                              bool& found, std::string& error) {
+    error.clear();
     found = false;
     std::vector<std::uint8_t> file;
     if (!read_model_file(path, file, error)) return false;
@@ -1019,6 +1021,7 @@ bool load_acm_bundle_texture(const std::string& path, TextureData& texture,
 bool load_acm_bundle_textures(const std::string& path,
                               std::vector<AcmBundleTexture>& textures,
                               std::string& error) {
+    error.clear();
     std::vector<std::uint8_t> file;
     if (!read_model_file(path, file, error)) return false;
     try {
@@ -1042,65 +1045,75 @@ bool load_acm_bundle_textures(const std::string& path,
 bool load_pm_texture_bundle(const std::string& path,
                            std::vector<AcmBundleTexture>& textures,
                            std::string& error) {
-    std::vector<std::uint8_t> file;
-    if (!read_model_file(path, file, error)) return false;
-    std::vector<BundleSlot> root;
-    if (!read_bundle_slots(file, root)) {
-        error = "PM texture file is not a supported root bundle: " + path;
-        return false;
-    }
-    const auto slot_at = [](const std::vector<BundleSlot>& slots,
-                            std::uint32_t index) -> const BundleSlot* {
-        const auto it = std::find_if(slots.begin(), slots.end(),
-            [index](const BundleSlot& slot) { return slot.index == index; });
-        return it == slots.end() ? nullptr : &*it;
-    };
-    const BundleSlot* palette_slot = slot_at(root, 0);
-    const BundleSlot* image_bundle = slot_at(root, 1);
-    if (!palette_slot || !is_gim(palette_slot->bytes) ||
-        palette_slot->bytes.size() < 0x20u + 256u * 4u || !image_bundle) {
-        error = "PM texture bundle is missing its shared palette or full-resolution set";
-        return false;
-    }
-    const auto palette = palette_slot->bytes.subspan(0x20u, 256u * 4u);
-    std::vector<BundleSlot> images;
-    if (!read_bundle_slots(image_bundle->bytes, images)) {
-        error = "PM full-resolution texture slot is not a valid bundle";
-        return false;
-    }
-    std::vector<AcmBundleTexture> decoded;
-    std::size_t total_bytes = 0;
-    for (const BundleSlot& slot : images) {
-        if (!is_gim(slot.bytes)) continue;
-        if (decoded.size() >= 256) {
-            error = "PM texture set contains more than 256 images";
-            return false;
-        }
-        AcmBundleTexture item;
-        if (!decode_gim_indexed_with_palette(slot.bytes, palette,
-                                              item.texture, error, true)) {
-            error += " in PM texture slot " + std::to_string(slot.index);
-            return false;
-        }
-        if (item.texture.rgba.size() > 512u * 1024u * 1024u - total_bytes) {
-            error = "PM texture set exceeds the 512 MiB decoded-size limit";
-            return false;
-        }
-        total_bytes += item.texture.rgba.size();
-        item.bundle_slots = {1u, slot.index};
-        decoded.push_back(std::move(item));
-    }
-    if (decoded.empty()) {
-        error = "PM full-resolution texture set contains no indexed images";
-        return false;
-    }
-    textures = std::move(decoded);
     error.clear();
-    return true;
+    try {
+        std::vector<std::uint8_t> file;
+        if (!read_model_file(path, file, error)) return false;
+        std::vector<BundleSlot> root;
+        if (!read_bundle_slots(file, root)) {
+            error = "PM texture file is not a supported root bundle: " + path;
+            return false;
+        }
+        const auto slot_at = [](const std::vector<BundleSlot>& slots,
+                                std::uint32_t index) -> const BundleSlot* {
+            const auto it = std::find_if(slots.begin(), slots.end(),
+                [index](const BundleSlot& slot) { return slot.index == index; });
+            return it == slots.end() ? nullptr : &*it;
+        };
+        const BundleSlot* palette_slot = slot_at(root, 0);
+        const BundleSlot* image_bundle = slot_at(root, 1);
+        if (!palette_slot || !is_gim(palette_slot->bytes) ||
+            palette_slot->bytes.size() < 0x20u + 256u * 4u || !image_bundle) {
+            error = "PM texture bundle is missing its shared palette or full-resolution set";
+            return false;
+        }
+        const auto palette = palette_slot->bytes.subspan(0x20u, 256u * 4u);
+        std::vector<BundleSlot> images;
+        if (!read_bundle_slots(image_bundle->bytes, images)) {
+            error = "PM full-resolution texture slot is not a valid bundle";
+            return false;
+        }
+        std::vector<AcmBundleTexture> decoded;
+        std::size_t total_bytes = 0;
+        for (const BundleSlot& slot : images) {
+            if (!is_gim(slot.bytes)) continue;
+            if (decoded.size() >= 256) {
+                error = "PM texture set contains more than 256 images";
+                return false;
+            }
+            AcmBundleTexture item;
+            if (!decode_gim_indexed_with_palette(slot.bytes, palette,
+                                                  item.texture, error, true)) {
+                error += " in PM texture slot " + std::to_string(slot.index);
+                return false;
+            }
+            if (item.texture.rgba.size() > 512u * 1024u * 1024u - total_bytes) {
+                error = "PM texture set exceeds the 512 MiB decoded-size limit";
+                return false;
+            }
+            total_bytes += item.texture.rgba.size();
+            item.bundle_slots = {1u, slot.index};
+            decoded.push_back(std::move(item));
+        }
+        if (decoded.empty()) {
+            error = "PM full-resolution texture set contains no indexed images";
+            return false;
+        }
+        textures = std::move(decoded);
+        error.clear();
+        return true;
+    } catch (const std::bad_alloc&) {
+        error = "PM texture bundle allocation failed: " + path;
+        return false;
+    } catch (const std::length_error&) {
+        error = "PM texture bundle exceeds the platform's vector limit: " + path;
+        return false;
+    }
 }
 
 bool load_acm_weapon_rules(const std::string& path, AircraftWeaponRules& rules,
                            bool& found, std::string& error) {
+    error.clear();
     found = false;
     std::vector<std::uint8_t> file;
     if (!read_model_file(path, file, error)) return false;
@@ -1126,6 +1139,7 @@ bool load_acm_weapon_rules(const std::string& path, AircraftWeaponRules& rules,
 }
 
 bool load_acm_model(const std::string& path, MeshData& mesh, std::string& error) {
+    error.clear();
     std::vector<std::uint8_t> file;
     if (!read_model_file(path, file, error)) return false;
     try {
@@ -1156,6 +1170,7 @@ bool load_acm_model(const std::string& path, MeshData& mesh, std::string& error)
 
 bool load_acm_part_model(const std::string& path, AcmPartModel& model,
                          std::string& error) {
+    error.clear();
     std::vector<std::uint8_t> file;
     if (!read_model_file(path, file, error)) return false;
     try {

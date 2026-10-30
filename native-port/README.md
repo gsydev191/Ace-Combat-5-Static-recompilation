@@ -10,7 +10,9 @@ libraries can be built without those renderer dependencies.
 
 The current executable opens a window, creates a Vulkan 1.3 device and
 swapchain, reads an OBJ mesh, uploads indexed geometry, and draws it through a
-shader-backed pipeline using dynamic rendering and synchronization2. Shaders
+shader-backed pipeline using dynamic rendering and synchronization2. It
+requires an sRGB nonlinear swapchain format so fixed-function transparency
+blending operates on linear-light attachment values. Shaders
 compile to SPIR-V during the CMake build. The renderer uses per-image depth
 attachments, depth testing, indexed UV geometry, OBJ vertex normals with flat
 normal generation when absent, per-draw inverse-transpose normal matrices,
@@ -50,6 +52,11 @@ The native math uses column-major, right-handed matrices. Its perspective
 projection uses Vulkan's zero-to-one depth range and inverts Y for a
 positive-height viewport; `Camera` uses those same conventions for view,
 projection, and view-projection matrices.
+The viewer derives its initial camera target, distance, and clipping planes
+from transformed scene geometry, so imported models of different scales are
+framed without a model-specific fixed zoom. Flight mode keeps that fitted
+follow offset in aircraft-local space, rotating it with yaw, pitch, and roll
+while tracking the aircraft root. Mouse-wheel zoom scales the local offset.
 
 `UlzDecoder` exposes `begin` and `step` for callers that need to spread
 decompression over multiple frames. Each `step` accepts a control-word budget;
@@ -102,7 +109,8 @@ and textures by camera distance using the recovered retail thresholds; use the
 mouse wheel to move through the LOD ranges. `ac5_model_info --parts <model-file>`
 reports the retained ACM part tree and each part's local mesh.
 It also prints all eight source part-table words for every record, including
-records without geometry. For placed-model bundles, `--pm-textures <pmtex-file>`
+records without geometry, plus each part's local position and Euler rotation.
+For placed-model bundles, `--pm-textures <pmtex-file>`
 decodes the shared palette and lists full-resolution texture slots. The viewer
 accepts `--material-textures <pmtex-file>` with an ACM model and binds each
 geometry part's source word 3 to the matching texture slot. Current placed-
@@ -118,6 +126,49 @@ To run the native flight model on an imported aircraft, provide its matching
 ```text
 ac5_native --model f04g.mpl --flight-rules f04g.pmb
 ```
+
+To render an image as a heightfield, pass a supported PPM, TGA, or GIM image;
+the red channel maps from `-height-scale/2` to `+height-scale/2` and adjacent
+samples use the requested world spacing:
+
+```text
+ac5_native --heightmap terrain.ppm --height-scale 120 --height-spacing 8
+```
+
+The heightfield path accepts an extracted AC5 `.mha`/`.mhd` pair. `.mha`
+selects the height blocks in the `.mhd` pool; the viewer accepts either
+filename and finds its companion beside it. It assembles the overlapping
+33-by-33 blocks into the generated 513-by-513 grid, applies the recovered
+80-unit height step, and uses the mission's 1,024-unit spacing and centered
+origin. For example, `ac5_native --heightmap m03a.mhd` loads `m03a.mha` too.
+The preview is grayscale; mission terrain mode below also loads tile and
+vertex-color layers.
+
+To inspect an extracted mission's indexed map texture data, pass its matching
+`.mti`, `.mtd`, and `.mtc` files:
+
+```text
+ac5_native --map-textures m03a.mti m03a.mtd m03a.mtc
+```
+
+The standalone preview decodes 64×64 indexed tiles through the 256-entry GS
+palette, packs them into a guttered atlas, and draws the 64-column MTI entry
+grid. The preview uses ten viewer units per cell because the map files do not
+establish their alignment or scale relative to the MHD heightfield.
+
+For a decompressed mission member in `DATA.PAC`, the viewer can decode and
+render its native terrain layers directly. Pass the matching archive table,
+archive, and the mission member index:
+
+```text
+ac5_native --mission-terrain BIN/DATA.TBL BIN/DATA.PAC 3
+```
+
+The mode assembles the mission height blocks, tile-index map, and atlas, then
+renders them at their recovered world spacing. Member 3 is M01A in
+`config/pac_names.txt`; use that manifest to locate another map member, or
+extract the archive members with `ac5_extract --all DATA.TBL DATA.PAC -
+extracted` for inspection.
 
 In this mode SDL pitch, roll, and yaw controls plus throttle drive the fixed
 60 Hz native flight tick, and the camera follows the simulated aircraft. Press
@@ -212,9 +263,10 @@ find_package(ac5_native CONFIG REQUIRED)
 target_link_libraries(my_tool PRIVATE ac5::asset_core ac5::game_core)
 ```
 
-The renderer has a separate `ac5_native_renderer` package with target
-`ac5::vulkan_renderer`. Its config discovers Vulkan 1.3 and SDL3 for the
-consumer; the core package does not discover or link either dependency. Use
+The renderer has a separate `ac5_native_renderer` package with targets
+`ac5::vulkan_renderer` and `ac5::platform`. Its config loads the core package
+and discovers Vulkan 1.3 and SDL3 for the consumer; the core package does not
+discover or link either renderer dependency. Use
 `find_package(ac5_native_renderer CONFIG REQUIRED)` when linking the renderer.
 All exported library targets propagate the C++20 requirement to consumers.
 The public C++ API is in the `ac5` namespace (for example,
@@ -264,8 +316,9 @@ Arrow keys/WASD pitch and roll, Q/E yaw, R/F set throttle input, Space fires the
 selected missile/special, either Ctrl key fires the gun, Tab switches the
 selected missile/special, P toggles approach control in flight mode, and G
 toggles the viewer gear state. These actions also map to gamepad South (selected
-weapon), East (gun), and North (weapon switch); the left stick controls pitch
-and roll, the right stick controls yaw, and triggers provide throttle. In the
+weapon), East (gun), North (weapon switch), West (gear), and D-pad Up (approach
+control); the left stick controls pitch and roll, the right stick controls yaw,
+and triggers provide throttle. In the
 default model viewer, pitch, roll, and yaw rotate the demo model. `--flight-rules`
 loads aircraft parameters from a `.pmb` file. Add
 `--weapon-rules <aircraft-member.bin>` to load weapon records from the complete
@@ -283,6 +336,12 @@ weapon parameters. The viewer consumes those rules in flight mode, advances a
 bounded native projectile pool at fixed ticks, and uploads its fixed-topology dynamic
 mesh through the Vulkan renderer. Its 128 slots recycle shots after a 12-second
 native presentation lifetime; this is not claimed as the retail lifetime.
+Special-weapon shot events do not create projectiles until their own launch
+parameters are decoded, and the decoded gun spread is not yet applied.
+The game-core API can optionally sweep those projectiles against caller-owned
+spherical target bounds and return impact positions/ids. This is a generic
+collision boundary only; the viewer does not currently supply targets, and
+retail hit volumes and damage behavior remain undecoded.
 `map_engine_lever` ports the generated throttle routine's split into dry power,
 afterburner, and airbrake channels. `advance_airborne_speed` ports the scalar
 airborne speed envelope, including density, climb/dive effects, spool response,
@@ -316,6 +375,36 @@ aircraft `.pmb` parameter file, and `ac5_flight_info` reports its decoded
 speed and axis tables (for example, `ac5_flight_info f04g.pmb`). Terrain
 collision, marker-based ground alignment, and a runtime ruleset selection UI
 remain future work.
+The dependency-free `build_heightfield_mesh` helper converts validated row-major
+world-height samples into indexed `MeshData` with upward-facing triangles,
+smoothed normals, and normalized UVs. This is the native terrain geometry stage;
+`build_heightfield_mesh_lod` creates lower-density full-extent variants for
+distance-based terrain selection. The viewer builds stride-1, 2, 4, and 8
+meshes and switches between them using native world-distance thresholds.
+`decode_ac5_terrain_height_lanes` additionally converts the generated terrain
+path's signed 32-bit height lanes to world elevations using the observed scale
+of 80. The observed `.mhd` row decoder is available; `.mii` semantics, patch
+selection, and retail LOD seams still require further format work.
+`sample_heightfield_surface` evaluates the exact piecewise-planar triangles
+used by the native terrain mesh, so callers can query terrain elevation at a
+world X/Z point without depending on Vulkan. It reports out-of-bounds queries
+instead of silently clamping them.
+
+The dependency-free asset library also exposes `decode_ac5_map_texture_set`
+for extracted mission `.mti`, `.mtd`, and `.mtc` files. It validates the four
+64-by-64 through 8-by-8 indexed tile mip regions, decodes the 256-entry GS RGBA palette,
+and returns a compact tile atlas plus square 16-bit map entries (including the
+64-by-64 extracted map form).
+For decompressed mission containers, `decode_ac5_mission_terrain` consumes the
+inner files returned by `DataArchive::split_member`: height files 0/1, vertex
+color files 2/3/4, tile-index files 5/6, and tile pool/palette files 7/8. It
+assembles overlapping 16-by-16 blocks into 513-by-513 elevation and color
+grids plus a 256-by-256 tile-index map, then decodes the atlas. The recovered
+grid spacing is 1,024 world units per height sample, centered at vertex
+(256, 256); tile cells span 2,048 world units. `build_ac5_mission_terrain_mesh`
+turns those layers into mission-scale textured geometry with vertex tint,
+height-derived normals, and per-tile UVs. This decoder uses only native
+asset/core APIs and does not need the renderer or extraction tools.
 The input system opens one connected gamepad at startup and scans the remaining
 connected devices when the active gamepad is removed. It also handles devices
 connected after startup.

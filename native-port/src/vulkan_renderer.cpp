@@ -12,7 +12,10 @@
 #include <filesystem>
 #include <fstream>
 #include <limits>
+#include <new>
+#include <stdexcept>
 #include <type_traits>
+#include <utility>
 
 namespace ac5 {
 
@@ -21,6 +24,7 @@ namespace {
 struct DrawPushConstants {
     Mat4 view_projection_model;
     NormalMatrix normal_matrix;
+    std::array<float, 4> lighting;
 };
 
 struct DrawSubmission {
@@ -29,6 +33,20 @@ struct DrawSubmission {
     Mat4 view_projection_model;
     float depth;
     bool transparent;
+};
+
+template <typename Callback>
+class ScopeExit {
+public:
+    explicit ScopeExit(Callback callback) : callback_(std::move(callback)) {}
+    ~ScopeExit() { if (active_) callback_(); }
+    ScopeExit(const ScopeExit&) = delete;
+    ScopeExit& operator=(const ScopeExit&) = delete;
+    void release() noexcept { active_ = false; }
+
+private:
+    Callback callback_;
+    bool active_ = true;
 };
 
 bool finite_matrix(const Mat4& matrix) {
@@ -51,7 +69,8 @@ float projected_depth(const Mat4& view_projection, Vec3 position) {
 static_assert(std::is_standard_layout_v<DrawPushConstants>);
 static_assert(sizeof(NormalMatrix) == 48);
 static_assert(offsetof(DrawPushConstants, normal_matrix) == 64);
-static_assert(sizeof(DrawPushConstants) == 112);
+static_assert(offsetof(DrawPushConstants, lighting) == 112);
+static_assert(sizeof(DrawPushConstants) == 128);
 
 template <typename T>
 T vk_struct(VkStructureType type) {
@@ -84,11 +103,35 @@ bool has_instance_extension(const char* name) {
     });
 }
 
+constexpr std::array<VkFormat, 3> supported_swapchain_formats{
+    VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_R8G8B8A8_SRGB,
+    VK_FORMAT_A8B8G8R8_SRGB_PACK32};
+
 bool supports_swapchain(VkPhysicalDevice device, VkSurfaceKHR surface) {
-    std::uint32_t formats = 0, modes = 0;
-    return vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formats, nullptr) == VK_SUCCESS &&
-           vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &modes, nullptr) == VK_SUCCESS &&
-           formats != 0 && modes != 0;
+    VkSurfaceCapabilitiesKHR capabilities{};
+    if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &capabilities) != VK_SUCCESS ||
+        (capabilities.supportedUsageFlags & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) == 0)
+        return false;
+
+    std::uint32_t format_count = 0, mode_count = 0;
+    if (vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &format_count, nullptr) != VK_SUCCESS ||
+        vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &mode_count, nullptr) != VK_SUCCESS ||
+        format_count == 0 || mode_count == 0)
+        return false;
+    std::vector<VkSurfaceFormatKHR> formats(format_count);
+    if (vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &format_count,
+                                               formats.data()) != VK_SUCCESS)
+        return false;
+    const bool accepts_any_srgb = format_count == 1 &&
+        formats[0].format == VK_FORMAT_UNDEFINED &&
+        formats[0].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+    return accepts_any_srgb || std::any_of(formats.begin(), formats.end(),
+        [](const VkSurfaceFormatKHR& format) {
+            return format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR &&
+                std::find(supported_swapchain_formats.begin(),
+                          supported_swapchain_formats.end(), format.format) !=
+                    supported_swapchain_formats.end();
+        });
 }
 
 bool read_shader(const char* name, std::vector<std::uint32_t>& code, std::string& error) {
@@ -108,10 +151,30 @@ bool read_shader(const char* name, std::vector<std::uint32_t>& code, std::string
         error = "invalid SPIR-V file size: " + path_to_utf8(path);
         return false;
     }
-    code.resize(static_cast<std::size_t>(size) / sizeof(std::uint32_t));
+    const std::streamoff byte_size = static_cast<std::streamoff>(size);
+    const auto word_count = static_cast<std::uintmax_t>(byte_size) / sizeof(std::uint32_t);
+    if (word_count > code.max_size() ||
+        byte_size > std::numeric_limits<std::streamsize>::max()) {
+        error = "SPIR-V file exceeds the platform limit: " + path_to_utf8(path);
+        return false;
+    }
+    try {
+        code.resize(static_cast<std::size_t>(word_count));
+    } catch (const std::bad_alloc&) {
+        error = "SPIR-V allocation failed: " + path_to_utf8(path);
+        return false;
+    } catch (const std::length_error&) {
+        error = "SPIR-V file exceeds the platform limit: " + path_to_utf8(path);
+        return false;
+    }
     file.seekg(0);
-    if (!file.read(reinterpret_cast<char*>(code.data()), size)) {
+    if (!file.read(reinterpret_cast<char*>(code.data()),
+                   static_cast<std::streamsize>(byte_size))) {
         error = "cannot read shader: " + path_to_utf8(path);
+        return false;
+    }
+    if (code.front() != 0x07230203u) {
+        error = "invalid SPIR-V magic number: " + path_to_utf8(path);
         return false;
     }
     return true;
@@ -132,6 +195,7 @@ bool VulkanRenderer::fail(const char* operation, VkResult result) {
 }
 
 bool VulkanRenderer::initialize(SDL_Window* window) {
+    error_.clear();
     if (window_ != nullptr || device_ != VK_NULL_HANDLE) {
         error_ = "Vulkan renderer is already initialized";
         return false;
@@ -262,7 +326,7 @@ bool VulkanRenderer::choose_device() {
         }
     }
     if (physical_device_ != VK_NULL_HANDLE) return true;
-    error_ = "no Vulkan 1.3 device with dynamic rendering, synchronization2, and swapchain support";
+    error_ = "no Vulkan 1.3 device with dynamic rendering, synchronization2, and a supported sRGB swapchain";
     return false;
 }
 
@@ -319,20 +383,25 @@ bool VulkanRenderer::create_swapchain() {
     result = vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device_, surface_, &format_count, formats.data());
     if (result != VK_SUCCESS) return fail("vkGetPhysicalDeviceSurfaceFormatsKHR", result);
     auto chosen = formats.front();
-    if (format_count == 1 && chosen.format == VK_FORMAT_UNDEFINED) {
-        chosen.format = VK_FORMAT_B8G8R8A8_SRGB;
-    }
-    constexpr std::array<VkFormat, 2> preferred_formats{
-        VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_R8G8B8A8_SRGB};
-    for (const VkFormat preferred : preferred_formats) {
+    const bool any_format = format_count == 1 &&
+                            chosen.format == VK_FORMAT_UNDEFINED;
+    if (any_format) chosen.format = VK_FORMAT_B8G8R8A8_SRGB;
+    bool found_srgb_format = any_format &&
+        chosen.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+    for (const VkFormat preferred : supported_swapchain_formats) {
         const auto match = std::find_if(formats.begin(), formats.end(), [preferred](const auto& format) {
             return format.format == preferred &&
                    format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
         });
         if (match != formats.end()) {
             chosen = *match;
+            found_srgb_format = true;
             break;
         }
+    }
+    if (!found_srgb_format) {
+        error_ = "surface does not provide a supported sRGB nonlinear swapchain format";
+        return false;
     }
 
     VkExtent2D extent = caps.currentExtent;
@@ -527,7 +596,7 @@ bool VulkanRenderer::create_pipeline() {
     layout_info.setLayoutCount = 1;
     layout_info.pSetLayouts = &texture_set_layout_;
     VkPushConstantRange draw_constants{};
-    draw_constants.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    draw_constants.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     draw_constants.offset = 0;
     draw_constants.size = sizeof(DrawPushConstants);
     layout_info.pushConstantRangeCount = 1;
@@ -1008,6 +1077,20 @@ bool VulkanRenderer::create_texture_descriptors(std::vector<GpuTexture>& texture
 }
 
 bool VulkanRenderer::upload_scene(const Scene& scene) {
+    error_.clear();
+    try {
+        return upload_scene_impl(scene);
+    } catch (const std::bad_alloc&) {
+        error_ = "scene upload allocation failed";
+    } catch (const std::length_error&) {
+        error_ = "scene upload data exceeds a platform limit";
+    } catch (const std::exception& exception) {
+        error_ = std::string("scene upload failed: ") + exception.what();
+    }
+    return false;
+}
+
+bool VulkanRenderer::upload_scene_impl(const Scene& scene) {
     if (device_ == VK_NULL_HANDLE || command_pool_ == VK_NULL_HANDLE) {
         error_ = "cannot upload a scene before Vulkan initialization";
         return false;
@@ -1166,6 +1249,7 @@ bool VulkanRenderer::upload_scene(const Scene& scene) {
         new_index_buffer = VK_NULL_HANDLE;
         new_index_memory = VK_NULL_HANDLE;
     };
+    ScopeExit staged_cleanup(destroy_staged);
 
     for (std::size_t mesh_index = 0; mesh_index < new_meshes.size(); ++mesh_index) {
         GpuMesh& mesh = new_meshes[mesh_index];
@@ -1365,12 +1449,18 @@ bool VulkanRenderer::upload_scene(const Scene& scene) {
     new_index_memory = VK_NULL_HANDLE;
     new_descriptor_pool = VK_NULL_HANDLE;
     uploaded_asset_revision_ = scene.asset_revision();
+    staged_cleanup.release();
     return true;
 }
 
 bool VulkanRenderer::draw_frame(const Mat4& view_projection, const Scene& scene) {
+    error_.clear();
     if (device_ == VK_NULL_HANDLE || swapchain_ == VK_NULL_HANDLE) {
         error_ = "cannot draw a frame before Vulkan initialization";
+        return false;
+    }
+    if (frame_submission_failed_) {
+        error_ = "renderer cannot continue after a Vulkan frame synchronization failure";
         return false;
     }
     if (vertex_buffer_ == VK_NULL_HANDLE || index_buffer_ == VK_NULL_HANDLE ||
@@ -1380,6 +1470,16 @@ bool VulkanRenderer::draw_frame(const Mat4& view_projection, const Scene& scene)
     }
     if (!finite_matrix(view_projection)) {
         error_ = "view-projection matrix contains a non-finite value";
+        return false;
+    }
+    const SceneLighting& lighting = scene.lighting();
+    if (!std::isfinite(lighting.direction.x) || !std::isfinite(lighting.direction.y) ||
+        !std::isfinite(lighting.direction.z) || !std::isfinite(lighting.ambient) ||
+        lighting.ambient < 0.0f || lighting.ambient > 1.0f ||
+        lighting.direction.x * lighting.direction.x +
+            lighting.direction.y * lighting.direction.y +
+            lighting.direction.z * lighting.direction.z <= 1.0e-12f) {
+        error_ = "scene lighting contains an invalid direction or ambient value";
         return false;
     }
     if (scene.meshes().size() != meshes_.size() ||
@@ -1604,7 +1704,7 @@ bool VulkanRenderer::draw_frame(const Mat4& view_projection, const Scene& scene)
     VkRect2D scissor{{0, 0}, swapchain_extent_};
     vkCmdSetViewport(command, 0, 1, &viewport);
     vkCmdSetScissor(command, 0, 1, &scissor);
-    const auto record_draw = [this, command](const DrawSubmission& submission,
+    const auto record_draw = [this, command, &scene](const DrawSubmission& submission,
                                              bool environment_pass) {
         const DrawItem& draw = *submission.item;
         const GpuMesh& mesh = meshes_[draw.mesh];
@@ -1615,8 +1715,11 @@ bool VulkanRenderer::draw_frame(const Mat4& view_projection, const Scene& scene)
             vkCmdBindPipeline(command, VK_PIPELINE_BIND_POINT_GRAPHICS,
                               submission.transparent ? transparent_pipeline_ : pipeline_);
         }
+        const SceneLighting& lighting = scene.lighting();
         const DrawPushConstants push_constants{
-            submission.view_projection_model, Mat4::normal_matrix(submission.world)};
+            submission.view_projection_model, Mat4::normal_matrix(submission.world),
+            {lighting.direction.x, lighting.direction.y, lighting.direction.z,
+             lighting.ambient}};
         const VkBuffer draw_vertex_buffer = mesh.dynamic
             ? mesh.dynamic_vertex_buffers[frame_index_] : vertex_buffer_;
         const VkDeviceSize offset = mesh.dynamic ? 0 : mesh.vertex_offset;
@@ -1626,7 +1729,8 @@ bool VulkanRenderer::draw_frame(const Mat4& view_projection, const Scene& scene)
         vkCmdBindDescriptorSets(command, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 pipeline_layout_, 0, 1,
                                 &textures_[texture].descriptor_set, 0, nullptr);
-        vkCmdPushConstants(command, pipeline_layout_, VK_SHADER_STAGE_VERTEX_BIT,
+        vkCmdPushConstants(command, pipeline_layout_,
+                           VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                            0, sizeof(push_constants), &push_constants);
         vkCmdDrawIndexed(command, mesh.index_count, 1, mesh.first_index, 0, 0);
     };
@@ -1658,7 +1762,10 @@ bool VulkanRenderer::draw_frame(const Mat4& view_projection, const Scene& scene)
     if (result != VK_SUCCESS) return fail("vkEndCommandBuffer", result);
 
     result = vkResetFences(device_, 1, &frame.in_flight);
-    if (result != VK_SUCCESS) return fail("vkResetFences", result);
+    if (result != VK_SUCCESS) {
+        frame_submission_failed_ = true;
+        return fail("vkResetFences", result);
+    }
     auto wait = vk_struct<VkSemaphoreSubmitInfo>(VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO);
     wait.semaphore = frame.image_available;
     wait.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -1675,7 +1782,13 @@ bool VulkanRenderer::draw_frame(const Mat4& view_projection, const Scene& scene)
     submit.signalSemaphoreInfoCount = 1;
     submit.pSignalSemaphoreInfos = &signal;
     result = vkQueueSubmit2(graphics_queue_, 1, &submit, frame.in_flight);
-    if (result != VK_SUCCESS) return fail("vkQueueSubmit2", result);
+    if (result != VK_SUCCESS) {
+        // The reset fence is now unsignaled, and the acquired image semaphore
+        // may remain signaled. Refuse future draws instead of waiting forever
+        // on synchronization that no queue submission will complete.
+        frame_submission_failed_ = true;
+        return fail("vkQueueSubmit2", result);
+    }
     image_initialized_[image_index] = true;
 
     auto present = vk_struct<VkPresentInfoKHR>(VK_STRUCTURE_TYPE_PRESENT_INFO_KHR);

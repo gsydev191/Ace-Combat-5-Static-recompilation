@@ -62,6 +62,7 @@ bool decode_axis(std::span<const std::uint8_t> bytes, std::size_t data_offset,
 bool decode_aircraft_flight_rules(std::span<const std::uint8_t> bytes,
                                   AircraftFlightRules& rules,
                                   std::string& error) {
+    error.clear();
     if (bytes.size() != 400) {
         error = "aircraft flight parameter file must be exactly 400 bytes";
         return false;
@@ -169,6 +170,7 @@ bool decode_aircraft_flight_rules(std::span<const std::uint8_t> bytes,
 bool load_aircraft_flight_rules(const std::string& path,
                                 AircraftFlightRules& rules,
                                 std::string& error) {
+    error.clear();
     std::ifstream input(path_from_utf8(path), std::ios::binary);
     if (!input) {
         error = "cannot open aircraft flight parameter file: " + path;
