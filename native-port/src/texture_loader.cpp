@@ -18,6 +18,8 @@ namespace ac5 {
 
 namespace {
 
+constexpr std::size_t max_ppm_token_length = 32;
+
 bool next_token(std::istream& input, std::string& token) {
     token.clear();
     char c = 0;
@@ -39,6 +41,7 @@ bool next_token(std::istream& input, std::string& token) {
             input.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
             return true;
         }
+        if (token.size() == max_ppm_token_length) return false;
         token.push_back(c);
     }
     return !token.empty();
