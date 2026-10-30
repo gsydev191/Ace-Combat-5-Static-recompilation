@@ -21,6 +21,35 @@ inline void apply_model_base_shading(Vertex& vertex,
     vertex.light_response = 0.0f;
 }
 
+inline bool apply_environment_shading(Vertex& vertex,
+                                      const ModelVertexOut& shaded) noexcept;
+
+// Convert one decoded model vertex through the portable shading routine into
+// the renderer's native vertex format. Opacity remains at the native default;
+// decoded material state owns that choice separately from GS vertex alpha.
+inline bool convert_model_vertex(Vertex& vertex, ModelShadeMode mode,
+                                 const ModelShadeParams& params,
+                                 const ModelVertexIn& input) noexcept {
+    if (!std::isfinite(input.position[0]) || !std::isfinite(input.position[1]) ||
+        !std::isfinite(input.position[2]) || !std::isfinite(input.uv[0]) ||
+        !std::isfinite(input.uv[1]))
+        return false;
+
+    const ModelVertexOut shaded = shade_model_vertex(mode, params, input);
+    Vertex converted;
+    converted.position = {input.position[0], input.position[1], input.position[2]};
+    converted.uv = {input.uv[0], input.uv[1]};
+    converted.normal = {static_cast<float>(input.normal[0]) / 4096.0f,
+                        static_cast<float>(input.normal[1]) / 4096.0f,
+                        static_cast<float>(input.normal[2]) / 4096.0f};
+    apply_model_base_shading(converted, shaded);
+    if (mode == ModelShadeMode::Environment &&
+        !apply_environment_shading(converted, shaded))
+        return false;
+    vertex = converted;
+    return true;
+}
+
 // Copy the environment pass outputs from the portable model vertex program
 // into the native Vulkan vertex representation. The model program emits
 // projective STQ, while the native shader expects normalized UVs and applies
