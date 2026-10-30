@@ -26,8 +26,14 @@ struct DrawPushConstants {
 struct DrawSubmission {
     const DrawItem* item;
     Mat4 world;
+    Mat4 view_projection_model;
     float depth;
 };
+
+bool finite_matrix(const Mat4& matrix) {
+    return std::all_of(matrix.value.begin(), matrix.value.end(),
+                       [](float value) { return std::isfinite(value); });
+}
 
 float projected_depth(const Mat4& view_projection, Vec3 position) {
     const auto& matrix = view_projection.value;
@@ -1281,6 +1287,10 @@ bool VulkanRenderer::draw_frame(const Mat4& view_projection, const Scene& scene)
         error_ = "cannot draw a frame before uploading a scene";
         return false;
     }
+    if (!finite_matrix(view_projection)) {
+        error_ = "view-projection matrix contains a non-finite value";
+        return false;
+    }
     if (scene.meshes().size() != meshes_.size() ||
         scene.textures().size() != textures_.size() ||
         scene.asset_revision() != uploaded_asset_revision_) {
@@ -1301,12 +1311,21 @@ bool VulkanRenderer::draw_frame(const Mat4& view_projection, const Scene& scene)
         error_ = std::string("could not resolve scene transforms: ") + exception.what();
         return false;
     }
+    if (!std::all_of(world_transforms.begin(), world_transforms.end(), finite_matrix)) {
+        error_ = "scene transform contains a non-finite value";
+        return false;
+    }
     std::vector<DrawSubmission> opaque_draws;
     std::vector<DrawSubmission> transparent_draws;
     opaque_draws.reserve(scene.draws().size());
     transparent_draws.reserve(scene.draws().size());
     for (const DrawItem& draw : scene.draws()) {
         const Mat4 world = Mat4::multiply(world_transforms[draw.transform], draw.model);
+        const Mat4 view_projection_model = Mat4::multiply(view_projection, world);
+        if (!finite_matrix(world) || !finite_matrix(view_projection_model)) {
+            error_ = "scene draw transform produces a non-finite matrix";
+            return false;
+        }
         const GpuMesh& mesh = meshes_[draw.mesh];
         const Vec3 center{
             world.value[0] * mesh.local_center.x + world.value[4] * mesh.local_center.y +
@@ -1315,7 +1334,8 @@ bool VulkanRenderer::draw_frame(const Mat4& view_projection, const Scene& scene)
                 world.value[9] * mesh.local_center.z + world.value[13],
             world.value[2] * mesh.local_center.x + world.value[6] * mesh.local_center.y +
                 world.value[10] * mesh.local_center.z + world.value[14]};
-        DrawSubmission submission{&draw, world, projected_depth(view_projection, center)};
+        DrawSubmission submission{&draw, world, view_projection_model,
+                                  projected_depth(view_projection, center)};
         if (textures_[draw.texture].has_transparency)
             transparent_draws.push_back(submission);
         else
@@ -1417,8 +1437,8 @@ bool VulkanRenderer::draw_frame(const Mat4& view_projection, const Scene& scene)
                                 const DrawSubmission& submission) {
         const DrawItem& draw = *submission.item;
         const GpuMesh& mesh = meshes_[draw.mesh];
-        const Mat4 mvp = Mat4::multiply(view_projection, submission.world);
-        const DrawPushConstants push_constants{mvp, Mat4::normal_matrix(submission.world)};
+        const DrawPushConstants push_constants{
+            submission.view_projection_model, Mat4::normal_matrix(submission.world)};
         const VkDeviceSize offset = mesh.vertex_offset;
         vkCmdBindVertexBuffers(command, 0, 1, &vertex_buffer_, &offset);
         vkCmdBindIndexBuffer(command, index_buffer_, 0, VK_INDEX_TYPE_UINT32);
