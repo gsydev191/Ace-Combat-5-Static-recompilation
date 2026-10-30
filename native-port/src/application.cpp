@@ -173,6 +173,7 @@ int Application::run(int argc, char** argv) {
                         break;
                     }
                     process_event(event);
+                    previous_counter = SDL_GetPerformanceCounter();
                     continue;
                 }
                 const float aspect = pixel_width > 0 && pixel_height > 0
