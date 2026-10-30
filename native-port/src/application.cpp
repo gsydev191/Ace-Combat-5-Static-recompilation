@@ -39,6 +39,8 @@ struct DemoFrame {
         : scene(scene_ref), model_transform(transform) {}
     Camera* camera = nullptr;
     std::optional<AircraftFlightSession> flight_session;
+    std::optional<AcmPartModel> animated_model;
+    std::vector<TransformId> part_transforms;
     float delta_seconds = 0.0f;
     FlightInput controls{};
     float pitch_angle = 0.0f;
@@ -53,6 +55,78 @@ struct DemoLod {
     std::size_t draw_index = 0;
     bool active = false;
 };
+
+std::array<double, 64> aircraft_animation_channels(const FlightInput& controls) {
+    std::array<double, 64> channels{};
+    channels.fill(50.0);
+    const auto set = [&channels](std::size_t channel, double value) {
+        channels[channel] = std::clamp(value, 1.0, 100.0);
+    };
+    // These are the recovered direct stick mappings. Aircraft-specific
+    // authority and speed curves need the ACM's companion animation config.
+    set(1, 50.0 + 50.0 * controls.pitch);
+    set(3, 50.0 + 50.0 * controls.yaw);
+    set(5, 50.0 - 50.0 * controls.roll);
+    set(6, 50.0 + 50.0 * controls.roll);
+    set(8, 50.0 + 25.0 * controls.pitch);
+    set(12, 50.0 - 50.0 * controls.roll);
+    set(13, 50.0 + 50.0 * controls.roll);
+
+    const double lever = std::clamp(static_cast<double>(controls.throttle), -1.0, 1.0);
+    double dry = 0.0;
+    double afterburner = 0.0;
+    double airbrake = 0.0;
+    if (lever >= 0.9) {
+        dry = 1.0;
+        afterburner = (lever - 0.9) / 0.1;
+    } else if (lever >= -0.6) {
+        dry = (lever + 0.6) / 1.5;
+    } else {
+        airbrake = (-0.6 - lever) / 0.4;
+    }
+    set(14, 50.0 * dry + 50.0 * afterburner);
+    set(15, 50.0 + 50.0 * airbrake);
+    return channels;
+}
+
+void update_aircraft_part_animation(DemoFrame& frame) {
+    if (!frame.animated_model ||
+        frame.animated_model->parts.size() != frame.part_transforms.size()) return;
+    const std::array<double, 64> channels = aircraft_animation_channels(frame.controls);
+    for (std::size_t i = 0; i < frame.animated_model->parts.size(); ++i) {
+        const AcmModelPart& part = frame.animated_model->parts[i];
+        Vec3 position = part.position;
+        Vec3 rotation = part.rotation;
+        Vec3 animated{};
+        if (part.translation_track != AcmModelPart::no_parent) {
+            const AcmAnimationTrack& track =
+                frame.animated_model->translation_tracks[part.translation_track];
+            if (track.channel < channels.size() &&
+                sample_acm_animation_track(track, channels[track.channel], animated)) {
+                position.x += animated.x;
+                position.y += animated.y;
+                position.z += animated.z;
+            }
+        }
+        if (part.rotation_track != AcmModelPart::no_parent) {
+            const AcmAnimationTrack& track =
+                frame.animated_model->rotation_tracks[part.rotation_track];
+            if (track.channel < channels.size() &&
+                sample_acm_animation_track(track, channels[track.channel], animated)) {
+                rotation.x += animated.x;
+                rotation.y += animated.y;
+                rotation.z += animated.z;
+            }
+        }
+        const Mat4 rotation_x = Mat4::rotation_x(rotation.x);
+        const Mat4 rotation_y = Mat4::rotation_y(rotation.y);
+        const Mat4 rotation_z = Mat4::rotation_z(rotation.z);
+        const Mat4 local_rotation = Mat4::multiply(
+            rotation_z, Mat4::multiply(rotation_y, rotation_x));
+        frame.scene.set_transform(frame.part_transforms[i], Mat4::multiply(
+            Mat4::translation(position), local_rotation));
+    }
+}
 
 void select_demo_lod(Scene& scene, const DemoLod& lod, const Camera& camera) {
     if (!lod.active || lod.meshes.empty()) return;
@@ -122,6 +196,7 @@ void update_demo_scene(DemoFrame& frame, DemoStateMachine& scene_state) {
             frame.camera->target.y += movement.y;
             frame.camera->target.z += movement.z;
         }
+        update_aircraft_part_animation(frame);
         return;
     }
 
@@ -197,6 +272,8 @@ int Application::run(int argc, char** argv) {
     const bool acm_model = extension == ".mpl" || extension == ".acm" ||
                            extension == ".bin";
     std::optional<AircraftFlightRules> flight_rules;
+    std::optional<AcmPartModel> animated_model;
+    std::vector<TransformId> part_transforms;
     if (!flight_rules_path.empty()) {
         if (!acm_model) {
             std::fprintf(stderr, "--flight-rules requires an ACM aircraft model\n");
@@ -213,46 +290,71 @@ int Application::run(int argc, char** argv) {
     bool model_loaded = false;
     DemoLod demo_lod;
     if (acm_model) {
-        AcmLodBundle lod_bundle;
-        bool has_lod_bundle = false;
-        if (!load_acm_lod_bundle(model_path, lod_bundle, has_lod_bundle, load_error)) {
-            model_loaded = false;
-        } else if (has_lod_bundle) {
-            demo_lod.meshes.reserve(lod_bundle.levels.size());
-            demo_lod.textures.reserve(lod_bundle.levels.size());
-            demo_lod.thresholds.reserve(lod_bundle.levels.size());
-            for (AcmLodLevel& level : lod_bundle.levels) {
-                demo_lod.meshes.push_back(scene.add_mesh(std::move(level.mesh)));
-                demo_lod.textures.push_back(
-                    texture_path.empty() && level.has_texture
-                        ? scene.add_texture(std::move(level.texture))
-                        : TextureId{0});
-                demo_lod.thresholds.push_back(level.maximum_distance);
-            }
-            demo_lod.draw_index = scene.draws().size();
-            scene.add_draw(demo_lod.meshes.front(), demo_lod.textures.front(),
-                           Mat4::identity(), model_transform);
-            demo_lod.active = true;
-            model_loaded = true;
-        } else {
-            MeshData mesh;
-            if (load_acm_model(model_path, mesh, load_error)) {
-                const MeshId mesh_id = scene.add_mesh(std::move(mesh));
-                scene.add_draw(mesh_id, TextureId{0}, Mat4::identity(), model_transform);
-                model_loaded = true;
-            }
-            if (model_loaded && texture_path.empty()) {
-                TextureData embedded_texture;
-                bool found_texture = false;
-                std::string texture_error;
-                if (load_acm_bundle_texture(model_path, embedded_texture,
-                                            found_texture, texture_error) && found_texture) {
-                    const TextureId texture_id = scene.add_texture(std::move(embedded_texture));
-                    scene.set_all_draw_textures(texture_id);
-                } else if (!texture_error.empty()) {
-                    std::fprintf(stderr, "Embedded model texture unavailable: %s\n",
-                                 texture_error.c_str());
+        if (flight_rules) {
+            animated_model.emplace();
+            if (load_acm_part_model(model_path, *animated_model, load_error)) {
+                part_transforms.reserve(animated_model->parts.size());
+                for (AcmModelPart& part : animated_model->parts) {
+                    const Mat4 rotate_x = Mat4::rotation_x(part.rotation.x);
+                    const Mat4 rotate_y = Mat4::rotation_y(part.rotation.y);
+                    const Mat4 rotate_z = Mat4::rotation_z(part.rotation.z);
+                    const Mat4 rotation = Mat4::multiply(
+                        rotate_z, Mat4::multiply(rotate_y, rotate_x));
+                    const Mat4 local = Mat4::multiply(
+                        Mat4::translation(part.position), rotation);
+                    const TransformId parent = part.parent == AcmModelPart::no_parent
+                        ? model_transform : part_transforms.at(part.parent);
+                    const TransformId transform = scene.add_transform(local, parent);
+                    part_transforms.push_back(transform);
+                    if (!part.mesh.indices.empty()) {
+                        const MeshId mesh_id = scene.add_mesh(std::move(part.mesh));
+                        scene.add_draw(mesh_id, TextureId{0}, Mat4::identity(), transform);
+                    }
                 }
+                model_loaded = !scene.draws().empty();
+            }
+        } else {
+            AcmLodBundle lod_bundle;
+            bool has_lod_bundle = false;
+            if (!load_acm_lod_bundle(model_path, lod_bundle, has_lod_bundle, load_error)) {
+                model_loaded = false;
+            } else if (has_lod_bundle) {
+                demo_lod.meshes.reserve(lod_bundle.levels.size());
+                demo_lod.textures.reserve(lod_bundle.levels.size());
+                demo_lod.thresholds.reserve(lod_bundle.levels.size());
+                for (AcmLodLevel& level : lod_bundle.levels) {
+                    demo_lod.meshes.push_back(scene.add_mesh(std::move(level.mesh)));
+                    demo_lod.textures.push_back(
+                        texture_path.empty() && level.has_texture
+                            ? scene.add_texture(std::move(level.texture))
+                            : TextureId{0});
+                    demo_lod.thresholds.push_back(level.maximum_distance);
+                }
+                demo_lod.draw_index = scene.draws().size();
+                scene.add_draw(demo_lod.meshes.front(), demo_lod.textures.front(),
+                               Mat4::identity(), model_transform);
+                demo_lod.active = true;
+                model_loaded = true;
+            } else {
+                MeshData mesh;
+                if (load_acm_model(model_path, mesh, load_error)) {
+                    const MeshId mesh_id = scene.add_mesh(std::move(mesh));
+                    scene.add_draw(mesh_id, TextureId{0}, Mat4::identity(), model_transform);
+                    model_loaded = true;
+                }
+            }
+        }
+        if (model_loaded && texture_path.empty() && !demo_lod.active) {
+            TextureData embedded_texture;
+            bool found_texture = false;
+            std::string texture_error;
+            if (load_acm_bundle_texture(model_path, embedded_texture,
+                                        found_texture, texture_error) && found_texture) {
+                const TextureId texture_id = scene.add_texture(std::move(embedded_texture));
+                scene.set_all_draw_textures(texture_id);
+            } else if (!texture_error.empty()) {
+                std::fprintf(stderr, "Embedded model texture unavailable: %s\n",
+                             texture_error.c_str());
             }
         }
     } else {
@@ -302,6 +404,8 @@ int Application::run(int argc, char** argv) {
                 scene_state.request_transition(DemoSceneState::Exiting);
             }
             DemoFrame frame{scene, model_transform};
+            frame.animated_model = std::move(animated_model);
+            frame.part_transforms = std::move(part_transforms);
             if (flight_rules) {
                 AircraftFlightState flight_state{};
                 flight_state.speed_units_per_tick =

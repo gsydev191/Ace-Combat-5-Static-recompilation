@@ -163,8 +163,15 @@ project does not build or link any of those files.
   vertices and 2,172 triangles with assembled bounds of about 49 x 26 x 79
   game units. The F-16 player bundle has 57 part records and 33 geometry chains;
   its 29 explicitly owned chains import to 3,102 vertices and 1,632 triangles.
-  The four unowned chains are shape alternatives, so static import skips them
-  while leaving their animation unsupported.
+  The four unowned chains are shape alternatives, so static import skips them.
+  The flight viewer also has a part-preserving path that retains local meshes,
+  parent indices, part kinds, track-reference indices, and translation,
+  rotation, and shape animation keys. The viewer evaluates translation and
+  Euler rotation tracks using the recovered direct stick/throttle channels;
+  aircraft-specific authority/configuration curves, state-driven gear/flap
+  channels, and shape-track alternate-chain morphs remain open.
+  `ac5_model_info --parts` reports the hierarchy and decoded track/key counts
+  without opening Vulkan.
 - A Vulkan 1.3 renderer using SDL3, dynamic rendering, synchronization2,
   indexed textured meshes, push-constant transforms, per-image depth
   attachments, resize-aware swapchain recreation, and staging uploads that

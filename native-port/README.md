@@ -99,7 +99,8 @@ imported mesh counts and assembled bounds without opening the renderer; for
 nested LOD bundles it also lists all five level thresholds, mesh sizes, and
 texture dimensions. The viewer uploads all five levels and switches meshes
 and textures by camera distance using the recovered retail thresholds; use the
-mouse wheel to move through the LOD ranges.
+mouse wheel to move through the LOD ranges. `ac5_model_info --parts <model-file>`
+reports the retained ACM part tree and each part's local mesh.
 To run the native flight model on an imported aircraft, provide its matching
 400-byte flight rules bundle with `--flight-rules`, for example:
 
@@ -109,8 +110,13 @@ ac5_native --model f04g.mpl --flight-rules f04g.pmb
 
 In this mode SDL pitch, roll, and yaw controls plus throttle drive the fixed
 60 Hz native flight tick, and the camera follows the simulated aircraft. Press
-P to toggle the recovered approach-control law. The ordinary asset viewer
-remains the default when `--flight-rules` is omitted.
+P to toggle the recovered approach-control law. The flight viewer keeps each
+ACM part's local transform and parent link as separate scene draws. It decodes
+and evaluates translation and Euler-rotation tracks from the recovered direct
+stick and throttle channels. Aircraft-specific authority curves, gear and
+flap state, and shape-track mesh morphs still need their companion animation
+configuration and alternate-chain support. The ordinary asset viewer remains
+the default when `--flight-rules` is omitted.
 The native ACM loader decodes the observed VIF position, normal, color and UV
 streams, triangle strips, chain-to-part mapping, and static part hierarchy.
 It rejects duplicate or unresolved geometry-chain ownership, and
