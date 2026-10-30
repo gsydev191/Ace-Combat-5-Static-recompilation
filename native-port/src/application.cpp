@@ -77,6 +77,14 @@ void select_demo_lod(Scene& scene, const DemoLod& lod, const Camera& camera) {
 
 void update_demo_scene(DemoFrame& frame, DemoStateMachine& scene_state) {
     if (frame.flight_session) {
+        if (frame.controls.approach_control.pressed) {
+            const bool enabled =
+                (frame.flight_session->state().flags.contact & 0x20u) == 0;
+            set_aircraft_approach_control(frame.flight_session->state().flags,
+                                           enabled);
+            std::fprintf(stderr, "Approach control %s\n",
+                         enabled ? "enabled" : "disabled");
+        }
         const std::array<double, 3> previous_position =
             frame.flight_session->state().position;
         AircraftFlightInput flight_input{};

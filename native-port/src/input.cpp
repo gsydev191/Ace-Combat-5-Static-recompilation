@@ -74,6 +74,7 @@ FlightInput InputSystem::sample() {
     input.throttle = keyboard_throttle;
     input.primary_fire.held = down(SDL_SCANCODE_SPACE);
     input.secondary_fire.held = down(SDL_SCANCODE_LCTRL) || down(SDL_SCANCODE_RCTRL);
+    input.approach_control.held = down(SDL_SCANCODE_P);
     if (gamepad_) {
         input.pitch = combine(input.pitch,
             -axis_value(SDL_GetGamepadAxis(gamepad_, SDL_GAMEPAD_AXIS_LEFTY)));
@@ -95,8 +96,13 @@ FlightInput InputSystem::sample() {
     input.primary_fire.released = !input.primary_fire.held && previous_primary_fire_;
     input.secondary_fire.pressed = input.secondary_fire.held && !previous_secondary_fire_;
     input.secondary_fire.released = !input.secondary_fire.held && previous_secondary_fire_;
+    input.approach_control.pressed = input.approach_control.held &&
+                                     !previous_approach_control_;
+    input.approach_control.released = !input.approach_control.held &&
+                                      previous_approach_control_;
     previous_primary_fire_ = input.primary_fire.held;
     previous_secondary_fire_ = input.secondary_fire.held;
+    previous_approach_control_ = input.approach_control.held;
     return input;
 }
 

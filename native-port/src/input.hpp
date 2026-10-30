@@ -22,6 +22,7 @@ private:
     SDL_Gamepad* gamepad_ = nullptr;
     bool previous_primary_fire_ = false;
     bool previous_secondary_fire_ = false;
+    bool previous_approach_control_ = false;
 };
 
 } // namespace ac5

@@ -16,6 +16,7 @@ struct FlightInput {
     float throttle = 0.0f;
     ButtonInput primary_fire;
     ButtonInput secondary_fire;
+    ButtonInput approach_control;
 };
 
 } // namespace ac5

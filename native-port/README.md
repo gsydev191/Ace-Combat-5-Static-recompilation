@@ -107,9 +107,10 @@ To run the native flight model on an imported aircraft, provide its matching
 ac5_native --model f04g.mpl --flight-rules f04g.pmb
 ```
 
-In this mode SDL pitch, roll, yaw, and throttle controls drive the fixed 60 Hz
-native flight tick, and the camera follows the simulated aircraft. The ordinary
-asset viewer remains the default when `--flight-rules` is omitted.
+In this mode SDL pitch, roll, and yaw controls plus throttle drive the fixed
+60 Hz native flight tick, and the camera follows the simulated aircraft. Press
+P to toggle the recovered approach-control law. The ordinary asset viewer
+remains the default when `--flight-rules` is omitted.
 The native ACM loader decodes the observed VIF position, normal, color and UV
 streams, triangle strips, chain-to-part mapping, and static part hierarchy.
 It rejects duplicate or unresolved geometry-chain ownership, and
@@ -233,7 +234,8 @@ output paths that resolve through symlinks outside the selected output
 directory.
 
 Arrow keys/WASD pitch and roll, Q/E yaw, R/F set throttle input, Space is
-primary fire, and either Ctrl key is secondary fire. Fire controls expose held,
+primary fire, either Ctrl key is secondary fire, and P toggles approach control
+in flight mode. Fire controls expose held,
 pressed, and released states to native game systems. Demo pitch, roll, and yaw
 accumulate at a frame-rate-independent rate; throttle and fire are exposed to
 native game systems but are not yet consumed by the demo. The left gamepad stick
