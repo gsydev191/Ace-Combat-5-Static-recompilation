@@ -145,10 +145,28 @@ AircraftAnimationChannels aircraft_animation_targets(
     };
     set(1, 50.0 - 50.0 * input.pitch * authority);
     set(3, 50.0 + 50.0 * input.yaw);
-    // With no model-specific mapping flags, the retail controller selects
-    // opposite roll inputs and applies the same authority factor as pitch.
-    set(5, 50.0 - 50.0 * input.roll * authority);
-    set(6, 50.0 + 50.0 * input.roll * authority);
+    // These branches follow the recovered CPlAnimCtrl flag priority. Native
+    // pitch/roll/yaw stand in for the matching controller channels at ACM
+    // offsets +4/+8/+1c; model flags themselves come directly from ACM +4.
+    double roll5 = -static_cast<double>(input.roll);
+    double roll6 = static_cast<double>(input.roll);
+    const bool low_speed_400 = (input.model_flags & 0x400u) != 0 &&
+        rules.available && speed < config[13];
+    if (low_speed_400) {
+        roll5 = -flap;
+        roll6 = 0.0;
+    } else if ((input.model_flags & 0x10u) != 0) {
+        roll5 = -flap - input.roll;
+        roll6 = input.roll - flap;
+    } else if ((input.model_flags & 0x20u) != 0) {
+        roll5 = -static_cast<double>(input.pitch) - input.roll;
+        roll6 = static_cast<double>(input.roll) - input.pitch;
+    } else if ((input.model_flags & 0x40u) != 0) {
+        roll5 = static_cast<double>(input.yaw) - input.roll;
+        roll6 = static_cast<double>(input.yaw) + input.roll;
+    }
+    set(5, 50.0 + 50.0 * std::clamp(roll5, -1.0, 1.0) * authority);
+    set(6, 50.0 + 50.0 * std::clamp(roll6, -1.0, 1.0) * authority);
     set(7, 50.0 - 50.0 * flap);
     set(8, 50.0 + 25.0 * input.pitch * authority);
     set(12, 50.0 - 50.0 * input.roll);

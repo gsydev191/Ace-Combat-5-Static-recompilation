@@ -26,6 +26,7 @@ struct AircraftAnimationInput {
     float throttle_lever = 0.0f;
     double speed_kmh = 0.0;
     bool gear_down = false;
+    std::uint32_t model_flags = 0;
 };
 
 struct AircraftGearController {

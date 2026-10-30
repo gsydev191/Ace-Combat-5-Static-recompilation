@@ -639,6 +639,10 @@ bool parse_acm(std::span<const std::uint8_t> block, MeshData& mesh,
 
     AcmPartModel decoded_model;
     if (part_model) {
+        if (!read_u32(block, 0x04, decoded_model.model_flags)) {
+            error = "ACM model flags are truncated";
+            return false;
+        }
         decoded_model.parts.resize(part_count);
         for (std::uint32_t i = 0; i < part_count; ++i) {
             AcmModelPart& output = decoded_model.parts[i];

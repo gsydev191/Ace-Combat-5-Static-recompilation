@@ -51,6 +51,9 @@ struct AcmAnimationTrack {
 };
 
 struct AcmPartModel {
+    // Second ACM header word, used by the retail aircraft animation controller
+    // to select alternate control-surface mappings.
+    std::uint32_t model_flags = 0;
     std::vector<AcmModelPart> parts;
     std::vector<AcmAnimationTrack> translation_tracks;
     std::vector<AcmAnimationTrack> rotation_tracks;

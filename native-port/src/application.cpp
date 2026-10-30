@@ -199,6 +199,7 @@ void advance_demo_animation(DemoFrame& frame) {
     input.throttle_lever = frame.controls.throttle;
     input.speed_kmh = std::max(0.0, flight.speed_units_per_tick * 60.0 / 1.4222219);
     input.gear_down = frame.gear_down;
+    input.model_flags = frame.animated_model ? frame.animated_model->model_flags : 0;
     const AircraftAnimationChannels targets =
         aircraft_animation_targets(frame.animation_rules, input);
     frame.animation_accumulator_seconds += frame.delta_seconds;
