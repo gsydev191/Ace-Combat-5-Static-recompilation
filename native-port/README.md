@@ -28,6 +28,12 @@ reader live entirely in this directory. The project does not yet decode the
 game's packed model, texture, or animation
 assets or contain game-accurate gameplay systems.
 
+The portable `model_shading` library exposes the plain, lit, and environment
+vertex-program paths as value-in/value-out math. Environment mode returns the
+lit base-pass vertex result and separate reflective UV/color data for a second
+pass; the sample renderer does not yet bind decoded game material state to
+these outputs.
+
 The native math uses column-major, right-handed matrices. Its perspective
 projection uses Vulkan's zero-to-one depth range and inverts Y for a
 positive-height viewport; `Camera` uses those same conventions for view,

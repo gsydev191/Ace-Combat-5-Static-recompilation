@@ -60,6 +60,32 @@ ModelVertexOut shade_model_vertex(ModelShadeMode mode, const ModelShadeParams& p
         out.rgba[j] = static_cast<std::int32_t>(ch);
     }
     out.rgba[3] = 128;
+    if (mode == ModelShadeMode::Environment) {
+        Float4 reflected{};
+        for (int j = 0; j < 3; ++j) {
+            float acc = p.environment_dir[0][j] * n[0];
+            acc = acc + p.environment_dir[1][j] * n[1];
+            reflected[j] = acc + p.environment_dir[2][j] * n[2];
+        }
+        reflected[3] = 1.0f;
+
+        Float4 environment_color{};
+        for (int j = 0; j < 3; ++j) {
+            const float intensity = std::clamp(reflected[j], 0.0f, 128.0f) * 1280.0f;
+            environment_color[j] = std::min(intensity, 128.0f);
+        }
+        environment_color[3] = p.environment_alpha;
+        out.environment_rgba = {
+            static_cast<std::int32_t>(environment_color[0]),
+            static_cast<std::int32_t>(environment_color[1]),
+            static_cast<std::int32_t>(environment_color[2]),
+            static_cast<std::int32_t>(environment_color[3])};
+
+        reflected[0] = (reflected[0] + 1.0f) * 0.5f;
+        reflected[1] = (reflected[1] + 1.0f) * 0.5f;
+        reflected[2] = 1.0f;
+        out.environment_st = {reflected[0] * q, reflected[1] * q, q, 1.0f};
+    }
     return out;
 }
 

@@ -209,9 +209,13 @@ arithmetic, not guest CPU or hardware state) and are covered by
   decoder the unknown `pmtex*.bin` format will need once real files are
   available.
 - `adpcm` - the 16-byte-block sound codec (filter table, shift, loop flags).
-- `model_shading` - the plain and lit paths of the model vertex program
-  (perspective transform, fog, depth scaling, three cubed-falloff lights plus
-  ambient) as ordinary math. The environment-mapped path is not ported yet.
+- `model_shading` - the plain, lit, and environment-mapped paths of the model
+  vertex program as ordinary math. Environment mode returns the lit base pass
+  and a second pass with transformed reflection coordinates and capped
+  reflection color, following the environment path in
+  `runtime/src/rn/rn_vp_model.c`. The Vulkan sample does not yet consume this game-specific
+  shading output; wiring it requires decoded model/material data and matching
+  render passes.
 
 Still blocked on supplied game files: `generated/`, `DATA.TBL`/`DATA.PAC`
 and `SLUS_208.51` are not in this checkout, so the model/texture container
