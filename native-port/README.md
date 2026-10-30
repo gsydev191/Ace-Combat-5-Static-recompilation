@@ -81,13 +81,13 @@ coordinates, and the common optional RGB extension on `v` records (`x y z r g b`
 or `x y z w r g b`). Faces retain shared position/UV/normal tuples as indexed
 geometry. The OBJ loader preserves explicit normals, generates flat normals
 when smoothing is off, averages generated normals for OBJ smoothing groups,
-and ear-clips concave faces. It supports material sections and
-`Kd` diffuse colors plus simple `map_Kd` references to P3/P6 PPM or true-color
+and ear-clips concave faces. It supports material sections, `Kd` diffuse colors,
+scalar `d` dissolve and `Tr` transparency opacity, plus simple `map_Kd` references to P3/P6 PPM or true-color
 TGA images. TGA loading supports uncompressed and RLE 24-bit or 32-bit images,
 normalizes all four image origins, and preserves 32-bit alpha. Color-mapped and
 interleaved TGA files are rejected. MTL
-diffuse colors multiply OBJ vertex colors, and remain active when the command
-line texture override is used. PPM `maxval` values from 1 through 65535 are
+diffuse colors multiply OBJ vertex colors, while MTL opacity multiplies vertex
+alpha; both remain active when the command-line texture override is used. PPM `maxval` values from 1 through 65535 are
 scaled to 8-bit textures, including 16-bit big-endian P6 samples. The scene API
 supports multiple texture IDs and lets each draw select one. Each draw also
 has a local model matrix and a shared scene transform ID. Material sections of

@@ -49,6 +49,7 @@ struct ObjSubmesh {
 
 struct ObjMaterial {
     Vec3 diffuse{1.0f, 1.0f, 1.0f};
+    float opacity = 1.0f;
     std::filesystem::path diffuse_map;
 };
 
@@ -511,6 +512,15 @@ bool load_materials(const std::filesystem::path& obj_path, const ParsedObj& obj,
                 diffuse.y = std::clamp(diffuse.y, 0.0f, 1.0f);
                 diffuse.z = std::clamp(diffuse.z, 0.0f, 1.0f);
                 materials[material].diffuse = diffuse;
+            } else if ((record == "d" || record == "Tr") && !material.empty()) {
+                std::string token, extra;
+                float value = 0.0f;
+                if (!(row >> token) || (row >> extra) || !parse_float(token, value)) {
+                    error = path_to_utf8(library_path) + ": invalid " + record + " opacity";
+                    return false;
+                }
+                const float opacity = record == "d" ? value : 1.0f - value;
+                materials[material].opacity = std::clamp(opacity, 0.0f, 1.0f);
             } else if (record == "map_Kd" && !material.empty() && load_textures) {
                 std::string texture_name;
                 std::getline(row, texture_name);
@@ -603,6 +613,7 @@ bool load_obj_scene(const std::string& path, Scene& scene, std::string& error,
                 vertex.color.x *= material->second.diffuse.x;
                 vertex.color.y *= material->second.diffuse.y;
                 vertex.color.z *= material->second.diffuse.z;
+                vertex.alpha *= material->second.opacity;
             }
         }
         const MeshId mesh_id = loaded.add_mesh(std::move(submesh.mesh));
