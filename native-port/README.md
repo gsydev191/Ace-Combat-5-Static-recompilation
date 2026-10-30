@@ -231,6 +231,8 @@ controls pitch/roll, the right stick controls yaw, triggers provide throttle,
 and South/East provide the two fire actions. Pitch, roll, and yaw currently
 rotate the demo model's shared scene transform; throttle and fire are
 available in `FlightInput` for the flight model that has not been ported yet.
+`map_engine_lever` ports the generated throttle routine's split into dry power,
+afterburner, and airbrake channels; the demo does not yet simulate those outputs.
 The input system opens one connected gamepad at startup and scans the remaining
 connected devices when the active gamepad is removed. It also handles devices
 connected after startup.

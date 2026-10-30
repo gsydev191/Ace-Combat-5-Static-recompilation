@@ -191,6 +191,10 @@ project does not build or link any of those files.
 - SDL keyboard and gamepad input represented as ordinary native flight axes
   and actions. `FlightInput` itself has no SDL or Vulkan dependency, so a
   future simulation layer can consume the same native action contract.
+- `map_engine_lever` ports the throttle mapping at generated routine
+  `0x0016BF50` into dry-power, afterburner, and airbrake channels. It accepts
+  the native -1..1 lever and has no PS2 memory or runtime dependency; aircraft
+  speed and attitude integration remain future work.
 - A bounded, resumable ULZ decoder and `DATA.TBL`/`DATA.PAC` reader. The
   decoder can yield after a caller-selected number of control words, and
   `ArchiveMemberLoad` exposes that budget at the member-loading boundary. Its
