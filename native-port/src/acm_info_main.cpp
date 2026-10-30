@@ -47,5 +47,23 @@ int main(int argc, char** argv) {
     bool has_texture = false;
     if (ac5::load_acm_bundle_texture(arguments[1], texture, has_texture, error) && has_texture)
         std::printf("bundled texture: %ux%u\n", texture.width, texture.height);
+    ac5::AcmLodBundle lods;
+    bool has_lods = false;
+    if (!ac5::load_acm_lod_bundle(arguments[1], lods, has_lods, error)) {
+        std::fprintf(stderr, "LOD import failed: %s\n", error.c_str());
+        return 1;
+    }
+    if (has_lods) {
+        std::printf("LOD levels: %zu\n", lods.levels.size());
+        for (std::size_t i = 0; i < lods.levels.size(); ++i) {
+            const auto& level = lods.levels[i];
+            std::printf("  %zu: threshold %.3f, %zu vertices, %zu triangles",
+                        i, level.maximum_distance, level.mesh.vertices.size(),
+                        level.mesh.indices.size() / 3);
+            if (level.has_texture)
+                std::printf(", texture %ux%u", level.texture.width, level.texture.height);
+            std::printf("\n");
+        }
+    }
     return 0;
 }

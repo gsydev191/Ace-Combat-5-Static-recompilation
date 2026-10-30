@@ -250,13 +250,13 @@ otherwise they use one level. MTL support handles `Kd`, scalar `d` dissolve,
 scalar `Tr` transparency, and simple `map_Kd` paths to PPM or uncompressed/RLE
 true-color TGA images. The sampler enables anisotropic filtering up to
 16x when the device supports it. The native ACM/VIF loader decodes supported
-static aircraft bundles, including the first (highest-detail) mesh, its
-companion ACM meshes, and texture from a nested `lodplane/*.bin` container.
-The F-16C and F-4G LOD bundles both load through this path. The GIM decoder
+static aircraft bundles, including all five LOD meshes, parent-level companion
+ACM meshes, thresholds, and per-level textures from nested `lodplane/*.bin`
+containers. The F-16C and F-4G bundles both import through this path. The viewer
+still displays LOD0; runtime distance selection remains open. The GIM decoder
 handles indexed 4/8-bit textures. The OBJ importer remains an interchange
-path. Runtime LOD switching, ambiguous ACM part ownership, other texture
-formats, material assignment beyond the first bundle texture, and model
-animation remain open.
+path. Ambiguous ACM part ownership, other texture formats, material assignment
+beyond the first bundle texture, and model animation remain open.
 
 Textures containing non-opaque alpha and meshes containing non-opaque vertex
 alpha use a separate blended Vulkan pipeline. Opaque draws retain depth writes;

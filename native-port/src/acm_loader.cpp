@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstdint>
 #include <fstream>
+#include <iterator>
 #include <limits>
 #include <new>
 #include <optional>
@@ -67,6 +68,11 @@ struct ModelSelection {
     std::span<const std::uint8_t> model;
     std::vector<std::span<const std::uint8_t>> companion_models;
     std::span<const std::uint8_t> texture;
+};
+
+struct LodBundleSelection {
+    std::span<const std::uint8_t> bundle;
+    std::vector<std::span<const std::uint8_t>> companion_models;
 };
 
 bool read_bundle_slots(std::span<const std::uint8_t> file,
@@ -144,6 +150,75 @@ bool find_model(std::span<const std::uint8_t> file, ModelSelection& selection,
         return true;
     }
     return false;
+}
+
+bool find_lod_bundle(std::span<const std::uint8_t> file,
+                    LodBundleSelection& selection, unsigned depth = 0) {
+    if (depth >= 4) return false;
+    std::vector<BundleSlot> slots;
+    if (!read_bundle_slots(file, slots)) return false;
+    const auto slot_at = [&slots](std::uint32_t index) -> const BundleSlot* {
+        const auto found = std::find_if(slots.begin(), slots.end(),
+            [index](const BundleSlot& slot) { return slot.index == index; });
+        return found == slots.end() ? nullptr : &*found;
+    };
+    const BundleSlot* distances = slot_at(0);
+    if (distances && distances->bytes.size() >= 5 * sizeof(float)) {
+        std::array<float, 5> thresholds{};
+        bool valid = true;
+        for (std::size_t i = 0; i < thresholds.size(); ++i) {
+            if (!read_f32(distances->bytes, i * sizeof(float), thresholds[i]) ||
+                thresholds[i] < 0.0f || (i != 0 && thresholds[i] < thresholds[i - 1])) {
+                valid = false;
+                break;
+            }
+        }
+        for (std::uint32_t i = 1; valid && i <= 5; ++i) {
+            const BundleSlot* mesh = slot_at(i);
+            valid = mesh && is_acm(mesh->bytes);
+        }
+        if (valid) {
+            selection.bundle = file;
+            return true;
+        }
+    }
+
+    std::vector<std::span<const std::uint8_t>> direct_models;
+    for (const BundleSlot& slot : slots) {
+        if (!is_acm(slot.bytes)) continue;
+        const bool duplicate = std::any_of(direct_models.begin(), direct_models.end(),
+            [&slot](auto model) { return model.data() == slot.bytes.data(); });
+        if (!duplicate) direct_models.push_back(slot.bytes);
+    }
+    for (const BundleSlot& slot : slots) {
+        if (is_acm(slot.bytes)) continue;
+        LodBundleSelection nested;
+        if (find_lod_bundle(slot.bytes, nested, depth + 1)) {
+            nested.companion_models.insert(nested.companion_models.end(),
+                                            direct_models.begin(), direct_models.end());
+            selection = std::move(nested);
+            return true;
+        }
+    }
+    return false;
+}
+
+bool append_mesh(MeshData& destination, MeshData&& source, std::string& error) {
+    if (destination.vertices.size() > std::numeric_limits<std::uint32_t>::max() ||
+        source.vertices.size() > std::numeric_limits<std::uint32_t>::max() -
+                                     destination.vertices.size()) {
+        error = "combined ACM meshes exceed the native vertex index limit";
+        return false;
+    }
+    const std::uint32_t vertex_offset = static_cast<std::uint32_t>(destination.vertices.size());
+    destination.vertices.reserve(destination.vertices.size() + source.vertices.size());
+    destination.indices.reserve(destination.indices.size() + source.indices.size());
+    destination.vertices.insert(destination.vertices.end(),
+                                std::make_move_iterator(source.vertices.begin()),
+                                std::make_move_iterator(source.vertices.end()));
+    for (const std::uint32_t index : source.indices)
+        destination.indices.push_back(vertex_offset + index);
+    return true;
 }
 
 struct Part {
@@ -583,6 +658,89 @@ bool read_model_file(const std::string& path, std::vector<std::uint8_t>& file,
 
 } // namespace
 
+bool load_acm_lod_bundle(const std::string& path, AcmLodBundle& lods,
+                         bool& found, std::string& error) {
+    found = false;
+    std::vector<std::uint8_t> file;
+    if (!read_model_file(path, file, error)) return false;
+    try {
+        LodBundleSelection selected;
+        if (!find_lod_bundle(file, selected)) return true;
+        std::vector<BundleSlot> slots;
+        if (!read_bundle_slots(selected.bundle, slots)) {
+            error = "nested LOD bundle has an invalid slot table: " + path;
+            return false;
+        }
+        const auto slot_at = [&slots](std::uint32_t index) -> const BundleSlot* {
+            const auto slot = std::find_if(slots.begin(), slots.end(),
+                [index](const BundleSlot& candidate) { return candidate.index == index; });
+            return slot == slots.end() ? nullptr : &*slot;
+        };
+
+        AcmLodBundle decoded;
+        decoded.levels.reserve(5);
+        for (std::uint32_t level = 0; level < 5; ++level) {
+            const BundleSlot* distance_slot = slot_at(0);
+            const BundleSlot* mesh_slot = slot_at(level + 1);
+            if (!distance_slot || !mesh_slot || !is_acm(mesh_slot->bytes)) {
+                error = "nested LOD bundle is missing a distance or ACM mesh slot: " + path;
+                return false;
+            }
+            AcmLodLevel lod;
+            if (!read_f32(distance_slot->bytes, level * sizeof(float), lod.maximum_distance)) {
+                error = "nested LOD distance table contains an invalid value: " + path;
+                return false;
+            }
+            if (!parse_acm(mesh_slot->bytes, lod.mesh, error)) return false;
+            for (const auto companion : selected.companion_models) {
+                MeshData extra;
+                if (!parse_acm(companion, extra, error) ||
+                    !append_mesh(lod.mesh, std::move(extra), error)) return false;
+            }
+
+            const std::uint32_t preferred_texture_slot = 6 + level;
+            const BundleSlot* texture_slot = nullptr;
+            for (std::uint32_t index = preferred_texture_slot; index < 11; ++index) {
+                const BundleSlot* candidate = slot_at(index);
+                if (candidate && candidate->bytes.size() >= 4 &&
+                    candidate->bytes[0] == 'G' && candidate->bytes[1] == 'I' &&
+                    candidate->bytes[2] == 'M' && candidate->bytes[3] == 0) {
+                    texture_slot = candidate;
+                    break;
+                }
+            }
+            if (!texture_slot) {
+                for (std::uint32_t index = preferred_texture_slot; index > 6; --index) {
+                    const BundleSlot* candidate = slot_at(index - 1);
+                    if (candidate && candidate->bytes.size() >= 4 &&
+                        candidate->bytes[0] == 'G' && candidate->bytes[1] == 'I' &&
+                        candidate->bytes[2] == 'M' && candidate->bytes[3] == 0) {
+                        texture_slot = candidate;
+                        break;
+                    }
+                }
+            }
+            if (texture_slot) {
+                if (!decode_gim(texture_slot->bytes, lod.texture, error, true)) {
+                    error += " in LOD " + std::to_string(level) + " of " + path;
+                    return false;
+                }
+                lod.has_texture = true;
+            }
+            decoded.levels.push_back(std::move(lod));
+        }
+        lods = std::move(decoded);
+        found = true;
+        return true;
+    } catch (const std::bad_alloc&) {
+        error = "ACM LOD bundle allocation failed: " + path;
+        return false;
+    } catch (const std::length_error&) {
+        error = "ACM LOD bundle exceeds the platform's vector limit: " + path;
+        return false;
+    }
+}
+
 bool load_acm_bundle_texture(const std::string& path, TextureData& texture,
                              bool& found, std::string& error) {
     found = false;
@@ -623,20 +781,8 @@ bool load_acm_model(const std::string& path, MeshData& mesh, std::string& error)
         if (!parse_acm(block, decoded, error)) return false;
         for (const auto companion : selected.companion_models) {
             MeshData extra;
-            if (!parse_acm(companion, extra, error)) return false;
-            if (decoded.vertices.size() > std::numeric_limits<std::uint32_t>::max() ||
-                extra.vertices.size() > std::numeric_limits<std::uint32_t>::max() -
-                                            decoded.vertices.size()) {
-                error = "combined ACM meshes exceed the native vertex index limit";
-                return false;
-            }
-            const std::uint32_t vertex_offset =
-                static_cast<std::uint32_t>(decoded.vertices.size());
-            decoded.vertices.insert(decoded.vertices.end(), extra.vertices.begin(),
-                                    extra.vertices.end());
-            decoded.indices.reserve(decoded.indices.size() + extra.indices.size());
-            for (const std::uint32_t index : extra.indices)
-                decoded.indices.push_back(vertex_offset + index);
+            if (!parse_acm(companion, extra, error) ||
+                !append_mesh(decoded, std::move(extra), error)) return false;
         }
         mesh = std::move(decoded);
         return true;
