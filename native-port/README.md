@@ -17,8 +17,9 @@ normal generation when absent, per-draw inverse-transpose normal matrices,
 diffuse lighting, and sRGB textures with GPU generated mipmaps where linear
 blits are supported. When available, the renderer enables Vulkan portability
 enumeration and the device portability subset for layered Vulkan platforms.
-Textures with non-opaque alpha use a blending pipeline and are sorted by the
-transformed mesh bounds center; opaque meshes keep depth writes enabled.
+Native vertices and textures carry alpha into the shader; transparent meshes
+are sorted by transformed bounds center and blended back-to-front with depth
+writes disabled, while opaque meshes retain depth writes.
 Scene replacement uploads are staged in separate Vulkan buffers, textures,
 and descriptors; a failed upload leaves the previously uploaded scene usable.
 OBJ/MTL and PPM/TGA importers,

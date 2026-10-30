@@ -44,6 +44,7 @@ private:
         std::uint32_t first_index = 0;
         std::uint32_t index_count = 0;
         Vec3 local_center{};
+        bool has_transparency = false;
     };
 
     struct GpuTexture {

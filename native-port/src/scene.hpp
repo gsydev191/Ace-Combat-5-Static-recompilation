@@ -18,6 +18,7 @@ struct Vertex {
     Vec3 color;
     Vec2 uv;
     Vec3 normal{0.0f, 0.0f, 1.0f};
+    float alpha = 1.0f;
 };
 
 struct TextureData {

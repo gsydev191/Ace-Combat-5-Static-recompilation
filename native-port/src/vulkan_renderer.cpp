@@ -547,11 +547,12 @@ bool VulkanRenderer::create_pipeline() {
         VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO);
     static_assert(std::is_standard_layout_v<Vertex>);
     VkVertexInputBindingDescription vertex_binding{0, sizeof(Vertex), VK_VERTEX_INPUT_RATE_VERTEX};
-    std::array<VkVertexInputAttributeDescription, 4> attributes{{
+    std::array<VkVertexInputAttributeDescription, 5> attributes{{
         {0, 0, VK_FORMAT_R32G32B32_SFLOAT, static_cast<std::uint32_t>(offsetof(Vertex, position))},
         {1, 0, VK_FORMAT_R32G32B32_SFLOAT, static_cast<std::uint32_t>(offsetof(Vertex, color))},
         {2, 0, VK_FORMAT_R32G32_SFLOAT, static_cast<std::uint32_t>(offsetof(Vertex, uv))},
-        {3, 0, VK_FORMAT_R32G32B32_SFLOAT, static_cast<std::uint32_t>(offsetof(Vertex, normal))}}};
+        {3, 0, VK_FORMAT_R32G32B32_SFLOAT, static_cast<std::uint32_t>(offsetof(Vertex, normal))},
+        {4, 0, VK_FORMAT_R32_SFLOAT, static_cast<std::uint32_t>(offsetof(Vertex, alpha))}}};
     vertex_input.vertexBindingDescriptionCount = 1;
     vertex_input.pVertexBindingDescriptions = &vertex_binding;
     vertex_input.vertexAttributeDescriptionCount = static_cast<std::uint32_t>(attributes.size());
@@ -1040,16 +1041,19 @@ bool VulkanRenderer::upload_scene(const Scene& scene) {
         Vec3 maximum{-std::numeric_limits<float>::infinity(),
                      -std::numeric_limits<float>::infinity(),
                      -std::numeric_limits<float>::infinity()};
+        bool has_transparency = false;
         for (const Vertex& vertex : source.vertices) {
             if (!std::isfinite(vertex.position.x) || !std::isfinite(vertex.position.y) ||
                 !std::isfinite(vertex.position.z) || !std::isfinite(vertex.color.x) ||
                 !std::isfinite(vertex.color.y) || !std::isfinite(vertex.color.z) ||
                 !std::isfinite(vertex.uv.x) || !std::isfinite(vertex.uv.y) ||
                 !std::isfinite(vertex.normal.x) || !std::isfinite(vertex.normal.y) ||
-                !std::isfinite(vertex.normal.z)) {
-                error_ = "scene mesh contains a non-finite vertex attribute";
+                !std::isfinite(vertex.normal.z) || !std::isfinite(vertex.alpha) ||
+                vertex.alpha < 0.0f || vertex.alpha > 1.0f) {
+                error_ = "scene mesh contains an invalid or non-finite vertex attribute";
                 return false;
             }
+            has_transparency |= vertex.alpha < 1.0f;
             minimum.x = std::min(minimum.x, vertex.position.x);
             minimum.y = std::min(minimum.y, vertex.position.y);
             minimum.z = std::min(minimum.z, vertex.position.z);
@@ -1072,6 +1076,7 @@ bool VulkanRenderer::upload_scene(const Scene& scene) {
         target.vertex_offset = vertices.size() * sizeof(Vertex);
         target.first_index = static_cast<std::uint32_t>(indices.size());
         target.index_count = static_cast<std::uint32_t>(source.indices.size());
+        target.has_transparency = has_transparency;
         target.local_center = {
             static_cast<float>((static_cast<double>(minimum.x) + maximum.x) * 0.5),
             static_cast<float>((static_cast<double>(minimum.y) + maximum.y) * 0.5),
@@ -1336,7 +1341,7 @@ bool VulkanRenderer::draw_frame(const Mat4& view_projection, const Scene& scene)
                 world.value[10] * mesh.local_center.z + world.value[14]};
         DrawSubmission submission{&draw, world, view_projection_model,
                                   projected_depth(view_projection, center)};
-        if (textures_[draw.texture].has_transparency)
+        if (textures_[draw.texture].has_transparency || mesh.has_transparency)
             transparent_draws.push_back(submission);
         else
             opaque_draws.push_back(submission);
