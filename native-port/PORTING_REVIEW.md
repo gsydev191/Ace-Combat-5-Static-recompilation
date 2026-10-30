@@ -177,10 +177,12 @@ project does not build or link any of those files.
   capability flags from part tags, and swaps fairing/leg visibility. The
   channel-5/6 roll mappings now use the ACM header flags and shared authority
   factor, including the low-speed `0x400` flap branch and `0x10`, `0x20`, and
-  `0x40` alternatives. The recovered controller combines values at offsets
-  `+4`, `+8`, and `+0x1c`; the native viewer currently supplies pitch, roll,
-  and yaw for those channels. Aircraft-class meaning and exact source-channel
-  equivalence remain under investigation.
+  `0x40` alternatives. The recovered controller combines pitch, roll, and
+  slip inputs at offsets `+4`, `+8`, and `+0x1c`; native slip remains zero
+  until the flight state exposes a supported sideslip value. The `0x400`
+  threshold comparison uses the recovered conversion from km/h to speed units
+  per tick (`0.0237037018`). Aircraft-class meaning remains under
+  investigation.
   `ac5_model_info --parts` reports the hierarchy and decoded track/key counts
   without opening Vulkan.
 - A Vulkan 1.3 renderer using SDL3, dynamic rendering, synchronization2,

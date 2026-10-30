@@ -146,10 +146,13 @@ AircraftAnimationChannels aircraft_animation_targets(
     set(1, 50.0 - 50.0 * input.pitch * authority);
     set(3, 50.0 + 50.0 * input.yaw);
     // These branches follow the recovered CPlAnimCtrl flag priority. Native
-    // pitch/roll/yaw stand in for the matching controller channels at ACM
-    // offsets +4/+8/+1c; model flags themselves come directly from ACM +4.
+    // pitch/roll/slip feed its matching controller channels at +4/+8/+1c;
+    // model flags themselves come directly from ACM header offset +4.
     double roll5 = -static_cast<double>(input.roll);
     double roll6 = static_cast<double>(input.roll);
+    // Retail multiplies its km/h threshold by 0.0237037018 before comparing
+    // against speed-units-per-tick. speed_kmh is already converted back to
+    // km/h by the native flight adapter, so this comparison is equivalent.
     const bool low_speed_400 = (input.model_flags & 0x400u) != 0 &&
         rules.available && speed < config[13];
     if (low_speed_400) {
@@ -162,8 +165,8 @@ AircraftAnimationChannels aircraft_animation_targets(
         roll5 = -static_cast<double>(input.pitch) - input.roll;
         roll6 = static_cast<double>(input.roll) - input.pitch;
     } else if ((input.model_flags & 0x40u) != 0) {
-        roll5 = static_cast<double>(input.yaw) - input.roll;
-        roll6 = static_cast<double>(input.yaw) + input.roll;
+        roll5 = static_cast<double>(input.slip) - input.roll;
+        roll6 = static_cast<double>(input.slip) + input.roll;
     }
     set(5, 50.0 + 50.0 * std::clamp(roll5, -1.0, 1.0) * authority);
     set(6, 50.0 + 50.0 * std::clamp(roll6, -1.0, 1.0) * authority);
