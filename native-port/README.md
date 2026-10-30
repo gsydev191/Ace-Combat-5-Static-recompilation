@@ -195,9 +195,16 @@ connected after startup.
 
 ## Tests
 
-`cmake --build build && ctest --test-dir build` runs `ac5_native_tests`
-(tiled image layout round-trips, palette decode, ADPCM, model shading). It
-needs only the core libraries.
+Configure and build the dependency-free core, then run its tests with:
+
+```powershell
+cmake --preset core
+cmake --build --preset core
+ctest --test-dir build/core --output-on-failure
+```
+
+The `ac5_native_tests` target covers tiled image layout round-trips, palette
+decode, ADPCM, and model shading. It needs only the core libraries.
 
 ## Porting rule
 
