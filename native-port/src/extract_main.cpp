@@ -43,8 +43,9 @@ bool write_file(const std::filesystem::path& path,
         }
     }
     std::ofstream output(path, std::ios::binary);
-    if (!output || !output.write(reinterpret_cast<const char*>(data.data()),
-                                 static_cast<std::streamsize>(data.size()))) {
+    if (!output || (!data.empty() &&
+                    !output.write(reinterpret_cast<const char*>(data.data()),
+                                  static_cast<std::streamsize>(data.size())))) {
         error = "cannot write output file: " + path_to_utf8(path);
         return false;
     }
