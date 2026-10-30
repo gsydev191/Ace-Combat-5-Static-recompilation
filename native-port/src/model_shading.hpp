@@ -29,6 +29,7 @@ struct ModelShadeParams {
     Float4x4 light_col{};
     // Environment direction transform applied to the signed 4.12 normal.
     Float4x4 environment_dir{}; // first three rows and columns are used
+    float environment_st_w = 1.0f; // passthrough fourth lane of reflected STQ
     float environment_alpha = 128.0f;
     float fog_bias = 0.0f;  // fog = fog_bias + clip.w * fog_scale
     float fog_scale = 0.0f;
@@ -47,7 +48,7 @@ struct ModelVertexOut {
     Float4 screen{};        // x/w, y/w, z scaled+clamped, fog (0..255)
     Float4 st{};            // u/w, v/w, 1/w
     std::array<std::int32_t, 4> rgba{}; // lit colour, alpha fixed at 128
-    Float4 environment_st{}; // reflected u/w, v/w, 1/w, 1
+    Float4 environment_st{}; // reflected u/w, v/w, 1/w, passthrough lane
     std::array<std::int32_t, 4> environment_rgba{};
 };
 
