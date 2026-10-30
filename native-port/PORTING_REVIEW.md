@@ -216,8 +216,9 @@ arithmetic, not guest CPU or hardware state) and are covered by
   `runtime/src/rn/rn_vp_model.c`. The Vulkan sample does not yet consume this game-specific
   shading output automatically; scene draws can select an environment texture
   and use vertex environment coordinates/color in a blended depth-tested pass.
-  Wiring the game-specific output requires decoded model/material data and
-  conversion of its STQ/color values into the native vertex representation.
+  `model_mesh_adapter.hpp` converts the shading output's projective STQ and
+  integer modulation channels into the native vertex representation. Wiring
+  the game-specific output still requires decoded model/material data.
 
 The generated code is present as behavioral reference. `DATA.TBL`, `DATA.PAC`,
 and `SLUS_208.51` are not in this checkout, so the model/texture container

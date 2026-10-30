@@ -1,4 +1,4 @@
-#include "model_shading.hpp"
+#include "model_mesh_adapter.hpp"
 
 #include <algorithm>
 

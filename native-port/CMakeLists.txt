@@ -27,6 +27,7 @@ target_compile_features(ac5_asset_core PUBLIC cxx_std_20)
 
 add_library(ac5_game_core STATIC
     src/model_shading.cpp
+    src/model_mesh_adapter.hpp
     src/obj_loader.cpp
     src/texture_loader.cpp)
 add_library(ac5::game_core ALIAS ac5_game_core)
@@ -57,6 +58,7 @@ install(FILES
     src/adpcm.hpp
     src/data_archive.hpp
     src/gs_image.hpp
+    src/model_mesh_adapter.hpp
     src/model_shading.hpp
     src/ulz.hpp
     src/math.hpp
