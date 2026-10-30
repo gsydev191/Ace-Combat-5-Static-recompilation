@@ -1,6 +1,7 @@
 #include "gs_image.hpp"
 
 #include <array>
+#include <limits>
 #include <string>
 
 namespace ac5 {
@@ -101,10 +102,13 @@ std::size_t tiled_extent(PixelFormat f, std::uint32_t stride, std::uint32_t w,
                          std::uint32_t h) noexcept {
     if (!w || !h) return 0;
     const Geom g = geom_for(f);
-    unsigned ppr = stride / g.pw;
+    std::uint64_t ppr = stride / g.pw;
     if (!ppr) ppr = 1;
-    const std::size_t pages = static_cast<std::size_t>((h - 1) / g.ph) * ppr + (w - 1) / g.pw + 1;
-    return pages * 8192u;
+    const std::uint64_t pages = static_cast<std::uint64_t>((h - 1) / g.ph) * ppr +
+                                (w - 1) / g.pw + 1;
+    if (pages > std::numeric_limits<std::size_t>::max() / 8192u)
+        return std::numeric_limits<std::size_t>::max();
+    return static_cast<std::size_t>(pages * 8192u);
 }
 
 std::uint32_t tiled_read(const TiledImageView& v, std::uint32_t x, std::uint32_t y) {
@@ -188,6 +192,10 @@ std::uint32_t palette_entry(const PaletteView& pal, PixelFormat indexed, std::ui
 
 bool decode_tiled_image(const TiledImageView& image, const PaletteView* pal, std::uint32_t w,
                         std::uint32_t h, TextureData& out, std::string& error) {
+    if (!is_known_pixel_format(static_cast<std::uint32_t>(image.format))) {
+        error = "unsupported image pixel format";
+        return false;
+    }
     if (!w || !h || w > 4096 || h > 4096) {
         error = "image dimensions out of range";
         return false;
@@ -198,13 +206,22 @@ bool decode_tiled_image(const TiledImageView& image, const PaletteView* pal, std
         error = "indexed image requires a palette";
         return false;
     }
+    if (indexed && !is_known_pixel_format(static_cast<std::uint32_t>(pal->format))) {
+        error = "unsupported palette pixel format";
+        return false;
+    }
+    if (indexed && pal->format != PixelFormat::Rgba32 &&
+        pal->format != PixelFormat::Rgba16 && pal->format != PixelFormat::Rgba16S) {
+        error = "palette must use a 16-bit or 32-bit RGBA format";
+        return false;
+    }
     if (image.stride == 0 || image.stride % 64u != 0) {
         error = "stride must be a multiple of 64 pixels";
         return false;
     }
-    const std::size_t need = static_cast<std::size_t>(image.base) +
-                             tiled_extent(image.format, image.stride, w, h);
-    if (need > image.memory.size()) {
+    const std::size_t base = image.base;
+    const std::size_t extent = tiled_extent(image.format, image.stride, w, h);
+    if (base > image.memory.size() || extent > image.memory.size() - base) {
         error = "image memory is too small";
         return false;
     }
