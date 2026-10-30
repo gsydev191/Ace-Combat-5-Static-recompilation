@@ -88,6 +88,7 @@ FlightSpeedOutput advance_airborne_speed(const FlightSpeedRules& rules,
     output.speed_units_per_tick = speed + (target - speed) *
         (gain / 100.0 * 60.0 / input.ticks_per_second);
     output.target_units_per_tick = target;
+    output.maximum_units_per_tick = maximum;
     output.stall_factor = output.speed_units_per_tick < stall_speed
         ? 1.0
         : output.speed_units_per_tick < full_control_speed
@@ -98,6 +99,7 @@ FlightSpeedOutput advance_airborne_speed(const FlightSpeedRules& rules,
     output.full_control_speed_units_per_tick = full_control_speed;
     output.valid = std::isfinite(output.speed_units_per_tick) &&
                    std::isfinite(output.target_units_per_tick) &&
+                   std::isfinite(output.maximum_units_per_tick) &&
                    std::isfinite(output.stall_factor) &&
                    std::isfinite(output.stall_speed_units_per_tick) &&
                    std::isfinite(output.full_control_speed_units_per_tick);

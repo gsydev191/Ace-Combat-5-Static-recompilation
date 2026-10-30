@@ -33,6 +33,7 @@ struct FlightSpeedOutput {
     bool valid = false;
     double speed_units_per_tick = 0.0;
     double target_units_per_tick = 0.0;
+    double maximum_units_per_tick = 0.0;
     double stall_factor = 0.0;
     double stall_speed_units_per_tick = 0.0;
     double full_control_speed_units_per_tick = 0.0;

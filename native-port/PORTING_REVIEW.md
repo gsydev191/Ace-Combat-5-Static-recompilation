@@ -209,8 +209,9 @@ project does not build or link any of those files.
   applies recovered airborne trim and stall nose-drop, and integrates body
   attitude and airborne position with the generated routine's Euler-matrix
   order and path-attitude lag. Approach-control mode has its own native stick
-  law and captured-pitch state. Ground-contact speed and terrain collision
-  remain separate.
+  law and captured-pitch state. Ground contact has a native acceleration law,
+  configurable carrier scale/bias, and envelope speed cap. Terrain collision
+  and marker-based alignment remain separate.
 - A bounded, resumable ULZ decoder and `DATA.TBL`/`DATA.PAC` reader. The
   decoder can yield after a caller-selected number of control words, and
   `ArchiveMemberLoad` exposes that budget at the member-loading boundary. Its

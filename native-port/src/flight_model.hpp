@@ -26,11 +26,14 @@ struct AircraftFlightInput {
     bool reduced_speed_mode = false;
     bool suppress_inverted_sink = false;
     bool approach_control = false;
+    bool ground_contact = false;
+    bool reset_contact_speed = false;
+    double contact_acceleration_scale = 1.0;
+    double contact_acceleration_bias = 0.0;
 };
 
-// Advance one native airborne speed/rate/attitude tick. Ground handling and
-// terrain collision are separate; approach_control selects the recovered
-// approach stick law and skips steady trim.
+// Advance one native flight tick. ground_contact selects the recovered scalar
+// contact-speed law; terrain collision and ground-marker alignment are separate.
 [[nodiscard]] bool advance_aircraft_flight_tick(
     const AircraftFlightRules& rules, const AircraftFlightInput& input,
     AircraftFlightState& state) noexcept;

@@ -240,12 +240,15 @@ input slew law. `advance_aircraft_flight_tick` composes those scalar updates,
 applies recovered airborne trim and stall nose-drop, supports the explicit
 approach-control stick law, integrates native body attitude, and advances
 position with path lag and airborne sink terms. Approach mode captures the
-reference pitch and suppresses steady trim and inverted-flight sink.
+reference pitch and suppresses steady trim and inverted-flight sink. The
+ground-contact option uses the recovered per-tick acceleration and maximum
+speed clamp, with caller-supplied carrier scaling and bias; it does not perform
+terrain collision or marker-based alignment.
 `load_aircraft_flight_rules` reads the standalone 400-byte
 aircraft `.pmb` parameter file, and `ac5_flight_info` reports its decoded
 speed and axis tables (for example, `ac5_flight_info f04g.pmb`). The demo does
-not yet run this flight model; ground contact, terrain collision, and a
-runtime ruleset selection UI remain future work.
+not yet run this flight model; terrain collision, marker-based ground
+alignment, and a runtime ruleset selection UI remain future work.
 The input system opens one connected gamepad at startup and scans the remaining
 connected devices when the active gamepad is removed. It also handles devices
 connected after startup.
