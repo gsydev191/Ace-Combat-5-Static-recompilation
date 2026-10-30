@@ -10,6 +10,8 @@
 #include <filesystem>
 #include <fstream>
 #include <limits>
+#include <new>
+#include <stdexcept>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -104,7 +106,15 @@ bool load_tga(const std::string& path, TextureData& texture, std::string& error)
     TextureData decoded;
     decoded.width = width;
     decoded.height = height;
-    decoded.rgba.resize(static_cast<std::size_t>(pixel_count * 4u));
+    try {
+        decoded.rgba.resize(static_cast<std::size_t>(pixel_count * 4u));
+    } catch (const std::bad_alloc&) {
+        error = "TGA texture allocation failed: " + path;
+        return false;
+    } catch (const std::length_error&) {
+        error = "TGA texture exceeds the platform's vector limit: " + path;
+        return false;
+    }
     const std::size_t pixel_bytes = depth / 8u;
     const bool top_origin = (descriptor & 0x20u) != 0;
     const bool right_origin = (descriptor & 0x10u) != 0;
@@ -197,7 +207,15 @@ bool load_ppm(const std::string& path, TextureData& texture, std::string& error)
     TextureData decoded;
     decoded.width = width;
     decoded.height = height;
-    decoded.rgba.resize(static_cast<std::size_t>(pixel_count * 4u));
+    try {
+        decoded.rgba.resize(static_cast<std::size_t>(pixel_count * 4u));
+    } catch (const std::bad_alloc&) {
+        error = "PPM texture allocation failed: " + path;
+        return false;
+    } catch (const std::length_error&) {
+        error = "PPM texture exceeds the platform's vector limit: " + path;
+        return false;
+    }
     if (binary) {
         const std::size_t sample_bytes = maximum < 256 ? 1u : 2u;
         constexpr std::size_t chunk_bytes = 64u * 1024u;
