@@ -50,6 +50,7 @@ struct DemoFrame {
     }();
     bool gear_down = false;
     AircraftGearController gear_controller{};
+    std::uint32_t animation_controller_flags = 0;
     std::vector<std::size_t> part_draw_indices;
     double animation_accumulator_seconds = 0.0;
     std::optional<AcmPartModel> animated_model;
@@ -76,6 +77,30 @@ struct DemoLod {
     std::size_t draw_index = 0;
     bool active = false;
 };
+
+std::uint32_t infer_animation_controller_flags(const AcmPartModel& model) {
+    // CPlAnimCtrl setup tests these channel slots in its animation table to
+    // choose optional surface mappings and gear/nozzle channels.
+    std::array<bool, aircraft_animation_channel_count> channels{};
+    const auto record_channels = [&channels](
+        const std::vector<AcmAnimationTrack>& tracks) {
+        for (const AcmAnimationTrack& track : tracks)
+            if (track.channel < channels.size()) channels[track.channel] = true;
+    };
+    record_channels(model.translation_tracks);
+    record_channels(model.rotation_tracks);
+    record_channels(model.shape_tracks);
+
+    std::uint32_t flags = 0;
+    if (channels[2]) flags |= 0x00001u;
+    if (channels[9]) flags |= 0x00002u;
+    if (channels[4]) flags |= 0x00004u;
+    if (channels[11]) flags |= 0x00008u;
+    if (channels[25]) flags |= 0x10000u;
+    if (channels[26]) flags |= 0x20000u;
+    if (channels[27]) flags |= 0x40000u;
+    return flags;
+}
 
 void update_aircraft_part_animation(DemoFrame& frame) {
     if (!frame.animated_model ||
@@ -200,6 +225,7 @@ void advance_demo_animation(DemoFrame& frame) {
     input.speed_kmh = std::max(0.0, flight.speed_units_per_tick * 60.0 / 1.4222219);
     input.gear_down = frame.gear_down;
     input.model_flags = frame.animated_model ? frame.animated_model->model_flags : 0;
+    input.controller_flags = frame.animation_controller_flags;
     const AircraftAnimationChannels targets =
         aircraft_animation_targets(frame.animation_rules, input);
     frame.animation_accumulator_seconds += frame.delta_seconds;
@@ -366,6 +392,7 @@ int Application::run(int argc, char** argv) {
     std::vector<DemoFrame::ShapeDraw> shape_draws;
     std::vector<std::size_t> part_draw_indices;
     AircraftGearController gear_controller{};
+    std::uint32_t animation_controller_flags = 0;
     if (!flight_rules_path.empty()) {
         if (!acm_model) {
             std::fprintf(stderr, "--flight-rules requires an ACM aircraft model\n");
@@ -399,6 +426,8 @@ int Application::run(int argc, char** argv) {
         if (flight_rules) {
             animated_model.emplace();
             if (load_acm_part_model(model_path, *animated_model, load_error)) {
+                animation_controller_flags =
+                    infer_animation_controller_flags(*animated_model);
                 part_transforms.reserve(animated_model->parts.size());
                 shape_draws.resize(animated_model->parts.size());
                 part_draw_indices.assign(animated_model->parts.size(),
@@ -558,6 +587,7 @@ int Application::run(int argc, char** argv) {
             }
             DemoFrame frame{scene, model_transform};
             frame.gear_controller = gear_controller;
+            frame.animation_controller_flags = animation_controller_flags;
             if (animation_rules) frame.animation_rules = *animation_rules;
             frame.animated_model = std::move(animated_model);
             frame.part_transforms = std::move(part_transforms);

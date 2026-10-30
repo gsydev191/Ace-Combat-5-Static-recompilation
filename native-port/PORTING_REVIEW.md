@@ -187,8 +187,10 @@ project does not build or link any of those files.
   investigation. The channel-8 speed curve and controller-flag `0x2` pair of
   channels 8/9 are also represented. Controller flag `0x8` selects the paired
   channel-10/11 pitch/roll mapping, with its `0x1000`/model-flag/slip override
-  on channel 10. Wiring these runtime controller flags from aircraft setup
-  remains open.
+  on channel 10. Retail setup derives feature bits from populated animation
+  channel slots 2, 4, 9, 11, and 25-27; the native viewer derives those bits
+  from the union of decoded ACM translation, rotation, and shape tracks.
+  The separate `0x1000` runtime override bit is not inferred by the viewer.
   `ac5_model_info --parts` reports the hierarchy and decoded track/key counts
   without opening Vulkan.
 - A Vulkan 1.3 renderer using SDL3, dynamic rendering, synchronization2,
