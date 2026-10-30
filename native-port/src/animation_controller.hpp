@@ -28,6 +28,13 @@ struct AircraftAnimationInput {
     bool gear_down = false;
 };
 
+struct AircraftGearController {
+    // 0 up, 1 extending, 2 down, 3 retracting.
+    std::uint8_t state = 0;
+    std::uint32_t capabilities = 0;
+    [[nodiscard]] bool visible() const noexcept { return state != 0; }
+};
+
 [[nodiscard]] bool decode_aircraft_animation_rules(
     std::span<const std::uint8_t> bytes, AircraftAnimationRules& rules,
     std::string& error);
@@ -37,5 +44,8 @@ struct AircraftAnimationInput {
     const AircraftAnimationRules& rules, const AircraftAnimationInput& input) noexcept;
 void advance_aircraft_animation_channels(AircraftAnimationChannels& channels,
                                          const AircraftAnimationChannels& targets) noexcept;
+void request_aircraft_gear(AircraftGearController& gear, bool down) noexcept;
+void advance_aircraft_retail_gear(AircraftGearController& gear,
+                                  AircraftAnimationChannels& channels) noexcept;
 
 } // namespace ac5

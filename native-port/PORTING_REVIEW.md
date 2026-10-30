@@ -172,9 +172,11 @@ project does not build or link any of those files.
   per-frame dynamic Vulkan vertex buffers; differing topology falls back to
   nearest-key target selection. Aircraft-specific authority/configuration
   curves decode the 80-byte subfile-6 payload when supplied. Direct channel
-  targets now include the recovered speed curves and generic gear/flap easing;
-  retail gear-state transitions, fairing/leg visibility changes, and the
-  model-flag-dependent roll-surface mappings remain open.
+  targets include the recovered speed curves and 60 Hz gear/flap easing. The
+  four-state retail gear transition updates channels 33-39, derives its
+  capability flags from part tags, and swaps fairing/leg visibility. The
+  model-flag-dependent roll-surface mappings and full aircraft controller
+  input path remain open.
   `ac5_model_info --parts` reports the hierarchy and decoded track/key counts
   without opening Vulkan.
 - A Vulkan 1.3 renderer using SDL3, dynamic rendering, synchronization2,

@@ -7,6 +7,7 @@
 #include <cmath>
 #include <fstream>
 #include <new>
+#include <initializer_list>
 #include <stdexcept>
 #include <vector>
 
@@ -29,6 +30,22 @@ double reverse_speed_curve(double speed, double full_below,
     if (speed <= full_below) return 1.0;
     if (speed >= none_above) return 0.0;
     return (none_above - speed) / (none_above - full_below);
+}
+
+float retail_float(double value) noexcept {
+    const float rounded = static_cast<float>(value);
+    return std::abs(static_cast<double>(rounded)) > std::abs(value)
+        ? std::nextafter(rounded, 0.0f) : rounded;
+}
+
+float gear_channel(AircraftAnimationChannels& channels, std::size_t index,
+                   float target, float step) noexcept {
+    float& value = channels[index];
+    const float difference = retail_float(static_cast<double>(value) - target);
+    if (difference > step) value = retail_float(static_cast<double>(value) - step);
+    else if (difference < -step) value = retail_float(static_cast<double>(value) + step);
+    else value = target;
+    return value;
 }
 
 } // namespace
@@ -142,8 +159,6 @@ AircraftAnimationChannels aircraft_animation_targets(
     set(20, 50.0 + 50.0 * channel20);
     for (std::size_t channel = 25; channel <= 27; ++channel)
         set(channel, input.gear_down ? 50.0 : 100.0);
-    for (std::size_t channel = 0x21; channel <= 0x27; ++channel)
-        set(channel, input.gear_down ? 50.0 : 100.0);
     return channels;
 }
 
@@ -151,13 +166,52 @@ void advance_aircraft_animation_channels(AircraftAnimationChannels& channels,
                                          const AircraftAnimationChannels& targets) noexcept {
     for (std::size_t i = 0; i < channels.size(); ++i) {
         const float delta = targets[i] - channels[i];
-        const bool gear = (i >= 25 && i <= 27) || (i >= 0x21 && i <= 0x27);
+        const bool hangar_gear = i >= 25 && i <= 27;
+        const bool retail_gear = i >= 33 && i <= 39;
         const bool flap = i == 7 || i == 17;
-        const float step = gear ? 50.0f / 6.0f
+        if (retail_gear) continue;
+        const float step = hangar_gear ? 50.0f / 6.0f
             : flap ? std::min(std::abs(delta) * 0.2f, 0.5f)
                    : std::abs(delta) * 0.2f;
         channels[i] = std::clamp(channels[i] + std::clamp(delta, -step, step),
                                  1.0f, 100.0f);
+    }
+}
+
+void request_aircraft_gear(AircraftGearController& gear, bool down) noexcept {
+    if (down && (gear.state == 0 || gear.state == 3)) gear.state = 1;
+    else if (!down && (gear.state == 1 || gear.state == 2)) gear.state = 3;
+}
+
+void advance_aircraft_retail_gear(AircraftGearController& gear,
+                                  AircraftAnimationChannels& channels) noexcept {
+    constexpr float slow = 0.1666666567325592f;
+    int completed = 0;
+    if (gear.state == 1) {
+        for (std::size_t i : {33u, 34u})
+            completed += gear_channel(channels, i, 50.0f, slow) == 50.0f;
+        if ((gear.capabilities & 0x300u) == 0x100u)
+            completed += gear_channel(channels, 39, 100.0f, slow) == 100.0f;
+        else ++completed;
+        for (std::size_t i : {35u, 37u, 36u})
+            completed += gear_channel(channels, i, 50.0f, slow) == 50.0f;
+        if (completed >= 6) gear.state = 2;
+    } else if (gear.state == 3) {
+        completed = gear_channel(channels, 38, 50.0f, 2.0f) == 50.0f ? 1 : 0;
+        if (completed != 0) {
+            for (std::size_t i : {35u, 37u, 36u}) {
+                if (channels[i] > 50.0f) gear_channel(channels, i, 50.0f, 1.0f);
+                else ++completed;
+            }
+        }
+        if (completed >= 4) {
+            for (std::size_t i : {33u, 34u})
+                completed += gear_channel(channels, i, 0.0f, slow) == 0.0f;
+            completed += gear_channel(channels, 39, 50.0f, slow) == 50.0f;
+            for (std::size_t i : {35u, 37u, 36u})
+                completed += gear_channel(channels, i, 0.0f, slow) == 0.0f;
+            if (completed >= 10) gear.state = 0;
+        }
     }
 }
 

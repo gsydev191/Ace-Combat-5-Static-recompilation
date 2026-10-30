@@ -44,9 +44,14 @@ struct DemoFrame {
     AircraftAnimationChannels animation_channels = [] {
         AircraftAnimationChannels channels{};
         channels.fill(50.0f);
+        for (std::size_t channel = 33; channel <= 37; ++channel)
+            channels[channel] = 0.0f;
         return channels;
     }();
     bool gear_down = false;
+    AircraftGearController gear_controller{};
+    std::vector<std::size_t> part_draw_indices;
+    double animation_accumulator_seconds = 0.0;
     std::optional<AcmPartModel> animated_model;
     std::vector<TransformId> part_transforms;
     struct ShapeDraw {
@@ -107,6 +112,15 @@ void update_aircraft_part_animation(DemoFrame& frame) {
             rotation_z, Mat4::multiply(rotation_y, rotation_x));
         frame.scene.set_transform(frame.part_transforms[i], Mat4::multiply(
             Mat4::translation(position), local_rotation));
+        if (i < frame.part_draw_indices.size() &&
+            frame.part_draw_indices[i] != std::numeric_limits<std::size_t>::max()) {
+            if (part.kind == 0x20u)
+                frame.scene.set_draw_visible(frame.part_draw_indices[i],
+                                             !frame.gear_controller.visible());
+            else if (part.kind == 0x21u)
+                frame.scene.set_draw_visible(frame.part_draw_indices[i],
+                                             frame.gear_controller.visible());
+        }
 
         DemoFrame::ShapeDraw& shape_draw = frame.shape_draws[i];
         if (part.shape_track == AcmModelPart::no_parent ||
@@ -187,7 +201,14 @@ void advance_demo_animation(DemoFrame& frame) {
     input.gear_down = frame.gear_down;
     const AircraftAnimationChannels targets =
         aircraft_animation_targets(frame.animation_rules, input);
-    advance_aircraft_animation_channels(frame.animation_channels, targets);
+    frame.animation_accumulator_seconds += frame.delta_seconds;
+    constexpr double animation_tick = 1.0 / 60.0;
+    while (frame.animation_accumulator_seconds >= animation_tick) {
+        advance_aircraft_animation_channels(frame.animation_channels, targets);
+        request_aircraft_gear(frame.gear_controller, frame.gear_down);
+        advance_aircraft_retail_gear(frame.gear_controller, frame.animation_channels);
+        frame.animation_accumulator_seconds -= animation_tick;
+    }
 }
 
 void select_demo_lod(Scene& scene, const DemoLod& lod, const Camera& camera) {
@@ -342,6 +363,8 @@ int Application::run(int argc, char** argv) {
     std::optional<AcmPartModel> animated_model;
     std::vector<TransformId> part_transforms;
     std::vector<DemoFrame::ShapeDraw> shape_draws;
+    std::vector<std::size_t> part_draw_indices;
+    AircraftGearController gear_controller{};
     if (!flight_rules_path.empty()) {
         if (!acm_model) {
             std::fprintf(stderr, "--flight-rules requires an ACM aircraft model\n");
@@ -377,7 +400,17 @@ int Application::run(int argc, char** argv) {
             if (load_acm_part_model(model_path, *animated_model, load_error)) {
                 part_transforms.reserve(animated_model->parts.size());
                 shape_draws.resize(animated_model->parts.size());
+                part_draw_indices.assign(animated_model->parts.size(),
+                                          std::numeric_limits<std::size_t>::max());
                 for (AcmModelPart& part : animated_model->parts) {
+                    if (part.kind == static_cast<std::uint8_t>('W'))
+                        gear_controller.capabilities |= 0x100u;
+                    else if (part.kind == static_cast<std::uint8_t>('X'))
+                        gear_controller.capabilities |= 0x200u;
+                    else if (part.kind == static_cast<std::uint8_t>('['))
+                        gear_controller.capabilities |= 0x400u;
+                    else if (part.kind == static_cast<std::uint8_t>(']'))
+                        gear_controller.capabilities |= 0x800u;
                     const Mat4 rotate_x = Mat4::rotation_x(part.rotation.x);
                     const Mat4 rotate_y = Mat4::rotation_y(part.rotation.y);
                     const Mat4 rotate_z = Mat4::rotation_z(part.rotation.z);
@@ -425,6 +458,8 @@ int Application::run(int argc, char** argv) {
                                                                    variant_mesh);
                             }
                         }
+                        part_draw_indices[part_transforms.size() - 1] =
+                            scene.draws().size();
                         scene.add_draw(shape.mesh, TextureId{0}, Mat4::identity(), transform);
                     }
                 }
@@ -521,10 +556,12 @@ int Application::run(int argc, char** argv) {
                 scene_state.request_transition(DemoSceneState::Exiting);
             }
             DemoFrame frame{scene, model_transform};
+            frame.gear_controller = gear_controller;
             if (animation_rules) frame.animation_rules = *animation_rules;
             frame.animated_model = std::move(animated_model);
             frame.part_transforms = std::move(part_transforms);
             frame.shape_draws = std::move(shape_draws);
+            frame.part_draw_indices = std::move(part_draw_indices);
             if (flight_rules) {
                 AircraftFlightState flight_state{};
                 flight_state.speed_units_per_tick =
