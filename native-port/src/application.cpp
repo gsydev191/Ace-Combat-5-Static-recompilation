@@ -36,9 +36,16 @@ struct DemoFrame {
 
 void update_demo_scene(DemoFrame& frame, DemoStateMachine&) {
     constexpr float demo_rotation_rate = 1.2f;
-    frame.pitch_angle += frame.controls.pitch * demo_rotation_rate * frame.delta_seconds;
-    frame.roll_angle += frame.controls.roll * demo_rotation_rate * frame.delta_seconds;
-    frame.yaw_angle += frame.controls.yaw * demo_rotation_rate * frame.delta_seconds;
+    constexpr float full_turn = 6.28318530717958647692f;
+    frame.pitch_angle = std::remainder(
+        frame.pitch_angle + frame.controls.pitch * demo_rotation_rate * frame.delta_seconds,
+        full_turn);
+    frame.roll_angle = std::remainder(
+        frame.roll_angle + frame.controls.roll * demo_rotation_rate * frame.delta_seconds,
+        full_turn);
+    frame.yaw_angle = std::remainder(
+        frame.yaw_angle + frame.controls.yaw * demo_rotation_rate * frame.delta_seconds,
+        full_turn);
     const Mat4 pitch = Mat4::rotation_x(frame.pitch_angle);
     const Mat4 yaw = Mat4::rotation_y(frame.yaw_angle);
     const Mat4 roll = Mat4::rotation_z(frame.roll_angle);
