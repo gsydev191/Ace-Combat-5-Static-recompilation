@@ -8,10 +8,10 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <set>
 #include <sstream>
 #include <string>
 #include <string_view>
-#include <unordered_set>
 #include <vector>
 
 #ifdef _WIN32
@@ -137,48 +137,52 @@ bool ensure_safe_directories(const std::filesystem::path& canonical_root,
     return true;
 }
 
-std::string portable_path_key(const std::filesystem::path& path) {
-    std::string key;
-    for (const auto& component : path) {
-        if (!key.empty()) key.push_back('/');
-        std::string text;
+using PortablePathKey = std::filesystem::path::string_type;
+
+struct PortablePathKeyLess {
+    bool operator()(const PortablePathKey& left, const PortablePathKey& right) const {
 #ifdef _WIN32
-        const std::wstring native = component.native();
-        if (!native.empty() && native.size() <= static_cast<std::size_t>(INT_MAX)) {
-            const int input_length = static_cast<int>(native.size());
-            const int output_length = LCMapStringEx(
-                LOCALE_NAME_INVARIANT, LCMAP_LOWERCASE, native.data(), input_length,
-                nullptr, 0, nullptr, nullptr, 0);
-            if (output_length > 0) {
-                std::wstring folded(static_cast<std::size_t>(output_length), L'\0');
-                const int converted = LCMapStringEx(
-                    LOCALE_NAME_INVARIANT, LCMAP_LOWERCASE, native.data(), input_length,
-                    folded.data(), output_length, nullptr, nullptr, 0);
-                if (converted == output_length) {
-                    text = path_to_utf8(std::filesystem::path(folded));
-                }
-            }
+        if (left.size() <= static_cast<std::size_t>(INT_MAX) &&
+            right.size() <= static_cast<std::size_t>(INT_MAX)) {
+            const int result = CompareStringOrdinal(
+                left.data(), static_cast<int>(left.size()),
+                right.data(), static_cast<int>(right.size()), TRUE);
+            if (result == CSTR_LESS_THAN) return true;
+            if (result == CSTR_EQUAL || result == CSTR_GREATER_THAN) return false;
         }
 #endif
-        if (text.empty()) text = path_to_utf8(component);
+        return left < right;
+    }
+};
+
+using UsedPathSet = std::set<PortablePathKey, PortablePathKeyLess>;
+
+PortablePathKey portable_path_key(const std::filesystem::path& path) {
+    PortablePathKey key;
+    for (const auto& component : path) {
+        if (!key.empty()) key.push_back(static_cast<PortablePathKey::value_type>('/'));
+        PortablePathKey text = component.native();
+#ifndef _WIN32
         for (char& c : text) {
             if (c >= 'A' && c <= 'Z') c = static_cast<char>(c + ('a' - 'A'));
         }
+#endif
         key += text;
     }
     return key;
 }
 
-bool path_conflicts(const std::string& key,
-                    const std::unordered_set<std::string>& used_paths) {
+bool path_conflicts(const PortablePathKey& key, const UsedPathSet& used_paths) {
     if (used_paths.contains(key)) return true;
-    std::size_t separator = key.find('/');
-    while (separator != std::string::npos) {
+    const auto slash = static_cast<PortablePathKey::value_type>('/');
+    std::size_t separator = key.find(slash);
+    while (separator != PortablePathKey::npos) {
         if (used_paths.contains(key.substr(0, separator))) return true;
-        separator = key.find('/', separator + 1);
+        separator = key.find(slash, separator + 1);
     }
-    const std::string descendant_prefix = key + '/';
-    for (const std::string& used : used_paths) {
+    PortablePathKey descendant_prefix = key;
+    descendant_prefix.push_back(slash);
+    for (const PortablePathKey& used : used_paths) {
         if (used.starts_with(descendant_prefix)) return true;
     }
     return false;
@@ -203,10 +207,10 @@ bool extract_all(const DataArchive& archive, const std::filesystem::path& output
     for (std::size_t member = first_member; member < last_member; ++member) {
         std::vector<ArchiveFile> files;
         if (!archive.split_member(member, files, error)) return false;
-        std::unordered_set<std::string> used_paths;
+        UsedPathSet used_paths;
         for (const ArchiveFile& file : files) {
             std::filesystem::path relative = safe_archive_path(archive.file_name(member, file.index));
-            std::string key = relative.empty() ? std::string{} : portable_path_key(relative);
+            PortablePathKey key = relative.empty() ? PortablePathKey{} : portable_path_key(relative);
             if (relative.empty() || path_conflicts(key, used_paths)) {
                 const std::string slot = std::to_string(file.index);
                 relative = std::filesystem::path("__ac5_slots") / slot;
