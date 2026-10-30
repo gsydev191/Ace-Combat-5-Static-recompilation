@@ -32,6 +32,8 @@ add_library(ac5_game_core STATIC
     src/flight_controls.hpp
     src/flight_dynamics.cpp
     src/flight_dynamics.hpp
+    src/flight_rules_loader.cpp
+    src/flight_rules_loader.hpp
     src/model_shading.cpp
     src/model_mesh_adapter.hpp
     src/obj_loader.cpp
@@ -46,6 +48,8 @@ target_compile_features(ac5_game_core PUBLIC cxx_std_20)
 add_executable(ac5_extract src/extract_main.cpp)
 add_executable(ac5_model_info src/acm_info_main.cpp)
 target_link_libraries(ac5_model_info PRIVATE ac5_game_core)
+add_executable(ac5_flight_info src/flight_info_main.cpp)
+target_link_libraries(ac5_flight_info PRIVATE ac5_game_core)
 
 enable_testing()
 add_executable(ac5_native_tests tests/native_tests.cpp)
@@ -64,6 +68,8 @@ install(TARGETS ac5_extract
     RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 install(TARGETS ac5_model_info
     RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+install(TARGETS ac5_flight_info
+    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 install(FILES
     src/acm_loader.hpp
     src/adpcm.hpp
@@ -79,6 +85,7 @@ install(FILES
     src/flight_input.hpp
     src/flight_controls.hpp
     src/flight_dynamics.hpp
+    src/flight_rules_loader.hpp
     src/obj_loader.hpp
     src/texture_loader.hpp
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/ac5_native")

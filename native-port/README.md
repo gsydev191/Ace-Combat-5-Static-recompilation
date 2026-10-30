@@ -236,8 +236,10 @@ afterburner, and airbrake channels. `advance_airborne_speed` ports the scalar
 airborne speed envelope, including density, climb/dive effects, spool response,
 and stall factor, from recovered rules supplied by the caller.
 `advance_flight_axis` ports the speed-dependent pitch/roll/yaw rate lookup and
-input slew law. The demo does not yet simulate these outputs or load the
-aircraft ruleset.
+input slew law. `load_aircraft_flight_rules` reads the standalone 400-byte
+aircraft `.pmb` parameter file, and `ac5_flight_info` reports its decoded
+speed and axis tables (for example, `ac5_flight_info f04g.pmb`). The demo does
+not yet run the flight simulation.
 The input system opens one connected gamepad at startup and scans the remaining
 connected devices when the active gamepad is removed. It also handles devices
 connected after startup.

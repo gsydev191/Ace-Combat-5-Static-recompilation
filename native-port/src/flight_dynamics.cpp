@@ -10,6 +10,7 @@ namespace {
 bool finite_values(const FlightSpeedRules& rules, const FlightSpeedInput& input) {
     const std::array values{
         rules.spool_up_gain, rules.spool_down_gain, rules.climb_penalty_percent,
+        rules.inverted_sink_mps,
         rules.cruise_kmh, rules.maximum_kmh, rules.minimum_kmh,
         rules.stall_kmh, rules.full_control_kmh, rules.dive_limit_kmh,
         rules.dive_extra_kmh, input.altitude_units, input.pitch_radians,
@@ -122,10 +123,7 @@ FlightAxisOutput advance_flight_axis(const FlightAxisRules& rules,
         std::abs(input.stick) > 1.0 ||
         input.stall_speed_units_per_tick < 0.0 ||
         input.full_control_speed_units_per_tick <= input.stall_speed_units_per_tick ||
-        rules.low_input_gain_percent < 0.0 || rules.full_input_gain_percent < 0.0 ||
-        std::adjacent_find(rules.breakpoints_kmh.begin(), rules.breakpoints_kmh.end(),
-            [](double lhs, double rhs) { return lhs >= rhs; }) !=
-                rules.breakpoints_kmh.end())
+        rules.low_input_gain_percent < 0.0 || rules.full_input_gain_percent < 0.0)
         return output;
 
     double rate_degrees_per_second = 0.0;
@@ -138,28 +136,21 @@ FlightAxisOutput advance_flight_axis(const FlightAxisRules& rules,
             rate_degrees_per_second = rules.rates_degrees_per_second.front() * fraction;
         } else {
             const double units_per_kmh = 1.4222219 / input.ticks_per_second;
-            const double first_breakpoint = rules.breakpoints_kmh.front() * units_per_kmh;
-            if (input.speed_units_per_tick <= first_breakpoint) {
-                rate_degrees_per_second = rules.rates_degrees_per_second.front();
-            } else {
-                std::size_t upper = 1;
-                while (upper < rules.breakpoints_kmh.size() &&
-                       input.speed_units_per_tick >=
-                           rules.breakpoints_kmh[upper] * units_per_kmh)
-                    ++upper;
-                if (upper == rules.breakpoints_kmh.size()) {
-                    rate_degrees_per_second = rules.rates_degrees_per_second.back();
-                } else {
-                    const std::size_t lower = upper - 1;
-                    const double low_speed = rules.breakpoints_kmh[lower] * units_per_kmh;
-                    const double high_speed = rules.breakpoints_kmh[upper] * units_per_kmh;
-                    const double fraction = (input.speed_units_per_tick - low_speed) /
-                                            (high_speed - low_speed);
-                    rate_degrees_per_second =
-                        rules.rates_degrees_per_second[lower] +
-                        (rules.rates_degrees_per_second[upper] -
-                         rules.rates_degrees_per_second[lower]) * fraction;
-                }
+            rate_degrees_per_second = rules.rates_degrees_per_second.back();
+            for (std::size_t upper = 1; upper < rules.breakpoints_kmh.size(); ++upper) {
+                const double high_speed = rules.breakpoints_kmh[upper] * units_per_kmh;
+                if (input.speed_units_per_tick >= high_speed) continue;
+                const std::size_t lower = upper - 1;
+                const double low_speed = rules.breakpoints_kmh[lower] * units_per_kmh;
+                const double denominator = high_speed - low_speed;
+                if (denominator == 0.0) return output;
+                const double fraction = (input.speed_units_per_tick - low_speed) /
+                                        denominator;
+                rate_degrees_per_second =
+                    rules.rates_degrees_per_second[lower] +
+                    (rules.rates_degrees_per_second[upper] -
+                     rules.rates_degrees_per_second[lower]) * fraction;
+                break;
             }
         }
     }

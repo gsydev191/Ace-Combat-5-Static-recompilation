@@ -202,6 +202,9 @@ project does not build or link any of those files.
 - `advance_flight_axis` ports the table interpolation, stall/full-control rate
   ramp, and input-dependent slew from generated routine `0x0016B828`. It returns
   native radians-per-tick state without requiring the guest aircraft structure.
+- `decode_aircraft_flight_rules` reads the 400-byte `.pmb` layout recovered
+  from `CParamPlaneBin::_Read` and the aircraft setup routine. `ac5_flight_info`
+  shows the decoded F-4G tables directly from a local extracted parameter file.
 - A bounded, resumable ULZ decoder and `DATA.TBL`/`DATA.PAC` reader. The
   decoder can yield after a caller-selected number of control words, and
   `ArchiveMemberLoad` exposes that budget at the member-loading boundary. Its

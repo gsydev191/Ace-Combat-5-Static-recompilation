@@ -10,6 +10,7 @@ struct FlightSpeedRules {
     double spool_up_gain = 0.0;
     double spool_down_gain = 0.0;
     double climb_penalty_percent = 0.0;
+    double inverted_sink_mps = 0.0;
     double cruise_kmh = 0.0;
     double maximum_kmh = 0.0;
     double minimum_kmh = 0.0;
