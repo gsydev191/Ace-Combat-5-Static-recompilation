@@ -22,10 +22,12 @@ project does not build or link any of those files.
 5. The generated `main_Loop` (`0x0031C388`) is a guest-state frame loop that
    dispatches scene work and repeatedly calls other guest routines. The
    generated `player_Render` (`0x0012BEB0`) includes HUD and model-render work;
-   it is not evidence of the aircraft flight-control update. The current
-   symbol map does not identify that update routine, so native flight behavior
-   should wait for a better behavioral boundary rather than being inferred
-   from rendering code.
+   it is not evidence of the aircraft flight-control update. Separate
+   disassembly later identified the scalar speed routine (`0x0016D408`),
+   flight-axis routine (`0x0016B828`), throttle mapping (`0x0016BF50`), and
+   flight-state integration path. The native model ports these from their own
+   control and state boundaries; none of its flight behavior is inferred from
+   `player_Render`.
 6. The frame loop calls `0x0032AD00`, whose generated body calls the Pad2
    state/profile/read entry points and translates controller state into game
    memory. It stores the current button mask at `+0x394` and a newly-pressed
