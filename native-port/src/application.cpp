@@ -1,5 +1,6 @@
 #include "application.hpp"
 
+#include "acm_loader.hpp"
 #include "input.hpp"
 #include "obj_loader.hpp"
 #include "texture_loader.hpp"
@@ -9,8 +10,10 @@
 
 #include <cstdio>
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstdint>
+#include <filesystem>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -96,7 +99,24 @@ int Application::run(int argc, char** argv) {
     }
     const TransformId model_transform = scene.add_transform();
     std::string load_error;
-    if (!load_obj_scene(model_path, scene, load_error, texture_path.empty(), model_transform)) {
+    std::string extension = std::filesystem::path(model_path).extension().string();
+    std::transform(extension.begin(), extension.end(), extension.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    const bool acm_model = extension == ".mpl" || extension == ".acm" ||
+                           extension == ".bin";
+    bool model_loaded = false;
+    if (acm_model) {
+        MeshData mesh;
+        if (load_acm_model(model_path, mesh, load_error)) {
+            const MeshId mesh_id = scene.add_mesh(std::move(mesh));
+            scene.add_draw(mesh_id, TextureId{0}, Mat4::identity(), model_transform);
+            model_loaded = true;
+        }
+    } else {
+        model_loaded = load_obj_scene(model_path, scene, load_error,
+                                      texture_path.empty(), model_transform);
+    }
+    if (!model_loaded) {
         std::fprintf(stderr, "Model load failed: %s\n", load_error.c_str());
         SDL_Quit();
         return 1;
@@ -147,7 +167,12 @@ int Application::run(int argc, char** argv) {
                 scene_state.request_transition(DemoSceneState::Exiting);
             }
             scene_state.commit_transition();
-            const Camera camera{};
+            Camera camera{};
+            if (acm_model) {
+                camera.position = {0.0f, 12.0f, -115.0f};
+                camera.target = {0.0f, 4.0f, 0.0f};
+                camera.far_plane = 300.0f;
+            }
             const Uint64 counter_frequency = SDL_GetPerformanceFrequency();
             Uint64 previous_counter = SDL_GetPerformanceCounter();
             const auto process_event = [&](const SDL_Event& event) {

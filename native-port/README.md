@@ -89,7 +89,14 @@ cmake -S . -B build
 cmake --build build --target ac5_native
 ```
 
-Run it with `--model path/to/model.obj` to load another OBJ file and optionally
+Run it with `--model path/to/model.obj` to load another OBJ file, or pass a
+standalone `ACM` block, `.mpl` aircraft bundle, or `.bin` ACM bundle to load
+its first geometry slot. `ac5_model_info <model-file>` reports imported mesh
+counts and assembled bounds without opening the renderer.
+The native ACM loader decodes the observed VIF position, normal, color and UV
+streams, triangle strips, chain-to-part mapping, and static part hierarchy.
+It rejects ACM blocks whose geometry-chain ownership is ambiguous, and
+currently omits model textures and animation. You can optionally
 `--texture path/to/image.ppm` or `--texture path/to/image.tga` to apply a
 texture to the scene, overriding OBJ material maps. The importer accepts standard homogeneous
 `v x y z w` positions, `vt` texture

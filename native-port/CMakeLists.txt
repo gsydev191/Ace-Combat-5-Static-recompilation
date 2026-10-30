@@ -26,6 +26,8 @@ target_include_directories(ac5_asset_core PUBLIC
 target_compile_features(ac5_asset_core PUBLIC cxx_std_20)
 
 add_library(ac5_game_core STATIC
+    src/acm_loader.cpp
+    src/acm_loader.hpp
     src/model_shading.cpp
     src/model_mesh_adapter.hpp
     src/obj_loader.cpp
@@ -38,6 +40,8 @@ target_include_directories(ac5_game_core PUBLIC
 target_compile_features(ac5_game_core PUBLIC cxx_std_20)
 
 add_executable(ac5_extract src/extract_main.cpp)
+add_executable(ac5_model_info src/acm_info_main.cpp)
+target_link_libraries(ac5_model_info PRIVATE ac5_game_core)
 
 enable_testing()
 add_executable(ac5_native_tests tests/native_tests.cpp)
@@ -54,7 +58,10 @@ install(TARGETS ac5_asset_core ac5_game_core
     RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 install(TARGETS ac5_extract
     RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+install(TARGETS ac5_model_info
+    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 install(FILES
+    src/acm_loader.hpp
     src/adpcm.hpp
     src/data_archive.hpp
     src/gs_image.hpp

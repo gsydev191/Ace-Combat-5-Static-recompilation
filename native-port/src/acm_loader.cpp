@@ -1,0 +1,558 @@
+#include "acm_loader.hpp"
+
+#include "utf8_path.hpp"
+
+#include <algorithm>
+#include <array>
+#include <bit>
+#include <cmath>
+#include <cstdint>
+#include <fstream>
+#include <limits>
+#include <new>
+#include <optional>
+#include <span>
+#include <stdexcept>
+#include <utility>
+#include <vector>
+
+namespace ac5 {
+namespace {
+
+constexpr std::size_t acm_header_size = 0x50;
+constexpr std::size_t part_record_size = 0x40;
+constexpr std::uint32_t no_link = std::numeric_limits<std::uint32_t>::max();
+constexpr std::size_t max_model_file_size = 128u * 1024u * 1024u;
+constexpr std::uint32_t max_parts_or_chains = 4096;
+
+bool read_u32(std::span<const std::uint8_t> bytes, std::size_t offset,
+              std::uint32_t& value) {
+    if (offset > bytes.size() || bytes.size() - offset < 4) return false;
+    value = static_cast<std::uint32_t>(bytes[offset]) |
+            (static_cast<std::uint32_t>(bytes[offset + 1]) << 8) |
+            (static_cast<std::uint32_t>(bytes[offset + 2]) << 16) |
+            (static_cast<std::uint32_t>(bytes[offset + 3]) << 24);
+    return true;
+}
+
+bool read_i16(std::span<const std::uint8_t> bytes, std::size_t offset,
+              std::int16_t& value) {
+    if (offset > bytes.size() || bytes.size() - offset < 2) return false;
+    const std::uint16_t raw = static_cast<std::uint16_t>(bytes[offset]) |
+        static_cast<std::uint16_t>(static_cast<std::uint16_t>(bytes[offset + 1]) << 8);
+    value = std::bit_cast<std::int16_t>(raw);
+    return true;
+}
+
+bool read_f32(std::span<const std::uint8_t> bytes, std::size_t offset,
+              float& value) {
+    std::uint32_t raw = 0;
+    if (!read_u32(bytes, offset, raw)) return false;
+    value = std::bit_cast<float>(raw);
+    return std::isfinite(value);
+}
+
+bool is_acm(std::span<const std::uint8_t> bytes) {
+    return bytes.size() >= 4 && bytes[0] == 'A' && bytes[1] == 'C' &&
+           bytes[2] == 'M' && bytes[3] == 0;
+}
+
+bool first_bundle_model(std::span<const std::uint8_t> file,
+                        std::span<const std::uint8_t>& model,
+                        std::string& error) {
+    if (is_acm(file)) {
+        model = file;
+        return true;
+    }
+
+    std::uint32_t count = 0;
+    if (!read_u32(file, 0, count) || count == 0 || count > max_parts_or_chains ||
+        count > (file.size() - std::min<std::size_t>(file.size(), 4)) / 4) {
+        error = "model file is neither an ACM block nor a valid sparse bundle";
+        return false;
+    }
+    const std::size_t table_end = 4 + static_cast<std::size_t>(count) * 4;
+    std::uint32_t first_offset = 0;
+    if (!read_u32(file, 4, first_offset) || first_offset < table_end ||
+        first_offset >= file.size()) {
+        error = "model bundle has no valid first slot";
+        return false;
+    }
+    std::size_t end = file.size();
+    for (std::uint32_t i = 1; i < count; ++i) {
+        std::uint32_t offset = 0;
+        if (!read_u32(file, 4 + static_cast<std::size_t>(i) * 4, offset)) {
+            error = "model bundle offset table is truncated";
+            return false;
+        }
+        if (offset != 0 && offset < end) {
+            if (offset <= first_offset || offset < table_end || offset > file.size()) {
+                error = "model bundle offsets are invalid";
+                return false;
+            }
+            end = offset;
+        }
+    }
+    if (end <= first_offset) {
+        error = "model bundle first slot is empty";
+        return false;
+    }
+    model = file.subspan(first_offset, end - first_offset);
+    if (!is_acm(model)) {
+        error = "model bundle first slot is not an ACM mesh";
+        return false;
+    }
+    return true;
+}
+
+struct Part {
+    std::array<std::uint32_t, 8> words{};
+    Vec3 position{};
+    Vec3 rotation{};
+};
+
+struct Unpack {
+    std::uint8_t format = 0;
+    std::uint32_t count = 0;
+    std::size_t data_offset = 0;
+};
+
+struct Batch {
+    std::uint32_t vertex_count = 0;
+    std::array<std::optional<Unpack>, 5> streams{};
+};
+
+struct StreamInfo {
+    std::uint32_t components;
+    std::uint32_t bits;
+};
+
+std::optional<StreamInfo> unpack_info(std::uint8_t format) {
+    switch (format) {
+    case 0x0: return StreamInfo{1, 32};
+    case 0x1: return StreamInfo{1, 16};
+    case 0x2: return StreamInfo{1, 8};
+    case 0x4: return StreamInfo{2, 32};
+    case 0x5: return StreamInfo{2, 16};
+    case 0x6: return StreamInfo{2, 8};
+    case 0x8: return StreamInfo{3, 32};
+    case 0x9: return StreamInfo{3, 16};
+    case 0xA: return StreamInfo{3, 8};
+    case 0xC: return StreamInfo{4, 32};
+    case 0xD: return StreamInfo{4, 16};
+    case 0xE: return StreamInfo{4, 8};
+    case 0xF: return StreamInfo{4, 16};
+    default: return std::nullopt;
+    }
+}
+
+bool finish_batch(const Batch& batch, std::span<const std::uint8_t> block,
+                  const Mat4& part_transform, MeshData& mesh, std::string& error) {
+    if (batch.vertex_count < 3) return true;
+    const std::size_t max_vertex_index = std::numeric_limits<std::uint32_t>::max();
+    if (mesh.vertices.size() > max_vertex_index ||
+        batch.vertex_count > max_vertex_index - mesh.vertices.size()) {
+        error = "ACM mesh exceeds the native vertex index limit";
+        return false;
+    }
+    const auto get = [&batch](std::size_t address) -> const Unpack* {
+        return batch.streams[address] ? &*batch.streams[address] : nullptr;
+    };
+    const Unpack* positions = get(1);
+    if (!positions || positions->count != batch.vertex_count ||
+        (positions->format != 0x8 && positions->format != 0xC)) {
+        error = "ACM VIF batch has no supported position stream";
+        return false;
+    }
+    const Unpack* normals = get(2);
+    if (normals && (normals->count != batch.vertex_count ||
+                    (normals->format != 0x9 && normals->format != 0xC)))
+        normals = nullptr;
+    const Unpack* colors = get(3);
+    if (colors && (colors->count != batch.vertex_count ||
+                   (colors->format != 0xE && colors->format != 0xC)))
+        colors = nullptr;
+    const Unpack* uvs = get(4);
+    if (uvs && (uvs->count != batch.vertex_count ||
+                (uvs->format != 0x4 && uvs->format != 0xC)))
+        uvs = nullptr;
+
+    const std::size_t vertex_base = mesh.vertices.size();
+    const std::size_t index_base = mesh.indices.size();
+    mesh.vertices.reserve(vertex_base + batch.vertex_count);
+    mesh.indices.reserve(index_base + (batch.vertex_count - 2) * 3u);
+    for (std::uint32_t i = 0; i < batch.vertex_count; ++i) {
+        Vertex vertex{};
+        const std::size_t position_stride = positions->format == 0x8 ? 12 : 16;
+        const std::size_t position_at = positions->data_offset + position_stride * i;
+        if (!read_f32(block, position_at, vertex.position.x) ||
+            !read_f32(block, position_at + 4, vertex.position.y) ||
+            !read_f32(block, position_at + 8, vertex.position.z)) {
+            error = "ACM position stream contains a non-finite or truncated vector";
+            return false;
+        }
+        if (normals) {
+            if (normals->format == 0x9) {
+                const std::size_t at = normals->data_offset + static_cast<std::size_t>(i) * 6;
+                std::int16_t x = 0, y = 0, z = 0;
+                if (!read_i16(block, at, x) || !read_i16(block, at + 2, y) ||
+                    !read_i16(block, at + 4, z)) {
+                    error = "ACM normal stream is truncated";
+                    return false;
+                }
+                vertex.normal = {static_cast<float>(x) / 4096.0f,
+                                 static_cast<float>(y) / 4096.0f,
+                                 static_cast<float>(z) / 4096.0f};
+            } else {
+                const std::size_t at = normals->data_offset + static_cast<std::size_t>(i) * 16;
+                if (!read_f32(block, at, vertex.normal.x) ||
+                    !read_f32(block, at + 4, vertex.normal.y) ||
+                    !read_f32(block, at + 8, vertex.normal.z)) {
+                    error = "ACM normal stream contains a non-finite or truncated vector";
+                    return false;
+                }
+            }
+        }
+        if (colors) {
+            std::array<float, 4> channel{};
+            if (colors->format == 0xE) {
+                const std::size_t at = colors->data_offset + static_cast<std::size_t>(i) * 4;
+                if (at > block.size() || block.size() - at < 4) {
+                    error = "ACM color stream is truncated";
+                    return false;
+                }
+                for (std::size_t c = 0; c < 4; ++c) channel[c] = block[at + c];
+            } else {
+                const std::size_t at = colors->data_offset + static_cast<std::size_t>(i) * 16;
+                for (std::size_t c = 0; c < 4; ++c) {
+                    if (!read_f32(block, at + c * 4, channel[c])) {
+                        error = "ACM color stream contains a non-finite or truncated value";
+                        return false;
+                    }
+                }
+            }
+            vertex.color = {std::clamp(channel[0], 0.0f, 255.0f) / 255.0f,
+                            std::clamp(channel[1], 0.0f, 255.0f) / 255.0f,
+                            std::clamp(channel[2], 0.0f, 255.0f) / 255.0f};
+        }
+        if (uvs) {
+            const std::size_t stride = uvs->format == 0x4 ? 8 : 16;
+            const std::size_t at = uvs->data_offset + stride * i;
+            if (!read_f32(block, at, vertex.uv.x) || !read_f32(block, at + 4, vertex.uv.y)) {
+                error = "ACM UV stream contains a non-finite or truncated value";
+                return false;
+            }
+            // mesh.vert converts OBJ's top-origin convention. ACM UVs already
+            // use row zero at v=0, so compensate here before that shader flip.
+            vertex.uv.y = 1.0f - vertex.uv.y;
+        }
+
+        const Mat4& transform = part_transform;
+        const Vec3 point = vertex.position;
+        vertex.position = {
+            transform.value[0] * point.x + transform.value[4] * point.y +
+                transform.value[8] * point.z + transform.value[12],
+            transform.value[1] * point.x + transform.value[5] * point.y +
+                transform.value[9] * point.z + transform.value[13],
+            transform.value[2] * point.x + transform.value[6] * point.y +
+                transform.value[10] * point.z + transform.value[14]};
+        const Vec3 normal{
+            transform.value[0] * vertex.normal.x + transform.value[4] * vertex.normal.y +
+                transform.value[8] * vertex.normal.z,
+            transform.value[1] * vertex.normal.x + transform.value[5] * vertex.normal.y +
+                transform.value[9] * vertex.normal.z,
+            transform.value[2] * vertex.normal.x + transform.value[6] * vertex.normal.y +
+                transform.value[10] * vertex.normal.z};
+        const float normal_length = std::sqrt(normal.x * normal.x + normal.y * normal.y +
+                                              normal.z * normal.z);
+        if (!std::isfinite(normal_length) || !std::isfinite(vertex.position.x) ||
+            !std::isfinite(vertex.position.y) || !std::isfinite(vertex.position.z)) {
+            error = "ACM part transform produced a non-finite vertex";
+            return false;
+        }
+        if (normal_length > 1.0e-12f)
+            vertex.normal = {normal.x / normal_length, normal.y / normal_length,
+                             normal.z / normal_length};
+        mesh.vertices.push_back(vertex);
+    }
+
+    const std::uint32_t base = static_cast<std::uint32_t>(vertex_base);
+    for (std::uint32_t i = 0; i + 2 < batch.vertex_count; ++i) {
+        // Retail vertex normals face opposite the default strip winding.
+        if ((i & 1u) == 0)
+            mesh.indices.insert(mesh.indices.end(), {base + i, base + i + 2, base + i + 1});
+        else
+            mesh.indices.insert(mesh.indices.end(), {base + i + 1, base + i + 2, base + i});
+    }
+    return true;
+}
+
+bool parse_vif_chain(std::span<const std::uint8_t> block, std::size_t chain_start,
+                     std::size_t chain_end, const Mat4& transform,
+                     MeshData& mesh, std::string& error) {
+    std::size_t position = chain_start + 8;
+    std::optional<Batch> batch;
+    while (position < chain_end) {
+        std::uint32_t word = 0;
+        if (!read_u32(block, position, word) || chain_end - position < 4) {
+            error = "ACM VIF command is truncated";
+            return false;
+        }
+        const std::uint8_t command = static_cast<std::uint8_t>(word >> 24);
+        const std::uint8_t encoded_count = static_cast<std::uint8_t>(word >> 16);
+        const std::uint16_t immediate = static_cast<std::uint16_t>(word);
+        if ((command & 0x60u) == 0x60u) {
+            const std::uint8_t format = command & 0x0fu;
+            const auto info = unpack_info(format);
+            if (!info) {
+                error = "ACM VIF chain uses an unsupported UNPACK format";
+                return false;
+            }
+            const std::uint32_t count = encoded_count ? encoded_count : 256u;
+            const std::uint64_t bit_count = static_cast<std::uint64_t>(info->components) *
+                                            info->bits * count;
+            const std::uint64_t data_size = ((bit_count + 31u) / 32u) * 4u;
+            if (data_size > chain_end - position - 4) {
+                error = "ACM VIF UNPACK payload exceeds its DMA chain";
+                return false;
+            }
+            const std::size_t data_offset = position + 4;
+            const std::uint16_t address = immediate & 0x03ffu;
+            if (address < 5) {
+                if (address == 0) {
+                    if (batch && !finish_batch(*batch, block, transform, mesh, error))
+                        return false;
+                    if (format != 0x4 || count != 1 || data_size < 8) {
+                        error = "ACM VIF batch header has an unsupported layout";
+                        return false;
+                    }
+                    std::uint32_t vertex_count = 0;
+                    if (!read_u32(block, data_offset, vertex_count) || vertex_count > 1'000'000) {
+                        error = "ACM VIF batch declares an invalid vertex count";
+                        return false;
+                    }
+                    batch.emplace();
+                    batch->vertex_count = vertex_count;
+                    batch->streams[0] = Unpack{format, count, data_offset};
+                } else if (batch) {
+                    batch->streams[address] = Unpack{format, count, data_offset};
+                }
+            }
+            position += 4 + static_cast<std::size_t>(data_size);
+            continue;
+        }
+
+        std::size_t extra = 0;
+        if (command == 0x20) extra = 4;                 // STMASK
+        else if (command == 0x30 || command == 0x31) extra = 16; // STROW / STCOL
+        else if (command == 0x4a) extra = (encoded_count ? encoded_count : 256u) * 8u;
+        else if (command == 0x50 || command == 0x51)
+            extra = static_cast<std::size_t>(immediate ? immediate : 65536u) * 16u;
+        else if (command == 0x00 || (command >= 0x01 && command <= 0x07) ||
+                 command == 0x10 || command == 0x11 || command == 0x13 ||
+                 command == 0x14 || command == 0x15 || command == 0x17) {
+            // NOP, cycle/state changes, flushes and microprogram call markers.
+        } else {
+            error = "ACM VIF chain contains an unknown command";
+            return false;
+        }
+        if (extra > chain_end - position - 4) {
+            error = "ACM VIF command payload exceeds its DMA chain";
+            return false;
+        }
+        position += 4 + extra;
+    }
+    if (batch && !finish_batch(*batch, block, transform, mesh, error)) return false;
+    return position == chain_end;
+}
+
+bool parse_acm(std::span<const std::uint8_t> block, MeshData& mesh,
+               std::string& error) {
+    if (!is_acm(block) || block.size() < acm_header_size) {
+        error = "ACM header is truncated or has an invalid signature";
+        return false;
+    }
+    std::uint32_t part_count = 0, table_offset = 0, chain_count = 0, table_end = 0;
+    if (!read_u32(block, 0x10, part_count) || !read_u32(block, 0x14, table_offset) ||
+        !read_u32(block, 0x18, chain_count) || !read_u32(block, 0x1c, table_end) ||
+        part_count > max_parts_or_chains || chain_count == 0 ||
+        chain_count > max_parts_or_chains || table_offset < acm_header_size ||
+        static_cast<std::uint64_t>(table_offset) +
+            static_cast<std::uint64_t>(part_count) * part_record_size != table_end ||
+        table_end > block.size()) {
+        error = "ACM part or chain table has invalid bounds";
+        return false;
+    }
+    const std::uint64_t table_bytes = static_cast<std::uint64_t>(chain_count) * 4u;
+    const std::uint64_t padded_table_bytes = std::max<std::uint64_t>(
+        16u, (table_bytes + 15u) & ~std::uint64_t{15u});
+    const std::uint64_t chains_start64 = static_cast<std::uint64_t>(table_end) + padded_table_bytes;
+    if (chains_start64 > block.size() || table_bytes > block.size() - table_end) {
+        error = "ACM chain offset table is truncated";
+        return false;
+    }
+    const std::size_t chains_start = static_cast<std::size_t>(chains_start64);
+
+    std::vector<Part> parts(part_count);
+    for (std::uint32_t i = 0; i < part_count; ++i) {
+        const std::size_t at = table_offset + static_cast<std::size_t>(i) * part_record_size;
+        for (std::size_t w = 0; w < 8; ++w)
+            read_u32(block, at + w * 4, parts[i].words[w]);
+        if (!read_f32(block, at + 0x20, parts[i].position.x) ||
+            !read_f32(block, at + 0x24, parts[i].position.y) ||
+            !read_f32(block, at + 0x28, parts[i].position.z) ||
+            !read_f32(block, at + 0x30, parts[i].rotation.x) ||
+            !read_f32(block, at + 0x34, parts[i].rotation.y) ||
+            !read_f32(block, at + 0x38, parts[i].rotation.z)) {
+            error = "ACM part table contains a non-finite transform";
+            return false;
+        }
+    }
+
+    std::vector<std::uint32_t> parents(part_count, no_link);
+    std::vector<std::pair<std::uint32_t, std::uint32_t>> hierarchy;
+    hierarchy.reserve(part_count);
+    for (std::uint32_t i = 0; i < part_count; ++i) {
+        while (!hierarchy.empty() && hierarchy.back().second == 0) hierarchy.pop_back();
+        if (i != 0) {
+            if (hierarchy.empty()) {
+                error = "ACM part child counts do not form a pre-order tree";
+                return false;
+            }
+            parents[i] = hierarchy.back().first;
+            --hierarchy.back().second;
+        }
+        hierarchy.emplace_back(i, parts[i].words[1]);
+    }
+    while (!hierarchy.empty() && hierarchy.back().second == 0) hierarchy.pop_back();
+    if (!hierarchy.empty()) {
+        error = "ACM part child counts do not close the pre-order tree";
+        return false;
+    }
+
+    std::vector<Mat4> world(part_count, Mat4::identity());
+    for (std::uint32_t i = 0; i < part_count; ++i) {
+        const Mat4 rotate_x = Mat4::rotation_x(parts[i].rotation.x);
+        const Mat4 rotate_y = Mat4::rotation_y(parts[i].rotation.y);
+        const Mat4 rotate_z = Mat4::rotation_z(parts[i].rotation.z);
+        const Mat4 rotate = Mat4::multiply(rotate_z, Mat4::multiply(rotate_y, rotate_x));
+        const Mat4 local = Mat4::multiply(Mat4::translation(parts[i].position), rotate);
+        world[i] = parents[i] == no_link ? local : Mat4::multiply(world[parents[i]], local);
+    }
+
+    std::vector<std::uint32_t> owners(chain_count, no_link);
+    bool duplicate_owner = false;
+    for (std::uint32_t i = 0; i < part_count; ++i) {
+        const std::uint32_t chain = parts[i].words[2];
+        if (chain != no_link && chain < chain_count) {
+            if (owners[chain] != no_link) duplicate_owner = true;
+            owners[chain] = i;
+        }
+    }
+    const bool owner_table_complete = !duplicate_owner &&
+        std::all_of(owners.begin(), owners.end(), [](std::uint32_t owner) {
+            return owner != no_link;
+        });
+    if (!owner_table_complete) {
+        const bool no_owners = std::all_of(parts.begin(), parts.end(), [](const Part& part) {
+            return part.words[2] == no_link || part.words[2] >= max_parts_or_chains;
+        });
+        if (part_count != chain_count || !no_owners) {
+            error = "ACM chain-to-part ownership is ambiguous";
+            return false;
+        }
+        for (std::uint32_t i = 0; i < chain_count; ++i) owners[i] = i;
+    }
+
+    std::vector<std::uint32_t> chain_offsets(chain_count);
+    for (std::uint32_t i = 0; i < chain_count; ++i) {
+        if (!read_u32(block, table_end + static_cast<std::size_t>(i) * 4,
+                      chain_offsets[i]) ||
+            chain_offsets[i] > block.size() - chains_start ||
+            (i != 0 && chain_offsets[i] <= chain_offsets[i - 1])) {
+            error = "ACM chain offsets are invalid or out of order";
+            return false;
+        }
+    }
+
+    MeshData decoded;
+    for (std::uint32_t i = 0; i < chain_count; ++i) {
+        const std::size_t start = chains_start + chain_offsets[i];
+        if (start > block.size() || block.size() - start < 16) {
+            error = "ACM DMA chain header is truncated";
+            return false;
+        }
+        std::uint32_t tag = 0;
+        read_u32(block, start, tag);
+        const std::uint32_t qwc = tag & 0xffffu;
+        const std::uint32_t dma_id = (tag >> 28) & 7u;
+        if (dma_id != 1u && dma_id != 6u && dma_id != 7u) {
+            error = "ACM geometry uses an unsupported DMA tag";
+            return false;
+        }
+        const std::uint64_t end64 = static_cast<std::uint64_t>(start) + 16u +
+                                    static_cast<std::uint64_t>(qwc) * 16u;
+        const std::size_t limit = i + 1 < chain_count
+            ? chains_start + chain_offsets[i + 1] : block.size();
+        if (end64 > limit || end64 > block.size()) {
+            error = "ACM DMA chain payload overlaps the next chain or exceeds the block";
+            return false;
+        }
+        if (qwc != 0 && !parse_vif_chain(block, start,
+                static_cast<std::size_t>(end64), world[owners[i]], decoded, error))
+            return false;
+    }
+    if (decoded.indices.empty()) {
+        error = "ACM block contains no supported triangle-strip geometry";
+        return false;
+    }
+    mesh = std::move(decoded);
+    return true;
+}
+
+} // namespace
+
+bool load_acm_model(const std::string& path, MeshData& mesh, std::string& error) {
+    std::ifstream input(path_from_utf8(path), std::ios::binary);
+    if (!input) {
+        error = "cannot open ACM model: " + path;
+        return false;
+    }
+    input.seekg(0, std::ios::end);
+    const std::streamoff length = input.tellg();
+    if (length <= 0 || static_cast<std::uint64_t>(length) > max_model_file_size) {
+        error = "ACM model file is empty or exceeds the 128 MiB size limit: " + path;
+        return false;
+    }
+    input.seekg(0, std::ios::beg);
+    std::vector<std::uint8_t> file;
+    try {
+        file.resize(static_cast<std::size_t>(length));
+    } catch (const std::bad_alloc&) {
+        error = "ACM model allocation failed: " + path;
+        return false;
+    } catch (const std::length_error&) {
+        error = "ACM model exceeds the platform's vector limit: " + path;
+        return false;
+    }
+    if (!input.read(reinterpret_cast<char*>(file.data()), length)) {
+        error = "ACM model read failed: " + path;
+        return false;
+    }
+    try {
+        std::span<const std::uint8_t> block;
+        if (!first_bundle_model(file, block, error)) return false;
+        MeshData decoded;
+        if (!parse_acm(block, decoded, error)) return false;
+        mesh = std::move(decoded);
+        return true;
+    } catch (const std::bad_alloc&) {
+        error = "ACM model geometry allocation failed: " + path;
+        return false;
+    } catch (const std::length_error&) {
+        error = "ACM model geometry exceeds the platform's vector limit: " + path;
+        return false;
+    }
+}
+
+} // namespace ac5
