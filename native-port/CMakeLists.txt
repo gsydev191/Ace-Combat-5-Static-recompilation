@@ -28,6 +28,8 @@ target_include_directories(ac5_asset_core PUBLIC
 target_compile_features(ac5_asset_core PUBLIC cxx_std_20)
 
 add_library(ac5_game_core STATIC
+    src/aircraft_collision.cpp
+    src/aircraft_collision.hpp
     src/animation_controller.cpp
     src/animation_controller.hpp
     src/acm_loader.cpp
@@ -42,6 +44,12 @@ add_library(ac5_game_core STATIC
     src/flight_session.hpp
     src/flight_rules_loader.cpp
     src/flight_rules_loader.hpp
+    src/mission_units.cpp
+    src/mission_units.hpp
+    src/mission_spawn_preview.cpp
+    src/mission_spawn_preview.hpp
+    src/mission_steering.cpp
+    src/mission_steering.hpp
     src/heightfield_mesh.cpp
     src/heightfield_mesh.hpp
     src/model_shading.cpp
@@ -67,6 +75,8 @@ add_executable(ac5_model_info src/acm_info_main.cpp)
 target_link_libraries(ac5_model_info PRIVATE ac5_game_core)
 add_executable(ac5_flight_info src/flight_info_main.cpp)
 target_link_libraries(ac5_flight_info PRIVATE ac5_game_core)
+add_executable(ac5_mission_info src/mission_info_main.cpp)
+target_link_libraries(ac5_mission_info PRIVATE ac5_game_core)
 
 enable_testing()
 add_executable(ac5_native_tests tests/native_tests.cpp)
@@ -77,6 +87,7 @@ if(WIN32)
     target_link_libraries(ac5_extract PRIVATE shell32)
     target_link_libraries(ac5_model_info PRIVATE shell32)
     target_link_libraries(ac5_flight_info PRIVATE shell32)
+    target_link_libraries(ac5_mission_info PRIVATE shell32)
 endif()
 
 install(TARGETS ac5_asset_core ac5_game_core
@@ -89,13 +100,19 @@ install(TARGETS ac5_model_info
     RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 install(TARGETS ac5_flight_info
     RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+install(TARGETS ac5_mission_info
+    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 install(FILES
+    src/aircraft_collision.hpp
     src/acm_loader.hpp
     src/adpcm.hpp
     src/data_archive.hpp
     src/gs_image.hpp
     src/map_texture.hpp
     src/mission_terrain.hpp
+    src/mission_units.hpp
+    src/mission_spawn_preview.hpp
+    src/mission_steering.hpp
     src/model_mesh_adapter.hpp
     src/model_shading.hpp
     src/ulz.hpp

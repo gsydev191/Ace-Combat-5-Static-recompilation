@@ -47,6 +47,35 @@ public:
         return true;
     }
 
+    // Variant for tick observers that can end simulation on a gameplay event.
+    // Returning false stops after the current tick and commits that tick plus
+    // the remaining clock accumulator. The caller owns the stopped/crashed
+    // state and should avoid advancing again while it remains active.
+    template <typename OnTick>
+    [[nodiscard]] bool advance_frame_until(double elapsed_seconds,
+                                           const AircraftFlightInput& input,
+                                           OnTick&& on_tick) noexcept {
+        static_assert(std::is_nothrow_invocable_r_v<bool, OnTick&,
+                                                    const AircraftFlightState&>,
+                      "flight tick callbacks must be noexcept and return bool");
+        if (!std::isfinite(elapsed_seconds) || elapsed_seconds < 0.0 ||
+            !std::isfinite(accumulator_seconds_)) return false;
+
+        constexpr double tick_seconds = 1.0 / 60.0;
+        constexpr double maximum_frame_seconds = 0.1;
+        double next_accumulator = std::min(accumulator_seconds_ + elapsed_seconds,
+                                           maximum_frame_seconds);
+        AircraftFlightState next_state = state_;
+        while (next_accumulator >= tick_seconds) {
+            if (!advance_aircraft_carrier_tick(rules_, input, next_state)) return false;
+            next_accumulator -= tick_seconds;
+            if (!on_tick(next_state)) break;
+        }
+        state_ = std::move(next_state);
+        accumulator_seconds_ = next_accumulator;
+        return true;
+    }
+
     [[nodiscard]] const AircraftFlightState& state() const noexcept { return state_; }
     [[nodiscard]] AircraftFlightState& state() noexcept { return state_; }
     void reset_clock() noexcept { accumulator_seconds_ = 0.0; }

@@ -22,6 +22,12 @@ struct AircraftProjectile {
     std::array<double, 3> guidance_target{};
     double turn_rate_radians_per_second = 0.0;
     double gravity_world_units_per_second_squared = 0.0;
+    double travelled_distance_units = 0.0;
+    double maximum_travel_distance_units = 0.0;
+    double seeker_half_angle_radians = 0.0;
+    double propulsion_time_remainder_seconds = 0.0;
+    double propulsion_acceleration_units_per_update = 0.0;
+    double maximum_speed_units_per_second = 0.0;
     double age_seconds = 0.0;
     bool active = false;
     bool has_guidance_target = false;
@@ -30,6 +36,8 @@ struct AircraftProjectile {
 struct AircraftProjectileSystem {
     std::array<AircraftProjectile, projectile_capacity> projectiles{};
     std::size_t next_slot = 0;
+    // Native deterministic dispersion stream; callers may set a different seed.
+    std::uint32_t dispersion_state = 0xAC5D15FEu;
 };
 
 struct ProjectileTargetSphere {
@@ -50,8 +58,9 @@ struct AircraftProjectileImpacts {
     std::size_t count = 0;
 };
 
-// Launches a gun round or standard missile from the aircraft origin. Special
-// weapon projectiles are rejected until their own launch rules are decoded.
+// Launches a gun round or standard missile from the supplied launch point (or
+// aircraft origin). Special weapon projectiles are rejected until their own
+// launch rules are decoded.
 // An optional target is accepted for standard missiles only and must be inside
 // the decoded seeker cone; missile turn rate then bounds guidance. Acquisition
 // and moving-target updates remain responsibilities of a higher-level system.
@@ -60,7 +69,8 @@ struct AircraftProjectileImpacts {
     const AircraftFlightState& aircraft,
     const std::array<double, 3>& aircraft_velocity_units_per_second,
     AircraftProjectileSystem& projectiles,
-    std::optional<std::array<double, 3>> guidance_target = std::nullopt) noexcept;
+    std::optional<std::array<double, 3>> guidance_target = std::nullopt,
+    std::optional<std::array<double, 3>> launch_position = std::nullopt) noexcept;
 
 // Replace the point followed by an already-guided standard missile. This lets
 // a higher-level target system refresh a moving target without owning the

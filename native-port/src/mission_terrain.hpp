@@ -49,10 +49,10 @@ struct Ac5MissionTerrain {
     std::span<const ArchiveFile> files, Ac5MissionTerrain& output,
     std::string& error);
 
-// Query the generated 0x0011BB88 regular terrain branch and 0x800 zero-height
-// class, wrapping cell coordinates over its 512-by-512 domain. Returns an
-// explicit error for 0x400 tiles until their raw-pool address/interpolation
-// branches are translated. Output is unchanged on error.
+// Query the generated 0x0011BB88 regular and 0x400 even-sample terrain paths,
+// plus the 0x800 zero-height class. Uses the source's 512-cell map and its
+// first/last 32-cell handling for coordinates outside the map. Output is
+// unchanged on error.
 [[nodiscard]] bool sample_ac5_mission_terrain_height(
     const Ac5MissionTerrain& terrain, double world_x, double world_z,
     float& world_y, std::string& error);

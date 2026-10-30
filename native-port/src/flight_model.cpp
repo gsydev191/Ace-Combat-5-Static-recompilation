@@ -216,6 +216,11 @@ std::array<double, 3> aircraft_forward_direction(
     return row_multiply({0.0, 0.0, -1.0}, euler_matrix(euler));
 }
 
+std::array<std::array<double, 3>, 3> aircraft_body_axes(
+    const std::array<double, 3>& euler) noexcept {
+    return euler_matrix(euler);
+}
+
 void set_aircraft_flight_mode(AircraftFlightFlags& flags,
                               std::uint8_t command) noexcept {
     switch (command) {

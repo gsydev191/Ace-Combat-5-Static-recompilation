@@ -165,10 +165,24 @@ ac5_native --mission-terrain BIN/DATA.TBL BIN/DATA.PAC 3
 ```
 
 The mode assembles the mission height blocks, tile-index map, and atlas, then
-renders them at their recovered world spacing. Member 3 is M01A in
-`config/pac_names.txt`; use that manifest to locate another map member, or
-extract the archive members with `ac5_extract --all DATA.TBL DATA.PAC -
-extracted` for inspection.
+renders them at their recovered world spacing. Member indexes refer to entries
+in the supplied DATA.PAC table. M01A's terrain is member 3 and its mission
+script pack is member 117. The native tools can extract an indexed member with
+`ac5_extract` for inspection.
+
+Add `--mission-units` followed by the mission pack's DATA.PAC member index to
+overlay side-colored markers for decoded type-0 spawn orders. For M01A, use:
+
+```text
+ac5_native --mission-terrain BIN/DATA.TBL BIN/DATA.PAC 3 --mission-units 117
+```
+
+Absolute placements, fixed far-corner placements, and terrain-relative
+altitudes are resolved from the mission data. Group-relative placements use
+the group's resolved initial spawn transform when available. References to an
+individual member are shown only when its decoded formation offset is zero;
+other placements are counted as unresolved because this preview does not run
+the mission unit simulation.
 
 In this mode SDL pitch, roll, and yaw controls plus throttle drive the fixed
 60 Hz native flight tick, and the camera follows the simulated aircraft. Press
@@ -332,12 +346,19 @@ The dependency-free `weapon_controller` game-core module accepts portable
 loadout rules and emits gun, missile, and special-weapon shot events. The ACM
 loader decodes aircraft bundle slots 7/8/9, and
 `ac5_model_info --weapons <aircraft-member.bin>` reports their loadout and
-weapon parameters. The viewer consumes those rules in flight mode, advances a
+weapon parameters, including aircraft-specific gun mount pitch. The viewer
+consumes those rules in flight mode, advances a
 bounded native projectile pool at fixed ticks, and uploads its fixed-topology dynamic
 mesh through the Vulkan renderer. Its 128 slots recycle shots after a 12-second
 native presentation lifetime; this is not claimed as the retail lifetime.
-Special-weapon shot events do not create projectiles until their own launch
-parameters are decoded, and the decoded gun spread is not yet applied.
+Gun spread is applied on two axes with a portable, seedable deterministic
+native random stream; it does not reproduce the retail PS2 random sequence.
+The decoded aircraft gun mount pitch is applied to the gun aim direction.
+When an animated ACM model exposes `@` attachment points, gun rounds launch
+from alternating points using their evaluated world transforms, falling back
+to the aircraft origin if the selected point is unavailable. Special-weapon
+shot events do not create projectiles until their own launch parameters are
+decoded.
 The game-core API can optionally sweep those projectiles against caller-owned
 spherical target bounds and return impact positions/ids. This is a generic
 collision boundary only; the viewer does not currently supply targets, and
@@ -359,6 +380,9 @@ lets aircraft animation advance from each post-physics state; the viewer stages
 animation, gear, approach-mode, weapon, and projectile state until all flight
 ticks in the frame succeed. It runs the carrier-aware
 tick wrapper, which reduces to the normal tick outside carrier modes.
+`advance_frame_until` is also available when a caller must stop on a fixed tick
+(for example, on ground collision); it commits the event tick and leaves the
+unconsumed accumulator available to the owner of that stopped state.
 `AircraftFlightFlags` keeps contact and mode bits as separate native bytes;
 `set_aircraft_flight_mode` and `set_aircraft_approach_control` preserve unrelated
 bits when changing modes. Each successful tick advances the recovered
@@ -375,6 +399,62 @@ aircraft `.pmb` parameter file, and `ac5_flight_info` reports its decoded
 speed and axis tables (for example, `ac5_flight_info f04g.pmb`). Terrain
 collision, marker-based ground alignment, and a runtime ruleset selection UI
 remain future work.
+The dependency-free `count_airframe_surface_hits` helper ports the recovered
+six-point body-axis collision query. It takes model extents and a caller-owned
+terrain sampler, and `aircraft_body_axes` supplies axes from native flight
+attitude. Automatic flight-session collision response still needs terrain and
+flight-session wiring; the `.pmb` flight parameters do not contain hit extents.
+`ac5_mission_info --hit-extents DATA.TBL DATA.PAC <aircraft-entry-index>`
+loads the six values directly from that aircraft's mission-entry AHM payload.
+`decode_ac5_mission_units` reads the unit/script child of a decompressed mission
+`.mmb` into native unit sides, formation members, object hit metadata, and the
+unit -> set -> act -> order hierarchy. Spawn orders and type-2 waypoint orders
+include decoded world positions; other order types retain their raw parameter
+words. Additional member-associated set bundles are decoded and deduplicated by
+source offset. Spawn and triggered-Act records also expose their decoded
+trigger fields.
+`evaluate_ac5_mission_trigger` evaluates the recovered time, player-proximity,
+target-inactive, and mission-state conditions using caller-supplied native
+runtime state. `step_ac5_mission_order` executes type-3 stop waits, type-5
+conditional/counted jumps, and type-6 mission-state writes using per-unit
+script state. The mission state table is 32-bit, matching the runtime store;
+script operands remain signed 16-bit values. Stop mode 2 accepts live target
+positions and side IDs and applies
+the recovered friendly/hostile camp and distance rule. Movement and activation
+orders remain separate systems. Waypoint completion uses caller-provided unit,
+follow-target, terrain, and post-movement ground state while applying the
+decoded timer, mission-state, radius, and ballistic-ground conditions.
+`eligible_ac5_mission_acts` scans a Set's first orders in source order.
+`select_ac5_mission_act` applies source-order arbitration and remembers consumed
+spawn gates per phase (or permanently for state gates); the caller creates the
+entities and applies the returned disappear movement mode. Consuming the Act's
+type-0/type-1 first order advances its script cursor; type-4 lead orders also
+advance after their no-op handler. `resolve_ac5_mission_spawn_transform`
+resolves absolute and additive target-relative type-0 placements, including
+optional terrain-relative altitude and model-bottom offset. Placement mode 1
+accepts a live group/member position, and mode 2 rotates its vertical/rearward
+offset by the target yaw before adding it to the target position.
+`build_ac5_mission_spawn_preview` resolves the statically available initial
+spawns, follows group-relative dependencies, and returns native transforms plus
+an unresolved-order count. It lives in `ac5_game_core` and has no renderer or
+SDL dependency. Individual member targets are resolved only when member zero's
+decoded formation offset is zero.
+`begin_ac5_mission_steering_order` initializes waypoint speed and velocity;
+it also applies the recovered movement-mode and payload flags and stores the
+order's `+0x3c/+0x3d` parameters.
+`advance_ac5_mission_steering` handles modes 0–8, including direct-turn,
+turn-limited, takeoff, ballistic, trail displacement, arrival-attitude blending,
+and keyframed paths. Mode-8 path keys are decoded from the order's secondary
+bundle and follow the live group-0 reference position. A mode-8 order without a
+complete path header/key table is rejected during decode; the runtime steering
+and order-step APIs likewise report a missing path as unsupported rather than
+silently completing the movement order.
+`ac5_mission_info <decompressed-unit-table.mmb>` summarizes a raw unit-table
+block, or `ac5_mission_info --archive DATA.TBL DATA.PAC <member-index>` follows
+the selected mission-pack member's slot 0 and then the wrapped mission-entry
+slot 0 before decoding its unit table. Both paths use native core APIs and do
+not need the renderer or extraction tools. Runtime AI/object creation remains
+separate integration work.
 The dependency-free `build_heightfield_mesh` helper converts validated row-major
 world-height samples into indexed `MeshData` with upward-facing triangles,
 smoothed normals, and normalized UVs. This is the native terrain geometry stage;

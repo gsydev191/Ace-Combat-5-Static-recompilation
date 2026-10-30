@@ -60,15 +60,20 @@ void push_shot(AircraftWeaponTick& output, AircraftShotKind kind,
 
 bool valid_weapon_rules(const AircraftWeaponRules& rules) noexcept {
     return std::isfinite(rules.gun_interval_seconds) &&
+        std::isfinite(rules.gun_mount_pitch_degrees) &&
         std::isfinite(rules.gun_spread_degrees) &&
         std::isfinite(rules.gun_gravity_mps2) &&
         std::isfinite(rules.standard_reload_seconds) &&
+        std::isfinite(rules.missile_range2_meters) &&
         std::isfinite(rules.missile_gravity_mps2) &&
         std::isfinite(rules.missile_turn_rate_degrees_per_second) &&
         std::isfinite(rules.special_reload_seconds) &&
         rules.gun_interval_seconds >= 0.0f &&
+        rules.gun_mount_pitch_degrees >= -180.0f &&
+        rules.gun_mount_pitch_degrees <= 180.0f &&
         rules.gun_spread_degrees >= 0.0f && rules.gun_gravity_mps2 >= 0.0f &&
         rules.standard_reload_seconds >= 0.0f &&
+        rules.missile_range2_meters >= 0.0f &&
         rules.missile_gravity_mps2 >= 0.0f &&
         rules.missile_turn_rate_degrees_per_second >= 0.0f &&
         rules.special_reload_seconds >= 0.0f &&
@@ -116,11 +121,13 @@ bool decode_aircraft_weapon_rules(
     }
 
     AircraftWeaponRules decoded;
-    if (!read_u16(loadout_slot, 0x1c, decoded.gun_ammunition) ||
+    if (!read_f32(loadout_slot, 0x04, decoded.gun_mount_pitch_degrees) ||
+        !read_u16(loadout_slot, 0x1c, decoded.gun_ammunition) ||
         !read_f32(gun_slot, 0x34, decoded.gun_interval_seconds) ||
         !read_f32(gun_slot, 0x40, decoded.gun_spread_degrees) ||
         !read_f32(gun_slot, 0x44, decoded.gun_gravity_mps2) ||
         !read_u16(gun_slot, 0x48, decoded.gun_muzzle_speed_kmh) ||
+        !read_f32(missile_slot, 0x24, decoded.missile_range2_meters) ||
         !read_f32(missile_slot, 0x34, decoded.standard_reload_seconds) ||
         !read_f32(missile_slot, 0x3c,
                   decoded.missile_turn_rate_degrees_per_second) ||
@@ -136,6 +143,9 @@ bool decode_aircraft_weapon_rules(
     decoded.seeker_half_angle_degrees = missile_slot[0x4c];
 
     if (!(decoded.gun_interval_seconds > 0.0f) ||
+        decoded.gun_mount_pitch_degrees < -180.0f ||
+        decoded.gun_mount_pitch_degrees > 180.0f ||
+        !(decoded.missile_range2_meters > 0.0f) ||
         decoded.gun_spread_degrees < 0.0f ||
         decoded.gun_gravity_mps2 < 0.0f ||
         decoded.standard_reload_seconds < 0.0f ||

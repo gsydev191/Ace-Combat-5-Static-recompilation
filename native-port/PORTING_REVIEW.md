@@ -499,10 +499,18 @@ weapon slots are loaded. The recovered
 special weapon and `0x0d` for the gun; these are configurable actions, so the
 native Space/Ctrl bindings are platform policy rather than fixed retail button
 equivalents. The gun uses the aircraft's slot-8 record for its `0.15 s` shot
-interval, muzzle speed, and gravity, and decrements the aircraft's gun
-ammunition per shot. Slot-8 spread is decoded and reported, but the native
-projectile path does not yet apply dispersion; its generated random/state
-behavior has not been isolated. The generated gun edge reaches
+interval, muzzle speed, and gravity, and the aircraft slot-7 loadout record's
+`+0x04` gun mount pitch, and decrements gun ammunition per shot. The mount
+pitch is converted from degrees and applied to gun aim only. Slot-8 spread is
+decoded and applied to gun direction on
+two axes using independent integer samples mapped through `((sample % 200) -
+100) / 100`, matching the recovered square-cone distribution. The portable
+projectile system owns a caller-seedable xorshift32 stream (default seed
+`0xAC5D15FE`) so firing stays deterministic and independent of the PS2 runtime;
+the retail random generator remains open. The player firing path alternates
+the `@` model attachment-point index, and the viewer resolves those ACM parts'
+animated world transforms for gun launch positions, falling back to the aircraft
+origin when the selected point is unavailable. The generated gun edge reaches
 `func_00109718`, which selects and fills a shot record before calling
 `func_00349DA0`; that wrapper only forwards into `func_00352EC0`, which in turn
 delegates to the 110-instruction `func_00353460` generic effect/object path.
@@ -525,10 +533,15 @@ values for extracted aircraft bundles. Weapon state advances on fixed flight
 ticks, and the viewer reports ammunition and emitted event counts in its
 window title. A bounded native projectile pool inherits the aircraft's actual
 per-tick displacement velocity (including path lag and vertical sink), adds the
-decoded launch speed along body forward, applies the weapon gravity value, and
-renders through the existing dynamic-mesh path. Its 128 slots recycle shots
-after a 12-second native presentation lifetime; that lifetime is not recovered
-retail behavior. Projectile advancement processes the full requested interval
+decoded launch speed along body forward, applies gun gravity only, and renders
+through the existing dynamic-mesh path. Standard missiles use the decoded
+`range2` distance for expiry, have no gravity term, skip steering outside their
+seeker cone, and apply the recovered full turn step capped by decoded turn rate.
+The 128-slot pool also applies a 12-second native presentation ceiling, which
+is not recovered retail behavior; missile `range2` expiry will normally occur
+first. Missile propulsion now adds 5 km/h per fixed 60 Hz update up to the
+recovered 3,000 km/h cap, using a fractional-update accumulator. Projectile
+advancement processes the full requested interval
 up to that lifetime in 1/60-second substeps, clipping the last step to each
 shot's remaining lifetime and checking that swept segment for impact before
 expiring it. Long caller updates do not silently discard simulation time.
@@ -632,9 +645,9 @@ Map files 2/3/4 are `.mia` selector grid, `.mii` 33×33 color-index blocks, and
 `.mid` RGBA palette. `decode_ac5_mission_terrain` now expands that registered
 color layer into per-vertex RGBA8 using the GS 0..128 full-scale convention,
 and the Vulkan mission mesh applies it as a vertex tint. The mission mesh now
-uses generated parity-selected diagonals. The native mission query handles the
-regular path and `0x800` class; it explicitly reports `0x400` as unsupported
-until its raw-pool address and interpolation branches are translated.
+uses generated parity-selected diagonals. The native mission query now handles
+the regular path, the `0x400` even-sample path, and the `0x800` zero-height
+class from the generated height routine.
 The native viewer builds stride-1, 2, 4, and 8 full-extent heightfield meshes
 through `build_heightfield_mesh_lod` and selects among them by camera distance.
 `sample_heightfield_surface` now queries the same triangle diagonal and
@@ -654,8 +667,9 @@ contain 64-entry rows of 16-bit words whose low 10 bits reference those tiles.
 `decode_ac5_map_texture_set` validates and decodes the level-zero records into
 a 2,304-pixel-wide atlas with four-pixel clamped gutters around each tile,
 plus the original `.mti` words. `--map-textures` displays those tile indices as
-a flat preview grid; its cell scale is for inspection only. The upper six bits
-are preserved but their class meanings remain open. The decompressed mission
+a flat preview grid; its cell scale is for inspection only. Height-query flags
+`0x400` and `0x800` are now decoded; the meanings of the remaining four high
+bits are still open. The decompressed mission
 container has a separate 256-by-256 tile-index raster in files 5/6, alongside
 height block grid/data in files 0/1 and the tile pool/palette in files 7/8.
 `decode_ac5_mission_terrain` now assembles these into a 513-by-513 heightfield
@@ -674,14 +688,87 @@ selected 33-by-33 blocks, including even-coordinate samples for `0x400` tiles.
 Its per-cell class comes separately from `.mta` selecting a 512-byte `.mti`
 block and the local 16-by-16 tile coordinate selecting a 16-bit entry; the
 native `surface.map_entries` stores that assembled 256-by-256 class raster.
-`sample_ac5_mission_terrain_height` ports the
-generated 1,024-unit parity-selected triangles, 512-cell coordinate wrapping,
-and `0x800` zero-height return.
-The `0x400` branch uses conditional raw-pool addresses and multiple
-interpolation regions, so the native query reports that tile class as
-unsupported instead of returning an approximation. The raw selector/pool data
-is retained for its translation. Other tile classes and retail patch
-scheduling/edge morphing remain open.
+`sample_ac5_mission_terrain_height` uses the selected raw height block at
+`selector * 0x441`, matching the generated reader's byte addressing. Regular
+cells use the 1,024-unit parity-selected triangles. Flag `0x400` selects the
+separate 2,048-unit triangle path, reads the even local height vertices at
+stride two, and selects its diagonal with the local x/z offset comparison.
+Flag `0x800` returns zero. Out-of-range positions follow the source's edge
+bands: negative coordinates wrap within the first 32 cells, and coordinates
+at or beyond the positive bound wrap within the last 32 cells. This replaces
+the earlier full-grid wrapping interpretation. Other tile classes and retail
+patch scheduling/edge morphing remain open.
 `ac5_native --mission-terrain DATA.TBL DATA.PAC <member>` now exposes this
 asset path in the Vulkan viewer; the ordinary demo and extracted-file modes
 remain independently selectable.
+
+Mode-8 mission waypoint decoding now requires its secondary keyframed-path
+header and complete offset/key records. A missing path is a decode error, and
+the runtime steering/order-step APIs report a missing path as unsupported;
+they no longer treat an absent path as immediate waypoint completion. This
+keeps malformed or incomplete mission data from silently skipping scripted
+movement.
+
+The native mission API also distinguishes the spawn trigger kind at payload
+`+0x38` from the placement mode at `+0x3c`. Absolute type-0 placements now
+resolve position, pitch/yaw, optional terrain height from flag `+0x3d` bit 0,
+and the caller-supplied model-bottom offset. Placement mode 1 adds the order
+offset to either its fixed far-corner target or an explicitly supplied live
+group/member position. Placement mode 2 adds the source's vertical/rearward
+offset after rotating it by target yaw plus the payload angle; its output yaw
+adds the payload yaw to target yaw and folds once into `(-pi, pi]`.
+
+The group member transform path is now narrowed to `0x179bb8`. It iterates
+members at the runtime `0x410` stride, reads a six-float local transform
+(position followed by Euler angles in degrees) from the member's linked object
+data, and writes the composed world position and attitude to `+0x1f0` and
+`+0x200`. The generated path delegates composition to `0x388ad0` and
+`0x32a1f0`. The remaining mapping is how that linked six-float source record
+is populated from the decoded MMB member's `+0x0c..+0x14` formation offset and
+unit reference. The viewer still uses a shared leader transform for member
+models until that mapping is established.
+
+`0x197a20` provides another use of the same linked-record shape: byte `+0x18`
+selects a member in a referenced group, its world position is subtracted from
+the record's xyz, and the result is rotated by the record's three degree
+angles before being added to that member's current position. This confirms a
+member-relative transform variant exists, but does not yet prove that the MMB
+formation vector is copied into this linked record or identify the group
+reference established by the script/spawn path.
+
+The archive-backed mission unit reader follows both observed slot-0 bundle
+layers: the DATA.PAC mission-pack member's sparse slot, then the wrapped
+mission-entry slot containing the unit table. Script parsing now mirrors
+`tools/parse_mmb_scripts.py`: begin at the root slot of the member table, read
+its children as acts, then each Act's children as orders. Additional sets are
+found in the sparse bundle at member-record `+0x2c`; the bundle's child set
+nodes are checked against their own header/table count and duplicate order
+source offsets are removed. The previous native path added an unsupported set
+level and interpreted nested order payloads as script objects, producing false
+zero-position markers.
+
+M01A confirms the corrected traversal: unit 2 / Act 0 / order 0 is read from
+wrapper offset `0x2d40` (type byte `0x2d50`) with coordinates
+`(-110000, 5000, 0)`, matching the generated order table. The native preview
+also matches unit 0's initial spawn at `(-57344, 5000, 50688)`. Across M01A,
+native decoding matches the runtime trace export's 167 orders, 21 spawns, and
+50 waypoints; unit 0's 57 orders are recovered across four sets. The preview
+resolves 11 statically available spawn markers and leaves 10 orders unresolved
+because their placements require live group/member state. The order model and
+CLI retain/show source offsets and raw order coordinates to keep parser and
+transform discrepancies inspectable. A second takeoff mission, M06A, also
+matches the generated export exactly at 619 orders, 61 spawns, and 145 waypoints
+after its member-associated sets are included.
+
+The generated free-flight path calls `airframe_hits` with six body-axis
+extremes and treats any point at or below the sampled surface as a collision;
+there is no speed or attitude threshold. The native core now exposes this
+portable six-point calculation as `count_airframe_surface_hits`, together with
+the native flight model's body-axis basis. It requires an explicit surface
+sampler and six model extents, so it has no terrain, renderer, SDL, or legacy
+runtime dependency. The native `.pmb` flight-rule decoder does not provide
+those extents; generated `tools/export_ruleset.py` reads them from the tail of
+an `AHM` payload nested in mission-entry bundle slot 1. Native
+`load_ac5_aircraft_hit_extents` now mirrors that bounded lookup and the
+`ac5_mission_info --hit-extents` command exposes it. Terrain sampling and
+flight-session collision response still need to be wired together.

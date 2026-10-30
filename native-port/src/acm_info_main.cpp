@@ -103,15 +103,17 @@ int main(int argc, char** argv) {
             return 1;
         }
         std::printf("gun ammo: %u%s\nmissile ammo: %u\nspecial ammo: %u (weapon id %u)\n"
-                    "gun interval: %.4f s, spread: %.3f deg, gravity: %.3f m/s^2, muzzle speed: %u km/h\n"
-                    "standard missile reload: %.3f s, turn rate: %.3f deg/s, gravity: %.3f m/s^2, launch speed: %u km/h, seeker half-angle: %u deg\n",
+                    "gun interval: %.4f s, mount pitch: %.3f deg, spread: %.3f deg, gravity: %.3f m/s^2, muzzle speed: %u km/h\n"
+                    "standard missile reload: %.3f s, range2: %.1f m, turn rate: %.3f deg/s, gravity record: %.3f m/s^2, launch speed: %u km/h, seeker half-angle: %u deg\n",
                     rules.gun_ammunition,
                     rules.gun_ammunition == ac5::unlimited_ammunition_sentinel
                         ? " (unlimited)" : "",
                     rules.missile_ammunition, rules.special_ammunition,
                     rules.special_weapon_id, rules.gun_interval_seconds,
-                    rules.gun_spread_degrees, rules.gun_gravity_mps2,
+                    rules.gun_mount_pitch_degrees, rules.gun_spread_degrees,
+                    rules.gun_gravity_mps2,
                     rules.gun_muzzle_speed_kmh, rules.standard_reload_seconds,
+                    rules.missile_range2_meters,
                     rules.missile_turn_rate_degrees_per_second,
                     rules.missile_gravity_mps2, rules.missile_launch_speed_kmh,
                     rules.seeker_half_angle_degrees);

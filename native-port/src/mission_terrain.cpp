@@ -256,15 +256,13 @@ bool sample_ac5_mission_terrain_height(const Ac5MissionTerrain& terrain,
                                        double world_x, double world_z,
                                        float& world_y, std::string& error) {
     error.clear();
-    constexpr std::uint32_t height_cells = Ac5MissionTerrain::height_width - 1u;
-    constexpr std::uint32_t tile_last = Ac5MissionTerrain::tile_width - 1u;
-    const std::uint64_t expected_heights =
-        static_cast<std::uint64_t>(Ac5MissionTerrain::height_width) *
-        Ac5MissionTerrain::height_width;
-    const std::uint64_t expected_tiles =
-        static_cast<std::uint64_t>(Ac5MissionTerrain::tile_width) *
+    constexpr std::size_t height_block_bytes = 33u * 33u;
+    constexpr std::size_t selector_count = 16u * 16u;
+    constexpr std::size_t expected_tiles =
+        static_cast<std::size_t>(Ac5MissionTerrain::tile_width) *
         Ac5MissionTerrain::tile_width;
-    if (terrain.elevations.size() != expected_heights ||
+    if (terrain.height_block_selectors.size() != selector_count ||
+        terrain.height_block_pool.empty() ||
         terrain.surface.map_width != Ac5MissionTerrain::tile_width ||
         terrain.surface.map_height != Ac5MissionTerrain::tile_width ||
         terrain.surface.map_entries.size() != expected_tiles ||
@@ -273,86 +271,117 @@ bool sample_ac5_mission_terrain_height(const Ac5MissionTerrain& terrain,
         return false;
     }
 
-    const double unwrapped_grid_x =
-        (world_x - Ac5MissionTerrain::height_origin_xz_world_units) /
-        Ac5MissionTerrain::height_spacing_world_units;
-    const double unwrapped_grid_z =
-        (world_z - Ac5MissionTerrain::height_origin_xz_world_units) /
-        Ac5MissionTerrain::height_spacing_world_units;
-    if (!std::isfinite(unwrapped_grid_x) || !std::isfinite(unwrapped_grid_z)) {
+    // The generated EE routine takes single-precision x/z. Inside the map,
+    // the integer terrain cell is trunc((coordinate + 262144) / 1024). Its
+    // two out-of-range branches retain the edge 32-cell band and wrap within
+    // that band; they do not wrap the whole 512-cell terrain.
+    const float x = static_cast<float>(world_x);
+    const float z = static_cast<float>(world_z);
+    const float x_offset = x - Ac5MissionTerrain::height_origin_xz_world_units;
+    const float z_offset = z - Ac5MissionTerrain::height_origin_xz_world_units;
+    constexpr float cells_per_world_unit = 1.0f / 1024.0f;
+    const auto get_cell = [](float coordinate, float offset,
+                             std::uint32_t& cell) {
+        const float scaled = offset * cells_per_world_unit;
+        constexpr float int32_upper_exclusive = 2147483648.0f;
+        if (!std::isfinite(scaled) || scaled < -int32_upper_exclusive ||
+            scaled >= int32_upper_exclusive) return false;
+        if (coordinate >= 262144.0f) {
+            cell = static_cast<std::uint32_t>(
+                (static_cast<std::int32_t>(scaled) & 31) + 480);
+        } else if (coordinate < -262144.0f) {
+            cell = static_cast<std::uint32_t>(static_cast<std::int32_t>(scaled) & 31);
+        } else {
+            cell = static_cast<std::uint32_t>(
+                static_cast<std::int32_t>(offset) >> 10);
+        }
+        return true;
+    };
+    std::uint32_t cell_x = 0, cell_z = 0;
+    if (!std::isfinite(x) || !std::isfinite(z) ||
+        !get_cell(x, x_offset, cell_x) || !get_cell(z, z_offset, cell_z)) {
         error = "AC5 mission terrain query position exceeds the grid range";
         return false;
     }
-    // The generated reader wraps cell indices across its 512-cell terrain
-    // domain; retain the fractional position within the wrapped cell.
-    const auto wrap_grid_coordinate = [](double coordinate) {
-        constexpr double period =
-            static_cast<double>(Ac5MissionTerrain::height_width - 1u);
-        double wrapped = std::fmod(coordinate, period);
-        if (wrapped < 0.0) wrapped += period;
-        if (wrapped >= period) wrapped = 0.0;
-        return wrapped;
-    };
-    const double grid_x = wrap_grid_coordinate(unwrapped_grid_x);
-    const double grid_z = wrap_grid_coordinate(unwrapped_grid_z);
-
-    const std::uint32_t tile_x = std::min(
-        static_cast<std::uint32_t>(grid_x / 2.0), tile_last);
-    const std::uint32_t tile_z = std::min(
-        static_cast<std::uint32_t>(grid_z / 2.0), tile_last);
+    const std::uint32_t local_x = cell_x & 0x1fu;
+    const std::uint32_t local_z = cell_z & 0x1fu;
+    const std::size_t block_index =
+        static_cast<std::size_t>(cell_z >> 5) * 16u + (cell_x >> 5);
+    const std::uint8_t height_block = terrain.height_block_selectors[block_index];
+    const std::size_t height_block_offset =
+        static_cast<std::size_t>(height_block) * height_block_bytes;
+    const std::size_t tile_x = cell_x >> 1;
+    const std::size_t tile_z = cell_z >> 1;
     const std::uint16_t tile_entry = terrain.surface.map_entries[
-        static_cast<std::size_t>(tile_z) * Ac5MissionTerrain::tile_width + tile_x];
+        tile_z * Ac5MissionTerrain::tile_width + tile_x];
     if ((tile_entry & 0x0800u) != 0u) {
         world_y = 0.0f;
         return true;
     }
-
-    const bool finer_half_cell_path = (tile_entry & 0x0400u) != 0u;
-    if (finer_half_cell_path) {
-        error = "AC5 0x400 terrain query still requires raw-pool address translation";
+    if (height_block_offset > terrain.height_block_pool.size() ||
+        height_block_bytes > terrain.height_block_pool.size() - height_block_offset) {
+        error = "AC5 mission terrain height selector references a missing block";
         return false;
     }
 
-    const std::uint32_t cell_x = std::min(
-        static_cast<std::uint32_t>(grid_x), height_cells - 1u);
-    const std::uint32_t cell_z = std::min(
-        static_cast<std::uint32_t>(grid_z), height_cells - 1u);
-    const double u = grid_x - cell_x;
-    const double v = grid_z - cell_z;
-    const auto at = [&](std::uint32_t x, std::uint32_t z) {
-        return static_cast<double>(terrain.elevations[
-            static_cast<std::size_t>(z) * Ac5MissionTerrain::height_width + x]);
+    const std::size_t sample_base = height_block_offset;
+    const auto at = [&](std::uint32_t sample_x, std::uint32_t sample_z) {
+        return static_cast<float>(terrain.height_block_pool[
+            sample_base + static_cast<std::size_t>(sample_z) * 33u + sample_x]);
     };
-    const double top_left = at(cell_x, cell_z);
-    const double top_right = at(cell_x + 1u, cell_z);
-    const double bottom_left = at(cell_x, cell_z + 1u);
-    const double bottom_right = at(cell_x + 1u, cell_z + 1u);
-    if (!std::isfinite(top_left) || !std::isfinite(top_right) ||
-        !std::isfinite(bottom_left) || !std::isfinite(bottom_right)) {
-        error = "AC5 mission terrain query cell contains a non-finite height";
-        return false;
-    }
-
-    double result;
-    if (((cell_x ^ cell_z) & 1u) == 0u) {
-        result = u >= v
-            ? top_left + u * (top_right - top_left) +
-                  v * (bottom_right - top_right)
-            : top_left + v * (bottom_left - top_left) +
-                  u * (bottom_right - bottom_left);
-    } else if (u + v <= 1.0) {
-        result = top_left + u * (top_right - top_left) +
-                 v * (bottom_left - top_left);
+    float height = 0.0f;
+    if ((tile_entry & 0x0400u) != 0u) {
+        // The recovered flag selects a two-cell (2048-unit) triangle and
+        // reads only even height vertices. Its addressing differs from the
+        // regular one-cell branch.
+        const float dx = x_offset - static_cast<float>(cell_x & 0x1feu) * 1024.0f;
+        const float dz = z_offset - static_cast<float>(cell_z & 0x1feu) * 1024.0f;
+        const std::uint32_t sx = cell_x & 0x1eu;
+        const std::uint32_t sz = cell_z & 0x1eu;
+        const float u = dx * (1.0f / 2048.0f);
+        const float v = dz * (1.0f / 2048.0f);
+        if (dx - dz < 0.0f) {
+            const float bottom_left = at(sx, sz + 2u);
+            height = (at(sx + 2u, sz + 2u) - bottom_left) * u + bottom_left +
+                (at(sx, sz) - bottom_left) * (1.0f - v);
+        } else {
+            const float top_left = at(sx, sz);
+            const float top_right = at(sx + 2u, sz);
+            height = (top_right - top_left) * u + top_left +
+                (at(sx + 2u, sz + 2u) - top_right) * v;
+        }
     } else {
-        result = top_right * (1.0 - v) + bottom_left * (1.0 - u) +
-                 bottom_right * (u + v - 1.0);
+        const float dx = x_offset - static_cast<float>(cell_x) * 1024.0f;
+        const float dz = z_offset - static_cast<float>(cell_z) * 1024.0f;
+        const float u = dx * (1.0f / 1024.0f);
+        const float v = dz * (1.0f / 1024.0f);
+        const float top_left = at(local_x, local_z);
+        if (((local_x ^ local_z) & 1u) != 0u) {
+            if (dx + dz > 1024.0f) {
+                const float bottom_left = at(local_x, local_z + 1u);
+                const float bottom_right = at(local_x + 1u, local_z + 1u);
+                const float top_right = at(local_x + 1u, local_z);
+                height = (bottom_right - bottom_left) * u + bottom_left +
+                    (top_right - bottom_right) * (1.0f - v);
+            } else {
+                height = (at(local_x + 1u, local_z) - top_left) * u + top_left +
+                    (at(local_x, local_z + 1u) - top_left) * v;
+            }
+        } else if (dx - dz < 0.0f) {
+            const float bottom_left = at(local_x, local_z + 1u);
+            height = (at(local_x + 1u, local_z + 1u) - bottom_left) * u +
+                bottom_left + (top_left - bottom_left) * (1.0f - v);
+        } else {
+            const float top_right = at(local_x + 1u, local_z);
+            height = (top_right - top_left) * u + top_left +
+                (at(local_x + 1u, local_z + 1u) - top_right) * v;
+        }
     }
-    if (!std::isfinite(result) ||
-        std::abs(result) > std::numeric_limits<float>::max()) {
-        error = "AC5 mission terrain query height exceeds the native float range";
+    if (!std::isfinite(height)) {
+        error = "AC5 mission terrain query produced a non-finite height";
         return false;
     }
-    world_y = static_cast<float>(result);
+    world_y = height * 80.0f;
     return true;
 }
 

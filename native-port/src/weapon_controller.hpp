@@ -18,10 +18,12 @@ struct AircraftWeaponRules {
     std::uint8_t standard_pylon_mask = 0x03;
     std::uint8_t special_pylon_mask = 0x0f;
     float gun_interval_seconds = 0.15f;
+    float gun_mount_pitch_degrees = 0.0f;
     float gun_spread_degrees = 0.0f;
     float gun_gravity_mps2 = 9.8f;
     std::uint16_t gun_muzzle_speed_kmh = 0;
     float standard_reload_seconds = 4.0f;
+    float missile_range2_meters = 0.0f;
     float missile_gravity_mps2 = 9.8f;
     float missile_turn_rate_degrees_per_second = 0.0f;
     std::uint16_t missile_launch_speed_kmh = 0;

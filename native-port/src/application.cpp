@@ -10,6 +10,8 @@
 #include "input.hpp"
 #include "map_texture.hpp"
 #include "mission_terrain.hpp"
+#include "mission_spawn_preview.hpp"
+#include "mission_units.hpp"
 #include "obj_loader.hpp"
 #include "projectile_mesh.hpp"
 #include "projectile_system.hpp"
@@ -41,6 +43,24 @@ using namespace ac5;
 
 namespace {
 
+MeshData make_mission_spawn_marker(Vec3 color) {
+    constexpr float h = 0.5f;
+    MeshData mesh;
+    mesh.vertices = {
+        {{0.0f, h, 0.0f}, color, {}, {0.0f, 1.0f, 0.0f}},
+        {{0.0f, -h, 0.0f}, color, {}, {0.0f, -1.0f, 0.0f}},
+        {{-h, 0.0f, 0.0f}, color, {}, {-1.0f, 0.0f, 0.0f}},
+        {{h, 0.0f, 0.0f}, color, {}, {1.0f, 0.0f, 0.0f}},
+        {{0.0f, 0.0f, -h}, color, {}, {0.0f, 0.0f, -1.0f}},
+        {{0.0f, 0.0f, h}, color, {}, {0.0f, 0.0f, 1.0f}},
+    };
+    mesh.indices = {
+        0, 2, 4, 0, 4, 3, 0, 3, 5, 0, 5, 2,
+        1, 4, 2, 1, 3, 4, 1, 5, 3, 1, 2, 5,
+    };
+    return mesh;
+}
+
 enum class DemoSceneState : std::uint8_t { Viewing, Exiting };
 enum class DemoSceneSubstate : std::uint8_t { Frame };
 
@@ -57,6 +77,7 @@ struct DemoFrame {
     std::optional<AircraftWeaponRules> weapon_rules;
     AircraftWeaponState weapon_state{};
     AircraftProjectileSystem projectile_system{};
+    std::uint32_t gun_muzzle_index = 0;
     MeshId projectile_mesh = 0;
     bool has_projectile_mesh = false;
     std::uint32_t pending_weapon_switch_presses = 0;
@@ -127,41 +148,74 @@ std::uint32_t infer_animation_controller_flags(const AcmPartModel& model) {
     return flags;
 }
 
+Mat4 animated_part_local_transform(const AcmPartModel& model,
+                                   const AcmModelPart& part,
+                                   const AircraftAnimationChannels& channels) noexcept {
+    Vec3 position = part.position;
+    Vec3 rotation = part.rotation;
+    Vec3 animated{};
+    if (part.translation_track != AcmModelPart::no_parent) {
+        const AcmAnimationTrack& track = model.translation_tracks[part.translation_track];
+        if (track.channel < channels.size() &&
+            sample_acm_animation_track(track, channels[track.channel], animated)) {
+            position.x += animated.x;
+            position.y += animated.y;
+            position.z += animated.z;
+        }
+    }
+    if (part.rotation_track != AcmModelPart::no_parent) {
+        const AcmAnimationTrack& track = model.rotation_tracks[part.rotation_track];
+        if (track.channel < channels.size() &&
+            sample_acm_animation_track(track, channels[track.channel], animated)) {
+            rotation.x += animated.x;
+            rotation.y += animated.y;
+            rotation.z += animated.z;
+        }
+    }
+    const Mat4 rotate_x = Mat4::rotation_x(rotation.x);
+    const Mat4 rotate_y = Mat4::rotation_y(rotation.y);
+    const Mat4 rotate_z = Mat4::rotation_z(rotation.z);
+    return Mat4::multiply(Mat4::translation(position), Mat4::multiply(
+        rotate_z, Mat4::multiply(rotate_y, rotate_x)));
+}
+
+bool animated_attachment_world_position(const AcmPartModel& model,
+                                        std::size_t part_index,
+                                        const AircraftAnimationChannels& channels,
+                                        const AircraftFlightState& flight,
+                                        std::array<double, 3>& position) noexcept {
+    if (part_index >= model.parts.size() || model.parts.size() > 4096) return false;
+    std::array<std::uint32_t, 4096> ancestry{};
+    std::size_t depth = 0;
+    std::uint32_t current = static_cast<std::uint32_t>(part_index);
+    while (current != AcmModelPart::no_parent) {
+        if (current >= model.parts.size() || depth == ancestry.size()) return false;
+        ancestry[depth++] = current;
+        current = model.parts[current].parent;
+    }
+    const Mat4 rotate = Mat4::multiply(
+        Mat4::multiply(Mat4::rotation_y(static_cast<float>(flight.euler[1])),
+                       Mat4::rotation_x(static_cast<float>(flight.euler[0]))),
+        Mat4::rotation_z(static_cast<float>(flight.euler[2])));
+    Mat4 world = Mat4::multiply(Mat4::translation({
+        static_cast<float>(flight.position[0]), static_cast<float>(flight.position[1]),
+        static_cast<float>(flight.position[2])}), rotate);
+    while (depth != 0)
+        world = Mat4::multiply(world, animated_part_local_transform(
+            model, model.parts[ancestry[--depth]], channels));
+    position = {world.value[12], world.value[13], world.value[14]};
+    return std::isfinite(position[0]) && std::isfinite(position[1]) &&
+           std::isfinite(position[2]);
+}
+
 void update_aircraft_part_animation(DemoFrame& frame) {
     if (!frame.animated_model ||
         frame.animated_model->parts.size() != frame.part_transforms.size()) return;
     for (std::size_t i = 0; i < frame.animated_model->parts.size(); ++i) {
         const AcmModelPart& part = frame.animated_model->parts[i];
-        Vec3 position = part.position;
-        Vec3 rotation = part.rotation;
-        Vec3 animated{};
-        if (part.translation_track != AcmModelPart::no_parent) {
-            const AcmAnimationTrack& track =
-                frame.animated_model->translation_tracks[part.translation_track];
-            if (track.channel < frame.animation_channels.size() &&
-                sample_acm_animation_track(track, frame.animation_channels[track.channel], animated)) {
-                position.x += animated.x;
-                position.y += animated.y;
-                position.z += animated.z;
-            }
-        }
-        if (part.rotation_track != AcmModelPart::no_parent) {
-            const AcmAnimationTrack& track =
-                frame.animated_model->rotation_tracks[part.rotation_track];
-            if (track.channel < frame.animation_channels.size() &&
-                sample_acm_animation_track(track, frame.animation_channels[track.channel], animated)) {
-                rotation.x += animated.x;
-                rotation.y += animated.y;
-                rotation.z += animated.z;
-            }
-        }
-        const Mat4 rotation_x = Mat4::rotation_x(rotation.x);
-        const Mat4 rotation_y = Mat4::rotation_y(rotation.y);
-        const Mat4 rotation_z = Mat4::rotation_z(rotation.z);
-        const Mat4 local_rotation = Mat4::multiply(
-            rotation_z, Mat4::multiply(rotation_y, rotation_x));
-        frame.scene.set_transform(frame.part_transforms[i], Mat4::multiply(
-            Mat4::translation(position), local_rotation));
+        frame.scene.set_transform(frame.part_transforms[i],
+            animated_part_local_transform(*frame.animated_model, part,
+                                          frame.animation_channels));
         if (i < frame.part_draw_indices.size() &&
             frame.part_draw_indices[i] != std::numeric_limits<std::size_t>::max()) {
             if (part.kind == 0x20u)
@@ -404,6 +458,7 @@ void update_demo_scene(DemoFrame& frame, DemoStateMachine& scene_state) {
         AircraftGearController staged_gear_controller = frame.gear_controller;
         AircraftWeaponState staged_weapon_state = frame.weapon_state;
         AircraftProjectileSystem staged_projectiles = frame.projectile_system;
+        std::uint32_t staged_gun_muzzle_index = frame.gun_muzzle_index;
         std::uint32_t staged_weapon_switch_presses =
             frame.pending_weapon_switch_presses;
         std::uint32_t staged_primary_fire_presses =
@@ -420,6 +475,7 @@ void update_demo_scene(DemoFrame& frame, DemoStateMachine& scene_state) {
                 [&frame, staged_gear_down, &staged_animation_channels,
                  &staged_gear_controller, &staged_weapon_state,
                  &staged_projectiles,
+                 &staged_gun_muzzle_index,
                  &staged_weapon_switch_presses, &staged_primary_fire_presses,
                  &staged_gun_fire_presses,
                  &staged_weapon_shots,
@@ -462,10 +518,36 @@ void update_demo_scene(DemoFrame& frame, DemoStateMachine& scene_state) {
                         for (std::size_t i = 0; i < output.shot_count &&
                              staged_weapon_shot_count < staged_weapon_shots.size(); ++i) {
                             staged_weapon_shots[staged_weapon_shot_count++] = output.shots[i];
+                            std::optional<std::array<double, 3>> gun_muzzle_position;
+                            if (output.shots[i].kind == AircraftShotKind::Gun) {
+                                if (frame.animated_model) {
+                                    const std::size_t muzzle_index =
+                                        staged_gun_muzzle_index & 1u;
+                                    std::size_t matching_point = 0;
+                                    for (std::size_t part_index = 0;
+                                         part_index < frame.animated_model->parts.size();
+                                         ++part_index) {
+                                        const AcmModelPart& part =
+                                            frame.animated_model->parts[part_index];
+                                        if ((part.source_words[4] & 0xffffu) != 0x40u)
+                                            continue;
+                                        if (matching_point++ != muzzle_index) continue;
+                                        std::array<double, 3> position{};
+                                        if (animated_attachment_world_position(
+                                                *frame.animated_model, part_index,
+                                                staged_animation_channels, tick_state,
+                                                position))
+                                            gun_muzzle_position = position;
+                                        break;
+                                    }
+                                }
+                                ++staged_gun_muzzle_index;
+                            }
                             if (output.shots[i].kind != AircraftShotKind::Special &&
                                 !launch_aircraft_projectile(*frame.weapon_rules,
                                     output.shots[i], tick_state, aircraft_velocity,
-                                    staged_projectiles)) {
+                                    staged_projectiles, std::nullopt,
+                                    gun_muzzle_position)) {
                                 staged_gameplay_valid = false;
                                 return;
                             }
@@ -491,6 +573,7 @@ void update_demo_scene(DemoFrame& frame, DemoStateMachine& scene_state) {
         frame.gear_controller = staged_gear_controller;
         frame.weapon_state = staged_weapon_state;
         frame.projectile_system = staged_projectiles;
+        frame.gun_muzzle_index = staged_gun_muzzle_index;
         frame.pending_weapon_switch_presses = staged_weapon_switch_presses;
         frame.pending_primary_fire_presses = staged_primary_fire_presses;
         frame.pending_gun_fire_presses = staged_gun_fire_presses;
@@ -550,6 +633,7 @@ int Application::run(int argc, char** argv) {
     std::array<std::string, 3> map_texture_paths{};
     std::array<std::string, 2> mission_archive_paths{};
     std::size_t mission_terrain_member = 0;
+    std::optional<std::size_t> mission_units_member;
     bool has_mission_terrain_member = false;
     float heightmap_scale = 100.0f;
     float heightmap_spacing = 10.0f;
@@ -566,6 +650,7 @@ int Application::run(int argc, char** argv) {
                      "[--height-scale units] [--height-spacing units]] "
                      "[--map-textures map.mti map.mtd map.mtc] "
                      "[--mission-terrain DATA.TBL DATA.PAC member-index] "
+                     "[--mission-units mission-pack-member-index] "
                      "[--texture image.ppm|image.tga|image.gim] "
                      "[--material-textures aircraft.pmtex] "
                      "[--flight-rules aircraft.pmb] "
@@ -625,6 +710,24 @@ int Application::run(int argc, char** argv) {
             has_mission_terrain_member = true;
             continue;
         }
+        if (argument == "--mission-units") {
+            if (i + 1 >= argc) {
+                std::fprintf(stderr,
+                             "--mission-units requires a mission-pack member index\n");
+                return 2;
+            }
+            const std::string_view value(argv[++i]);
+            std::size_t parsed_member = 0;
+            const auto parsed = std::from_chars(value.data(), value.data() + value.size(),
+                                                parsed_member);
+            if (parsed.ec != std::errc{} || parsed.ptr != value.data() + value.size()) {
+                std::fprintf(stderr,
+                             "mission unit member index must be an unsigned integer\n");
+                return 2;
+            }
+            mission_units_member = parsed_member;
+            continue;
+        }
         if (argument == "--model" || argument == "--heightmap" ||
             argument == "--texture" ||
             argument == "--material-textures" ||
@@ -655,6 +758,10 @@ int Application::run(int argc, char** argv) {
     }
     const bool map_texture_mode = !map_texture_paths[0].empty();
     const bool mission_terrain_mode = has_mission_terrain_member;
+    if (mission_units_member.has_value() && !mission_terrain_mode) {
+        std::fprintf(stderr, "--mission-units requires --mission-terrain\n");
+        return 2;
+    }
     if (mission_terrain_mode &&
         (!model_path.empty() || !heightmap_path.empty() || map_texture_mode ||
          !texture_path.empty() || !material_textures_path.empty() ||
@@ -790,6 +897,59 @@ int Application::run(int argc, char** argv) {
             scene.add_texture(std::move(mission_terrain.surface.atlas));
         scene.add_draw(terrain_mesh_id, terrain_texture_id, Mat4::identity(),
                        model_transform);
+        if (mission_units_member.has_value()) {
+            std::vector<Ac5MissionUnit> mission_units;
+            if (!load_ac5_mission_units(archive, *mission_units_member,
+                                        mission_units, load_error)) {
+                std::fprintf(stderr, "Mission unit load failed: %s\n",
+                             load_error.c_str());
+                SDL_Quit();
+                return 1;
+            }
+            constexpr std::array<Vec3, 4> side_colors{{
+                {0.15f, 0.85f, 1.0f}, {1.0f, 0.28f, 0.18f},
+                {0.3f, 1.0f, 0.35f}, {1.0f, 0.82f, 0.15f},
+            }};
+            const Ac5MissionSpawnPreview preview =
+                build_ac5_mission_spawn_preview(mission_units, mission_terrain);
+            std::array<MeshId, side_colors.size()> marker_meshes{};
+            std::array<bool, side_colors.size()> marker_mesh_ready{};
+            std::size_t visible_spawns = 0;
+            std::size_t unresolved_spawns = preview.unresolved_orders;
+            for (const Ac5MissionSpawnPreviewItem& candidate : preview.spawns) {
+                const auto& position = candidate.transform.position;
+                if (std::any_of(position.begin(), position.begin() + 3,
+                                [](double value) {
+                                    return !std::isfinite(value) ||
+                                        std::abs(value) >
+                                            std::numeric_limits<float>::max();
+                                })) {
+                    ++unresolved_spawns;
+                    continue;
+                }
+                const std::size_t side = candidate.side % side_colors.size();
+                if (!marker_mesh_ready[side]) {
+                    marker_meshes[side] = scene.add_mesh(
+                        make_mission_spawn_marker(side_colors[side]));
+                    marker_mesh_ready[side] = true;
+                }
+                Mat4 marker = Mat4::identity();
+                constexpr float marker_size = 1024.0f;
+                marker.value[0] = marker.value[5] = marker.value[10] =
+                    marker_size;
+                marker.value[12] = static_cast<float>(position[0]);
+                marker.value[13] = static_cast<float>(position[1]);
+                marker.value[14] = static_cast<float>(position[2]);
+                const TransformId marker_transform =
+                    scene.add_transform(marker, model_transform);
+                scene.add_draw(marker_meshes[side], Mat4::identity(),
+                               marker_transform);
+                ++visible_spawns;
+            }
+            std::printf("Mission spawn preview: %zu markers, %zu unresolved orders; "
+                        "actor references with unknown formation offsets are omitted.\n",
+                        visible_spawns, unresolved_spawns);
+        }
         model_loaded = true;
     } else if (map_texture_mode) {
         Ac5MapTextureSet map_texture_set;

@@ -53,6 +53,11 @@ void advance_aircraft_flight_flags(AircraftFlightFlags& flags) noexcept;
 [[nodiscard]] std::array<double, 3> aircraft_forward_direction(
     const std::array<double, 3>& euler) noexcept;
 
+// Body axes used by the native aircraft model and the six-point collision
+// test. Each row is one local body axis expressed in world coordinates.
+[[nodiscard]] std::array<std::array<double, 3>, 3> aircraft_body_axes(
+    const std::array<double, 3>& euler) noexcept;
+
 // Advance one native flight tick. Contact bit 0 selects the recovered scalar
 // contact-speed law; terrain collision and ground-marker alignment are separate.
 [[nodiscard]] bool advance_aircraft_flight_tick(
