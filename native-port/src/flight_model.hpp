@@ -7,6 +7,10 @@
 
 namespace ac5 {
 
+// Native flight/world scale recovered from the speed and gravity conversions.
+inline constexpr double aircraft_world_units_per_meter = 5.12;
+inline constexpr double aircraft_world_units_per_kmh_per_second = 1.4222219;
+
 struct AircraftFlightFlags {
     std::uint8_t contact = 0;
     std::uint8_t mode = 0;
@@ -43,6 +47,11 @@ void set_aircraft_flight_mode(AircraftFlightFlags& flags,
 void set_aircraft_approach_control(AircraftFlightFlags& flags,
                                    bool enabled) noexcept;
 void advance_aircraft_flight_flags(AircraftFlightFlags& flags) noexcept;
+
+// World-space forward direction used by the native flight integrator, with
+// zero attitude pointing along negative Z.
+[[nodiscard]] std::array<double, 3> aircraft_forward_direction(
+    const std::array<double, 3>& euler) noexcept;
 
 // Advance one native flight tick. Contact bit 0 selects the recovered scalar
 // contact-speed law; terrain collision and ground-marker alignment are separate.

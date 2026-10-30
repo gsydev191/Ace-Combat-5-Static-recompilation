@@ -1,7 +1,9 @@
 #pragma once
 
 #include "scene.hpp"
+#include "weapon_controller.hpp"
 
+#include <array>
 #include <cstdint>
 #include <limits>
 #include <string>
@@ -20,6 +22,11 @@ struct AcmLodBundle {
     std::vector<AcmLodLevel> levels;
 };
 
+struct AcmBundleTexture {
+    std::vector<std::uint32_t> bundle_slots;
+    TextureData texture;
+};
+
 struct AcmModelPart {
     static constexpr std::uint32_t no_parent =
         std::numeric_limits<std::uint32_t>::max();
@@ -28,6 +35,7 @@ struct AcmModelPart {
     std::uint32_t translation_track = no_parent;
     std::uint32_t rotation_track = no_parent;
     std::uint32_t shape_track = no_parent;
+    std::array<std::uint32_t, 8> source_words{};
     Vec3 position{};
     Vec3 rotation{};
     MeshData mesh;
@@ -78,5 +86,19 @@ bool load_acm_part_model(const std::string& path, AcmPartModel& model,
     const AcmAnimationTrack& track, double frame, Vec3& value) noexcept;
 bool load_acm_bundle_texture(const std::string& path, TextureData& texture,
                              bool& found, std::string& error);
+// Decode indexed GIM textures reachable through nested bundle slots, retaining
+// each slot path for later material assignment.
+bool load_acm_bundle_textures(const std::string& path,
+                              std::vector<AcmBundleTexture>& textures,
+                              std::string& error);
+// Decode the full-resolution placed-model texture set, which stores one shared
+// RGBA palette in root slot 0 and indexed GIMs in the nested root slot 1.
+bool load_pm_texture_bundle(const std::string& path,
+                            std::vector<AcmBundleTexture>& textures,
+                            std::string& error);
+// Decode loadout, gun, and missile slots from an in-mission aircraft bundle.
+// Returns found=false for model bundles without the aircraft weapon slots.
+bool load_acm_weapon_rules(const std::string& path, AircraftWeaponRules& rules,
+                           bool& found, std::string& error);
 
 } // namespace ac5

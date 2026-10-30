@@ -282,6 +282,61 @@ bool decode_gim(std::span<const std::uint8_t> bytes, TextureData& texture,
     return decode_gim_impl(bytes, texture, error, force_opaque);
 }
 
+bool decode_gim_indexed_with_palette(std::span<const std::uint8_t> bytes,
+                                    std::span<const std::uint8_t> rgba_palette,
+                                    TextureData& texture, std::string& error,
+                                    bool force_opaque) {
+    if (bytes.size() < 0x20 || bytes[0] != 'G' || bytes[1] != 'I' ||
+        bytes[2] != 'M' || bytes[3] != 0 || rgba_palette.size() < 256u * 4u) {
+        error = "indexed GIM or shared RGBA palette is invalid";
+        return false;
+    }
+    const std::uint32_t format = (static_cast<std::uint32_t>(bytes[0x10]) << 24) |
+        (static_cast<std::uint32_t>(bytes[0x11]) << 16) |
+        (static_cast<std::uint32_t>(bytes[0x12]) << 8) | bytes[0x13];
+    if (format != 0x13 && format != 0x113 && format != 0x1b &&
+        !(format >= 0x200 && format <= 0x5ff && (format & 0xffu) == 0x13u)) {
+        error = "PM texture is not an 8-bit indexed GIM";
+        return false;
+    }
+    const std::uint32_t width = read_u16_le(bytes.data() + 0x1c);
+    const std::uint32_t height = read_u16_le(bytes.data() + 0x1e);
+    const std::uint64_t pixels = static_cast<std::uint64_t>(width) * height;
+    if (width == 0 || height == 0 || pixels > (256ull * 1024ull * 1024ull) / 4u ||
+        bytes.size() - 0x20u < pixels) {
+        error = "PM indexed GIM dimensions or pixel payload are invalid";
+        return false;
+    }
+    TextureData decoded;
+    decoded.width = width;
+    decoded.height = height;
+    try {
+        decoded.rgba.resize(static_cast<std::size_t>(pixels) * 4u);
+    } catch (const std::bad_alloc&) {
+        error = "PM texture allocation failed";
+        return false;
+    } catch (const std::length_error&) {
+        error = "PM texture exceeds the platform's vector limit";
+        return false;
+    }
+    for (std::size_t i = 0; i < static_cast<std::size_t>(pixels); ++i) {
+        const std::uint8_t index = bytes[0x20u + i];
+        const std::size_t group = index & 0xe0u;
+        const std::size_t within = index & 0x1fu;
+        const std::size_t palette_index = group +
+            (within >= 8 && within < 16 ? within + 8 :
+             within >= 16 && within < 24 ? within - 8 : within);
+        const std::size_t source = palette_index * 4u;
+        const std::size_t target = i * 4u;
+        decoded.rgba[target] = rgba_palette[source];
+        decoded.rgba[target + 1] = rgba_palette[source + 1];
+        decoded.rgba[target + 2] = rgba_palette[source + 2];
+        decoded.rgba[target + 3] = force_opaque ? 255 : rgba_palette[source + 3];
+    }
+    texture = std::move(decoded);
+    return true;
+}
+
 bool load_gim(const std::string& path, TextureData& texture, std::string& error) {
     std::ifstream input(path_from_utf8(path), std::ios::binary);
     if (!input) {

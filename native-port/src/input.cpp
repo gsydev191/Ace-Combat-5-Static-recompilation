@@ -49,6 +49,42 @@ void InputSystem::handle_event(const SDL_Event& event) {
         SDL_CloseGamepad(gamepad_);
         gamepad_ = nullptr;
         open_available_gamepad();
+    } else if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat) {
+        switch (event.key.scancode) {
+        case SDL_SCANCODE_SPACE: primary_fire_pressed_ = true; break;
+        case SDL_SCANCODE_LCTRL:
+        case SDL_SCANCODE_RCTRL: secondary_fire_pressed_ = true; break;
+        case SDL_SCANCODE_TAB: weapon_switch_pressed_ = true; break;
+        case SDL_SCANCODE_P: approach_control_pressed_ = true; break;
+        case SDL_SCANCODE_G: gear_toggle_pressed_ = true; break;
+        default: break;
+        }
+    } else if (event.type == SDL_EVENT_KEY_UP) {
+        switch (event.key.scancode) {
+        case SDL_SCANCODE_SPACE: primary_fire_released_ = true; break;
+        case SDL_SCANCODE_LCTRL:
+        case SDL_SCANCODE_RCTRL: secondary_fire_released_ = true; break;
+        case SDL_SCANCODE_TAB: weapon_switch_released_ = true; break;
+        case SDL_SCANCODE_P: approach_control_released_ = true; break;
+        case SDL_SCANCODE_G: gear_toggle_released_ = true; break;
+        default: break;
+        }
+    } else if ((event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN ||
+                event.type == SDL_EVENT_GAMEPAD_BUTTON_UP) && gamepad_ &&
+               SDL_GetGamepadID(gamepad_) == event.gbutton.which) {
+        const bool pressed = event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN;
+        switch (event.gbutton.button) {
+        case SDL_GAMEPAD_BUTTON_SOUTH:
+            (pressed ? primary_fire_pressed_ : primary_fire_released_) = true;
+            break;
+        case SDL_GAMEPAD_BUTTON_EAST:
+            (pressed ? secondary_fire_pressed_ : secondary_fire_released_) = true;
+            break;
+        case SDL_GAMEPAD_BUTTON_NORTH:
+            (pressed ? weapon_switch_pressed_ : weapon_switch_released_) = true;
+            break;
+        default: break;
+        }
     }
 }
 
@@ -74,6 +110,7 @@ FlightInput InputSystem::sample() {
     input.throttle = keyboard_throttle;
     input.primary_fire.held = down(SDL_SCANCODE_SPACE);
     input.secondary_fire.held = down(SDL_SCANCODE_LCTRL) || down(SDL_SCANCODE_RCTRL);
+    input.weapon_switch.held = down(SDL_SCANCODE_TAB);
     input.approach_control.held = down(SDL_SCANCODE_P);
     input.gear_toggle.held = down(SDL_SCANCODE_G);
     if (gamepad_) {
@@ -92,21 +129,48 @@ FlightInput InputSystem::sample() {
             SDL_GetGamepadButton(gamepad_, SDL_GAMEPAD_BUTTON_SOUTH);
         input.secondary_fire.held = input.secondary_fire.held ||
             SDL_GetGamepadButton(gamepad_, SDL_GAMEPAD_BUTTON_EAST);
+        input.weapon_switch.held = input.weapon_switch.held ||
+            SDL_GetGamepadButton(gamepad_, SDL_GAMEPAD_BUTTON_NORTH);
     }
-    input.primary_fire.pressed = input.primary_fire.held && !previous_primary_fire_;
-    input.primary_fire.released = !input.primary_fire.held && previous_primary_fire_;
-    input.secondary_fire.pressed = input.secondary_fire.held && !previous_secondary_fire_;
-    input.secondary_fire.released = !input.secondary_fire.held && previous_secondary_fire_;
-    input.approach_control.pressed = input.approach_control.held &&
-                                     !previous_approach_control_;
-    input.approach_control.released = !input.approach_control.held &&
-                                      previous_approach_control_;
-    input.gear_toggle.pressed = input.gear_toggle.held && !previous_gear_toggle_;
-    input.gear_toggle.released = !input.gear_toggle.held && previous_gear_toggle_;
+    const auto pressed_edge = [](bool held, bool previously_held,
+                                 bool event_pressed) {
+        return !previously_held && (held || event_pressed);
+    };
+    const auto released_edge = [](bool held, bool previously_held,
+                                  bool event_pressed, bool event_released) {
+        return (previously_held && !held) ||
+               (!previously_held && !held && event_pressed && event_released);
+    };
+    input.primary_fire.pressed = pressed_edge(input.primary_fire.held,
+        previous_primary_fire_, primary_fire_pressed_);
+    input.primary_fire.released = released_edge(input.primary_fire.held,
+        previous_primary_fire_, primary_fire_pressed_, primary_fire_released_);
+    input.secondary_fire.pressed = pressed_edge(input.secondary_fire.held,
+        previous_secondary_fire_, secondary_fire_pressed_);
+    input.secondary_fire.released = released_edge(input.secondary_fire.held,
+        previous_secondary_fire_, secondary_fire_pressed_, secondary_fire_released_);
+    input.weapon_switch.pressed = pressed_edge(input.weapon_switch.held,
+        previous_weapon_switch_, weapon_switch_pressed_);
+    input.weapon_switch.released = released_edge(input.weapon_switch.held,
+        previous_weapon_switch_, weapon_switch_pressed_, weapon_switch_released_);
+    input.approach_control.pressed = pressed_edge(input.approach_control.held,
+        previous_approach_control_, approach_control_pressed_);
+    input.approach_control.released = released_edge(input.approach_control.held,
+        previous_approach_control_, approach_control_pressed_, approach_control_released_);
+    input.gear_toggle.pressed = pressed_edge(input.gear_toggle.held,
+        previous_gear_toggle_, gear_toggle_pressed_);
+    input.gear_toggle.released = released_edge(input.gear_toggle.held,
+        previous_gear_toggle_, gear_toggle_pressed_, gear_toggle_released_);
     previous_primary_fire_ = input.primary_fire.held;
     previous_secondary_fire_ = input.secondary_fire.held;
+    previous_weapon_switch_ = input.weapon_switch.held;
     previous_approach_control_ = input.approach_control.held;
     previous_gear_toggle_ = input.gear_toggle.held;
+    primary_fire_pressed_ = primary_fire_released_ = false;
+    secondary_fire_pressed_ = secondary_fire_released_ = false;
+    weapon_switch_pressed_ = weapon_switch_released_ = false;
+    approach_control_pressed_ = approach_control_released_ = false;
+    gear_toggle_pressed_ = gear_toggle_released_ = false;
     return input;
 }
 

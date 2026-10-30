@@ -43,7 +43,13 @@ add_library(ac5_game_core STATIC
     src/model_shading.cpp
     src/model_mesh_adapter.hpp
     src/obj_loader.cpp
-    src/texture_loader.cpp)
+    src/projectile_mesh.cpp
+    src/projectile_mesh.hpp
+    src/projectile_system.cpp
+    src/projectile_system.hpp
+    src/texture_loader.cpp
+    src/weapon_controller.cpp
+    src/weapon_controller.hpp)
 add_library(ac5::game_core ALIAS ac5_game_core)
 set_target_properties(ac5_game_core PROPERTIES EXPORT_NAME game_core)
 target_include_directories(ac5_game_core PUBLIC
@@ -96,7 +102,10 @@ install(FILES
     src/flight_rules_loader.hpp
     src/animation_controller.hpp
     src/obj_loader.hpp
+    src/projectile_mesh.hpp
+    src/projectile_system.hpp
     src/texture_loader.hpp
+    src/weapon_controller.hpp
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/ac5_native")
 
 set(AC5_NATIVE_CMAKE_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/ac5_native")

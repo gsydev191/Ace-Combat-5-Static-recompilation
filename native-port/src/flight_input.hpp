@@ -16,6 +16,7 @@ struct FlightInput {
     float throttle = 0.0f;
     ButtonInput primary_fire;
     ButtonInput secondary_fire;
+    ButtonInput weapon_switch;
     ButtonInput approach_control;
     ButtonInput gear_toggle;
 };

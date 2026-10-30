@@ -27,6 +27,7 @@ struct AircraftAnimationInput {
     float controller_override = 0.0f;
     float throttle_lever = 0.0f;
     double speed_kmh = 0.0;
+    double speed_units_per_tick = 0.0;
     bool gear_down = false;
     std::uint32_t model_flags = 0;
     std::uint32_t controller_flags = 0;
@@ -48,6 +49,9 @@ struct AircraftGearController {
     const AircraftAnimationRules& rules, const AircraftAnimationInput& input) noexcept;
 void advance_aircraft_animation_channels(AircraftAnimationChannels& channels,
                                          const AircraftAnimationChannels& targets) noexcept;
+void advance_aircraft_animation_tick(AircraftAnimationChannels& channels,
+                                     const AircraftAnimationRules& rules,
+                                     const AircraftAnimationInput& input) noexcept;
 void request_aircraft_gear(AircraftGearController& gear, bool down) noexcept;
 void advance_aircraft_retail_gear(AircraftGearController& gear,
                                   AircraftAnimationChannels& channels) noexcept;

@@ -36,6 +36,9 @@ project does not build or link any of those files.
    `ButtonInput` exposes held and pressed states, plus the corresponding release
    edge. Copying the Pad2 structures or guest offsets would retain a
    hardware-specific ABI.
+   SDL keyboard and gamepad button down/up events are also latched until the
+   next sample, so a press and release received in one event-pump cycle still
+   produce both native edges even if the final polled held state is up.
    Its current axis/button choices and dead zone are native demo defaults, not
    a faithful port of the title's profile, calibration, and button mapping.
    Inspection of `0x0032AD00` shows why a direct SDL button substitution would
@@ -145,9 +148,10 @@ project does not build or link any of those files.
     already prepared guest texture object, builds GS `BITBLTBUF`, `TRXPOS`,
     `TRXREG`, and `TRXDIR` state, then submits the transfer through the guest
     graphics path. The `CTim2::setVpos` routines similarly update resident
-    texture state. These are PS2 upload operations, not evidence for a
-    standalone decoder for `pmtex*.bin`; indexed aircraft GIMs are decoded to
-    `TextureData`, while the separate terrain/material texture format remains
+    texture state. These are PS2 upload operations, not evidence for the native
+    `pmtex` decoder: the sampled placed-model bundles are independently decoded
+    as nested indexed GIMs with a shared palette. Indexed aircraft GIMs also
+    decode to `TextureData`; other terrain and GS material formats remain
     unknown.
 
 ## Work in `native-port/`
@@ -157,8 +161,23 @@ project does not build or link any of those files.
 - A bounds-checked native ACM/VIF static mesh loader for standalone ACM blocks
   and `.mpl`/`.bin` model bundles. It converts decoded triangle strips to indexed
   `MeshData`, uses the ACM pre-order child counts and chain-owner indices to
-  place geometry, and loads the first indexed GIM found in the bundle. Model
-  animation and additional material slots remain future work.
+  place geometry, and loads the first indexed GIM found in the bundle. For
+  placed-model PM texture files, a separate decoder reads the shared RGBA
+  palette in root slot 0 and the nested full-resolution indexed GIM set in
+  root slot 1, applying CSM1 palette ordering. `--pm-textures` reports these
+  textures; `--material-textures` binds geometry part word 3 to the nested
+  texture slot when explicitly requested. This mapping is supported by the
+  placed-model loader call sites and observed PM bundles, but remains
+  provisional across model families.
+  `ac5_model_info --pm-materials` cross-checks geometry-part word-3 values
+  against nested texture slot IDs. Three sampled mission pairs have no
+  unresolved references: M01A (1 geometry part, 2 textures), M02A (12 geometry
+  parts using slots 0-6, 41 textures), and M03A (1 geometry part, 7 textures).
+  This supports the slot interpretation for those bundles only. The
+  `--textures` diagnostic enumerates every supported GIM and its nested
+  bundle-slot path. The extracted F-4G model bundle has indexed GIMs in slots 8
+  and 9 at 512x512 and 128x128; those aircraft texture slots remain distinct
+  from the placed-model PM texture scheme.
   On the extracted F-4G selection bundle it produces 5,538 vertices and 2,920
   triangles with assembled bounds of about 59 x 26 x 96 game units, matching
   the measured reference model. The F-16 selection bundle produces 4,108
@@ -197,11 +216,26 @@ project does not build or link any of those files.
   now accept the shared native controller value corresponding to `+0x20`.
   Channel 20 follows its ACM model-flag gate: `0x10000` selects the aircraft
   speed curve, `0x20000` selects the `+0x20` controller value, and other
-  variants leave it neutral pending the stateful path. Controller flag
-  `0x1000` also drives channel 24 to its full endpoint; its source remains
-  unavailable in the native viewer.
+  variants use the stateful channel-20 path under model flag `0x4`. The
+  controller channel array begins at `CPlAnimCtrl +0x34`, making `+0x84`
+  exactly channel 20. Retail advances that existing channel once per tick by
+  config word 19 times `1/36`; model flag `0x2000` additionally scales the
+  increment by `min(speed_units_per_tick / 35.5555534, 1)`. The resulting value
+  wraps by one 100-frame cycle at either endpoint. The native tick preserves
+  this accumulator and leaves it out of the generic easing step. The same
+  `0x2000` branch also calls `0x379f78` and `0x388a88` with a global matrix at
+  `0x443bb0`; that auxiliary matrix effect is not yet represented in the
+  renderer. Controller flag `0x1000` also drives channel 24 to its full
+  endpoint; its source remains unavailable in the native viewer.
   `ac5_model_info --parts` reports the hierarchy and decoded track/key counts
-  without opening Vulkan.
+  without opening Vulkan. It now also prints the eight raw part-table words for
+  every part, including records without geometry. An extracted F-4G bundle has
+  62 part records but only 31 geometry parts; the other records include
+  repeated upper bits in word 4 and `0xffffffff` chain sentinels. Those raw
+  values give further reverse-engineering evidence. For placed-model files
+  specifically, word 3 is used as a PM texture slot by the opt-in native
+  material path; this interpretation is validated against M01A, M02A, and
+  M03A but remains unverified for other bundle families.
 - A Vulkan 1.3 renderer using SDL3, dynamic rendering, synchronization2,
   indexed textured meshes, push-constant transforms, per-image depth
   attachments, resize-aware swapchain recreation, and staging uploads that
@@ -256,6 +290,10 @@ project does not build or link any of those files.
   throttle gate, contact acceleration modifiers, and special flag timing.
   `AircraftFlightSession` owns the bounded fixed-step clock in the dependency-
   free game core, leaving the SDL/Vulkan application as an input/render adapter.
+  Its per-tick callback now advances flight animation from each post-physics
+  state, so speed-dependent channels follow the same fixed ticks as flight;
+  animation, gear, approach-mode, weapon, and projectile state is staged until
+  the frame's flight ticks all succeed.
 - A bounded, resumable ULZ decoder and `DATA.TBL`/`DATA.PAC` reader. The
   decoder can yield after a caller-selected number of control words, and
   `ArchiveMemberLoad` exposes that budget at the member-loading boundary. Its
@@ -284,9 +322,10 @@ arithmetic, not guest CPU or hardware state) and are covered by
   for 32/16/16S-bit and 8/4-bit indexed images, palette lookup (including the
   8-bit palette bit-3/4 exchange) and RGBA8 conversion. `tiled_bit_offset` was
   differentially checked against the original address routine over 450,000
-  pixel positions for all five formats with identical results. This is the
-  decoder the unknown `pmtex*.bin` format will need once real files are
-  available.
+  pixel positions for all five formats with identical results. The sampled
+  placed-model `pmtex` bundles use nested indexed GIM images with an external
+  shared palette and do not use this GS-memory layout; other terrain and GS
+  material formats remain to be identified.
 - `adpcm` - the 16-byte-block sound codec (filter table, shift, loop flags).
 - `model_shading` - the plain, lit, and environment-mapped paths of the model
   vertex program as ordinary math. Environment mode returns the lit base pass
@@ -321,10 +360,12 @@ static aircraft bundles, including all five LOD meshes, parent-level companion
 ACM meshes, thresholds, and per-level textures from nested `lodplane/*.bin`
 containers. The F-16C and F-4G bundles both import through this path. The viewer
 selects among all five levels using the recovered distance thresholds and
-mouse-wheel camera zoom. The GIM decoder handles indexed 4/8-bit textures. The
-OBJ importer remains an interchange path. Ambiguous ACM part ownership, other
-texture formats, material assignment beyond the first bundle texture, and
-model animation remain open.
+mouse-wheel camera zoom. The GIM decoder handles indexed 4/8-bit textures.
+Placed-model bundles can load a shared-palette full-resolution texture set and
+bind source part word 3 to those slots when explicitly requested. The OBJ
+importer remains an interchange path. Ambiguous ACM part ownership, mip-level
+selection for PM textures, other texture formats, and broader model animation
+remain open.
 
 Textures containing non-opaque alpha and meshes containing non-opaque vertex
 alpha use a separate blended Vulkan pipeline. Opaque draws retain depth writes;
@@ -333,7 +374,71 @@ back-to-front with depth writes disabled. This object-level ordering does not
 correctly order intersecting or interleaved transparent surfaces, which need
 finer-grained sorting or a different transparency technique.
 
-The next model work is to bind per-part material textures. Game-accurate
-flight behavior can follow once aircraft parameter and control routines have
-been mapped to native state. Archive files remain outside the repository; the
-source checkout contains only the filename index and native format code.
+The PM texture path covers the sampled full-resolution placed-model set;
+remaining texture work includes mip selection and other texture families.
+Game-accurate flight behavior can follow once aircraft parameter and control
+routines have been mapped to native state. Archive files remain outside the
+repository; the source checkout contains only the filename index and native
+format code.
+
+Player fire input is connected to the viewer when flight rules and aircraft
+weapon slots are loaded. The recovered
+`Mpl::_Control` pad table uses logical action `0x0c` for the selected missile or
+special weapon and `0x0d` for the gun; these are configurable actions, so the
+native Space/Ctrl bindings are platform policy rather than fixed retail button
+equivalents. The gun uses the aircraft's slot-8 record for its `0.15 s` shot
+interval, muzzle speed, spread, and gravity, and decrements the aircraft's gun
+ammunition per shot. Missile firing depends on slot-9 data, two alternating
+pylons, per-pylon reload timers, and an optional lock target. The standalone
+`weapon_controller` module models weapon switching, gun cadence/ammunition,
+alternating standard-missile pylons, per-pylon reload timers, and ordinary
+special-weapon pylon events. It accepts portable rules and emits native shot
+events without linking runtime code. The ACM loader decodes the aircraft
+loadout/gun/missile slots, and `ac5_model_info --weapons` reports the decoded
+values for extracted aircraft bundles. Weapon state advances on fixed flight
+ticks, and the viewer reports ammunition and emitted event counts in its
+window title. A bounded native projectile pool inherits the aircraft's actual
+per-tick displacement velocity (including path lag and vertical sink), adds the
+decoded launch speed along body forward, applies the weapon gravity value, and
+renders through the existing dynamic-mesh path. Its 128 slots recycle shots
+after a 12-second native presentation lifetime; that lifetime is not recovered
+retail behavior. Pylon-specific launch offsets, missile homing, target
+acquisition, collision, and damage remain open. Special-weapon ids `8` and
+`0x13` are surfaced as unsupported sequences instead of being treated as
+ordinary single-pylon launches.
+
+The generated input-state updater at `0x00103B18` compares the current masks
+(`+0x24/+0x28`) with their previous values (`+0x38/+0x3c`), then stores the
+current masks at `+0x38/+0x3c` and newly pressed bits at `+0x40/+0x44`.
+Accordingly, `0x001044D0` reads the held/current mask at `+0x38`, while
+`0x001047D0` reads the pressed-edge mask at `+0x40`. In `Mpl::_Control`, the
+selected missile/special action `0x0c` is queried through `0x001047D0`, and the
+gun action `0x0d` through `0x001044D0`. The native controller now fires the
+selected missile or special weapon on a press edge, while gun fire remains held
+and repeats at its decoded cadence. A short gun tap is preserved as one shot
+when its press and release both arrive before a simulation tick. Physical key bindings remain native
+platform policy; the logical action behavior is grounded in the generated code.
+The native render loop can sample input more frequently than its fixed 60 Hz
+simulation. SDL button transitions are latched through sampling, and the app
+queues primary-fire, gun-fire, and weapon-switch press edges until simulation
+ticks consume them. This prevents short taps from disappearing when an event
+poll ends with the button already released or when a frame advances no
+simulation tick. Overlapping keyboard/gamepad bindings produce combined
+logical edges, so releasing one device does not release the action while the
+other remains held.
+
+The generated `Mpl::_Control` firing branch reads the 16-bit ammunition value
+at `Mpl +0x1B1E`, compares it with `0x2710` (10,000), and skips the decrement
+for that sentinel. The native controller names this as
+`unlimited_ammunition_sentinel` and preserves the no-decrement behavior.
+
+The local F-4G PAC member (member 252 in `config/pac_names.txt`) confirms the
+container contract: slot 7 is the 48-byte `f04g.wxb` loadout, slot 8 is the
+80-byte `gun2.wpb`, and slot 9 is the 80-byte `mis.wpb`. The loadout decoder
+only reads through byte `0x21`; its former 64-byte minimum incorrectly rejected
+this real member. The minimum is now `0x22`. `ac5_model_info --weapons` was
+checked against an extracted copy and reports 800 gun rounds, 64 missiles, 10
+special rounds (weapon 11), a 0.15-second gun interval, and a 1,000 km/h
+missile launch speed. Since an `.mpl` contains the model rather than the full
+aircraft member, `ac5_native` now accepts `--weapon-rules` separately from
+`--model` and `--flight-rules`.

@@ -101,6 +101,17 @@ texture dimensions. The viewer uploads all five levels and switches meshes
 and textures by camera distance using the recovered retail thresholds; use the
 mouse wheel to move through the LOD ranges. `ac5_model_info --parts <model-file>`
 reports the retained ACM part tree and each part's local mesh.
+It also prints all eight source part-table words for every record, including
+records without geometry. For placed-model bundles, `--pm-textures <pmtex-file>`
+decodes the shared palette and lists full-resolution texture slots. The viewer
+accepts `--material-textures <pmtex-file>` with an ACM model and binds each
+geometry part's source word 3 to the matching texture slot. Current placed-
+model loader evidence supports this mapping, but it has not been verified for
+every model family.
+`ac5_model_info --pm-materials <model-file> <pmtex-file>` lists geometry-part
+material slot usage and flags slots without a matching texture.
+`ac5_model_info --textures <model-file>` lists every supported indexed GIM
+reachable through bundle slots and prints each nested slot path and dimensions.
 To run the native flight model on an imported aircraft, provide its matching
 400-byte flight rules bundle with `--flight-rules`, for example:
 
@@ -124,10 +135,13 @@ time. The ordinary asset viewer remains the default when `--flight-rules` is
 omitted.
 The native ACM loader decodes the observed VIF position, normal, color and UV
 streams, triangle strips, chain-to-part mapping, and static part hierarchy.
-It rejects duplicate or unresolved geometry-chain ownership, and
-loads the first supported GIM from the bundle for the aircraft texture. ACM
+It rejects duplicate or unresolved geometry-chain ownership, and loads the
+first supported GIM from the bundle for the aircraft texture unless
+placed-model material textures are explicitly supplied. ACM
 translation, rotation, and compatible shape animation are supported in flight
-mode; additional controller and state-driven animation remains open. You can
+mode. The stateful model-flag `0x4` channel-20 accumulator is advanced at the
+native 60 Hz animation tick; its retail auxiliary matrix effect and other
+controller state paths remain open. You can
 override OBJ material maps and bundled
 ACM textures with any of `--texture path/to/image.ppm`,
 `--texture path/to/image.tga`, or `--texture path/to/image.gim`. The native GIM
@@ -246,17 +260,29 @@ normalizes slash styles, rejects unsafe and nonportable names, and refuses
 output paths that resolve through symlinks outside the selected output
 directory.
 
-Arrow keys/WASD pitch and roll, Q/E yaw, R/F set throttle input, Space is
-primary fire, either Ctrl key is secondary fire, and P toggles approach control
-in flight mode; G toggles the viewer gear state. Fire controls expose held,
-pressed, and released states to native game systems. Demo pitch, roll, and yaw
-accumulate at a frame-rate-independent rate; throttle and fire are exposed to
-native game systems but are not yet consumed by the demo. The left gamepad stick
-controls pitch/roll, the right stick controls yaw, triggers provide throttle,
-and South/East provide the two fire actions. The default viewer rotates its
-demo model from pitch, roll, and yaw. With `--flight-rules`, these controls
-drive the native aircraft simulation; throttle and fire are also exposed in
-`FlightInput` for future game systems.
+Arrow keys/WASD pitch and roll, Q/E yaw, R/F set throttle input, Space fires the
+selected missile/special, either Ctrl key fires the gun, Tab switches the
+selected missile/special, P toggles approach control in flight mode, and G
+toggles the viewer gear state. These actions also map to gamepad South (selected
+weapon), East (gun), and North (weapon switch); the left stick controls pitch
+and roll, the right stick controls yaw, and triggers provide throttle. In the
+default model viewer, pitch, roll, and yaw rotate the demo model. `--flight-rules`
+loads aircraft parameters from a `.pmb` file. Add
+`--weapon-rules <aircraft-member.bin>` to load weapon records from the complete
+aircraft archive member; it contains the loadout `.wxb`, gun `.wpb`, and missile
+`.wpb` records alongside the `.mpl` model. Flight controls drive the aircraft
+and weapon inputs advance on fixed flight ticks. The window title reports
+ammunition and shot events. Simple gun/missile projectile meshes are rendered
+and advance under the decoded launch speed and gravity rules.
+`ButtonInput` exposes held, pressed, and released states for native game logic.
+The dependency-free `weapon_controller` game-core module accepts portable
+loadout rules and emits gun, missile, and special-weapon shot events. The ACM
+loader decodes aircraft bundle slots 7/8/9, and
+`ac5_model_info --weapons <aircraft-member.bin>` reports their loadout and
+weapon parameters. The viewer consumes those rules in flight mode, advances a
+bounded native projectile pool at fixed ticks, and uploads its fixed-topology dynamic
+mesh through the Vulkan renderer. Its 128 slots recycle shots after a 12-second
+native presentation lifetime; this is not claimed as the retail lifetime.
 `map_engine_lever` ports the generated throttle routine's split into dry power,
 afterburner, and airbrake channels. `advance_airborne_speed` ports the scalar
 airborne speed envelope, including density, climb/dive effects, spool response,
@@ -269,7 +295,10 @@ position with path lag and airborne sink terms. Approach mode captures the
 reference pitch and suppresses steady trim and inverted-flight sink.
 `AircraftFlightSession` supplies the reusable 60 Hz fixed-step clock for the
 game core; it bounds catch-up to 100 ms and leaves both state and accumulated
-time unchanged if a simulated tick rejects its input. It runs the carrier-aware
+time unchanged if a simulated tick rejects its input. Its per-tick callback
+lets aircraft animation advance from each post-physics state; the viewer stages
+animation, gear, approach-mode, weapon, and projectile state until all flight
+ticks in the frame succeed. It runs the carrier-aware
 tick wrapper, which reduces to the normal tick outside carrier modes.
 `AircraftFlightFlags` keeps contact and mode bits as separate native bytes;
 `set_aircraft_flight_mode` and `set_aircraft_approach_control` preserve unrelated

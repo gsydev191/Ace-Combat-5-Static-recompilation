@@ -1,8 +1,7 @@
 build*/
 cmake-build*/
+.vs/
+CMakeUserPresets.json
+compile_commands.json
 *.exe
 *.pdb
-
-# The parent reverse-engineering repository ignores converted OBJ/PPM assets.
-!assets/demo.obj
-!assets/demo.ppm

@@ -1,4 +1,5 @@
 #include "flight_dynamics.hpp"
+#include "flight_model.hpp"
 
 #include <algorithm>
 #include <array>
@@ -50,7 +51,8 @@ FlightSpeedOutput advance_airborne_speed(const FlightSpeedRules& rules,
     const double inverse_density_scale = 1.0 / density;
     const double pitch_scale = input.pitch_radians / 1.5707963;
     const double mode_scale = input.reduced_speed_mode ? 0.5 : 1.0;
-    const double speed_scale = 1.4222219 / input.ticks_per_second * mode_scale;
+    const double speed_scale = aircraft_world_units_per_kmh_per_second /
+                               input.ticks_per_second * mode_scale;
     const double thin_air = 0.3 * (1.0 - density);
 
     double cruise = rules.cruise_kmh * speed_scale;
@@ -137,7 +139,8 @@ FlightAxisOutput advance_flight_axis(const FlightAxisRules& rules,
                                      input.stall_speed_units_per_tick);
             rate_degrees_per_second = rules.rates_degrees_per_second.front() * fraction;
         } else {
-            const double units_per_kmh = 1.4222219 / input.ticks_per_second;
+            const double units_per_kmh = aircraft_world_units_per_kmh_per_second /
+                                         input.ticks_per_second;
             rate_degrees_per_second = rules.rates_degrees_per_second.back();
             for (std::size_t upper = 1; upper < rules.breakpoints_kmh.size(); ++upper) {
                 const double high_speed = rules.breakpoints_kmh[upper] * units_per_kmh;

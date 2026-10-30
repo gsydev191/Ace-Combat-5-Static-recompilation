@@ -211,6 +211,11 @@ bool finite(const std::array<double, 3>& values) {
 
 } // namespace
 
+std::array<double, 3> aircraft_forward_direction(
+    const std::array<double, 3>& euler) noexcept {
+    return row_multiply({0.0, 0.0, -1.0}, euler_matrix(euler));
+}
+
 void set_aircraft_flight_mode(AircraftFlightFlags& flags,
                               std::uint8_t command) noexcept {
     switch (command) {
@@ -332,10 +337,12 @@ bool advance_aircraft_flight_tick(const AircraftFlightRules& rules,
     if (!input.suppress_inverted_sink && !approach_control) {
         const double normalized_roll = next.euler[2] / pi;
         velocity[1] -= normalized_roll * normalized_roll *
-            (rules.speed.inverted_sink_mps * 5.12 / input.ticks_per_second);
+            (rules.speed.inverted_sink_mps * aircraft_world_units_per_meter /
+             input.ticks_per_second);
     }
     if (reduced_speed_mode) {
-        const double half_cruise = rules.speed.cruise_kmh * 1.4222219 * 0.5 /
+        const double half_cruise = rules.speed.cruise_kmh *
+                                   aircraft_world_units_per_kmh_per_second * 0.5 /
                                    input.ticks_per_second;
         if (next.speed_units_per_tick < half_cruise)
             velocity[1] -= (1.0 - next.speed_units_per_tick / half_cruise) * 0.5;

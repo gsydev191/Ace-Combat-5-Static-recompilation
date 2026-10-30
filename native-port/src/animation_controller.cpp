@@ -269,6 +269,33 @@ void advance_aircraft_animation_channels(AircraftAnimationChannels& channels,
     }
 }
 
+void advance_aircraft_animation_tick(AircraftAnimationChannels& channels,
+                                     const AircraftAnimationRules& rules,
+                                     const AircraftAnimationInput& input) noexcept {
+    const bool stateful_channel20 = rules.available &&
+        (input.model_flags & 0x4u) != 0 &&
+        (input.model_flags & (0x10000u | 0x20000u)) == 0;
+    AircraftAnimationChannels targets = aircraft_animation_targets(rules, input);
+    if (stateful_channel20) targets[20] = channels[20];
+    advance_aircraft_animation_channels(channels, targets);
+    if (!stateful_channel20) return;
+
+    float speed_fraction = 1.0f;
+    if ((input.model_flags & 0x2000u) != 0) {
+        speed_fraction = static_cast<float>(input.speed_units_per_tick) /
+                         35.5555534362793f;
+        speed_fraction = std::min(speed_fraction, 1.0f);
+    }
+    // Retail stores channel 20 at CPlAnimCtrl +0x84 (channels begin at
+    // +0x34). The accumulator uses ACM animation-config word 19 and advances
+    // once per controller tick, with a speed factor only for model flag 0x2000.
+    const float scaled_rate = rules.raw[19] * speed_fraction;
+    float value = channels[20] + scaled_rate * 0.0277777761220932f;
+    if (value > 100.0f) value -= 100.0f;
+    if (value < 1.0f) value += 1.0f;
+    channels[20] = value;
+}
+
 void request_aircraft_gear(AircraftGearController& gear, bool down) noexcept {
     if (down && (gear.state == 0 || gear.state == 3)) gear.state = 1;
     else if (!down && (gear.state == 1 || gear.state == 2)) gear.state = 3;

@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <cstdio>
 #include <limits>
+#include <map>
+#include <numeric>
 #include <string>
 #include <vector>
 
@@ -15,17 +17,106 @@ int main(int argc, char** argv) {
         return 2;
     }
     const bool parts_mode = arguments.size() == 3 && arguments[1] == "--parts";
+    const bool weapons_mode = arguments.size() == 3 && arguments[1] == "--weapons";
+    const bool textures_mode = arguments.size() == 3 && arguments[1] == "--textures";
+    const bool pm_textures_mode = arguments.size() == 3 && arguments[1] == "--pm-textures";
+    const bool pm_materials_mode = arguments.size() == 4 && arguments[1] == "--pm-materials";
     const bool simple_mode = arguments.size() == 2;
     const bool help = (simple_mode &&
                        (arguments[1] == "--help" || arguments[1] == "-h")) ||
-                      (parts_mode &&
+                      ((parts_mode || weapons_mode || textures_mode || pm_textures_mode ||
+                        pm_materials_mode) &&
                        (arguments[2] == "--help" || arguments[2] == "-h"));
-    if (help || (!simple_mode && !parts_mode)) {
+    if (help || (!simple_mode && !parts_mode && !weapons_mode && !textures_mode &&
+                 !pm_textures_mode && !pm_materials_mode)) {
         std::fprintf(help ? stdout : stderr,
-                     "usage: ac5_model_info [--parts] <model.acm|aircraft.mpl|model.bin>\n");
+                     "usage: ac5_model_info [--parts|--weapons|--textures|--pm-textures] <model.acm|aircraft.mpl|model.bin>\n"
+                     "       ac5_model_info --pm-materials <model.acm|model.bin> <pmtex.bin>\n");
         return help ? 0 : 2;
     }
-    const std::size_t path_index = parts_mode ? 2 : 1;
+    const std::size_t path_index =
+        (parts_mode || weapons_mode || textures_mode || pm_textures_mode) ? 2 : 1;
+    if (textures_mode || pm_textures_mode) {
+        std::vector<ac5::AcmBundleTexture> textures;
+        const bool loaded = pm_textures_mode
+            ? ac5::load_pm_texture_bundle(arguments[path_index], textures, error)
+            : ac5::load_acm_bundle_textures(arguments[path_index], textures, error);
+        if (!loaded) {
+            std::fprintf(stderr, "Texture bundle load failed: %s\n", error.c_str());
+            return 1;
+        }
+        std::printf("%s textures: %zu\n", pm_textures_mode ? "PM full-resolution" : "indexed", textures.size());
+        for (const ac5::AcmBundleTexture& item : textures) {
+            std::printf("  slots");
+            for (const std::uint32_t slot : item.bundle_slots)
+                std::printf(" / %u", slot);
+            std::printf(": %ux%u\n", item.texture.width, item.texture.height);
+        }
+        return 0;
+    }
+    if (pm_materials_mode) {
+        ac5::AcmPartModel model;
+        std::vector<ac5::AcmBundleTexture> textures;
+        if (!ac5::load_acm_part_model(arguments[2], model, error)) {
+            std::fprintf(stderr, "Part model load failed: %s\n", error.c_str());
+            return 1;
+        }
+        if (!ac5::load_pm_texture_bundle(arguments[3], textures, error)) {
+            std::fprintf(stderr, "PM material texture load failed: %s\n", error.c_str());
+            return 1;
+        }
+        std::map<std::uint32_t, std::size_t> uses;
+        std::size_t invalid = 0;
+        for (const ac5::AcmModelPart& part : model.parts) {
+            if (part.mesh.indices.empty()) continue;
+            const std::uint32_t slot = part.source_words[3];
+            ++uses[slot];
+            invalid += std::none_of(textures.begin(), textures.end(),
+                [slot](const ac5::AcmBundleTexture& texture) {
+                    return texture.bundle_slots.size() == 2 &&
+                           texture.bundle_slots[1] == slot;
+                });
+        }
+        std::printf("geometry parts: %zu\nfull-resolution textures: %zu\n",
+                    std::accumulate(uses.begin(), uses.end(), std::size_t{0},
+                        [](std::size_t total, const auto& use) { return total + use.second; }),
+                    textures.size());
+        for (const auto& [slot, count] : uses)
+            std::printf("  material slot %u: %zu part(s)%s\n", slot, count,
+                std::any_of(textures.begin(), textures.end(),
+                    [slot](const ac5::AcmBundleTexture& texture) {
+                        return texture.bundle_slots.size() == 2 &&
+                               texture.bundle_slots[1] == slot;
+                    }) ? "" : " [MISSING TEXTURE]");
+        std::printf("unresolved material references: %zu\n", invalid);
+        return invalid == 0 ? 0 : 1;
+    }
+    if (weapons_mode) {
+        ac5::AircraftWeaponRules rules;
+        bool found = false;
+        if (!ac5::load_acm_weapon_rules(arguments[path_index], rules, found, error)) {
+            std::fprintf(stderr, "Weapon data load failed: %s\n", error.c_str());
+            return 1;
+        }
+        if (!found) {
+            std::fprintf(stderr, "No supported aircraft weapon bundle found.\n");
+            return 1;
+        }
+        std::printf("gun ammo: %u%s\nmissile ammo: %u\nspecial ammo: %u (weapon id %u)\n"
+                    "gun interval: %.4f s, spread: %.3f deg, gravity: %.3f m/s^2, muzzle speed: %u km/h\n"
+                    "standard missile reload: %.3f s, turn rate: %.3f deg/s, gravity: %.3f m/s^2, launch speed: %u km/h, seeker half-angle: %u deg\n",
+                    rules.gun_ammunition,
+                    rules.gun_ammunition == ac5::unlimited_ammunition_sentinel
+                        ? " (unlimited)" : "",
+                    rules.missile_ammunition, rules.special_ammunition,
+                    rules.special_weapon_id, rules.gun_interval_seconds,
+                    rules.gun_spread_degrees, rules.gun_gravity_mps2,
+                    rules.gun_muzzle_speed_kmh, rules.standard_reload_seconds,
+                    rules.missile_turn_rate_degrees_per_second,
+                    rules.missile_gravity_mps2, rules.missile_launch_speed_kmh,
+                    rules.seeker_half_angle_degrees);
+        return 0;
+    }
     if (parts_mode) {
         ac5::AcmPartModel model;
         if (!ac5::load_acm_part_model(arguments[path_index], model, error)) {
@@ -82,11 +173,13 @@ int main(int argc, char** argv) {
                     model.shape_tracks.size(), shape_keys);
         for (std::size_t i = 0; i < model.parts.size(); ++i) {
             const ac5::AcmModelPart& part = model.parts[i];
-            if (part.mesh.indices.empty()) continue;
             std::printf("  part %zu kind %u parent ", i, part.kind);
             if (part.parent == ac5::AcmModelPart::no_parent) std::printf("root");
             else std::printf("%u", part.parent);
-            std::printf(": %zu triangles\n", part.mesh.indices.size() / 3);
+            std::printf(" chain %u source [", part.source_words[2]);
+            for (std::size_t word = 0; word < part.source_words.size(); ++word)
+                std::printf("%s%08x", word == 0 ? "" : " ", part.source_words[word]);
+            std::printf("]: %zu triangles\n", part.mesh.indices.size() / 3);
         }
         return 0;
     }

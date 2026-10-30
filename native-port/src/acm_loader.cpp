@@ -83,6 +83,17 @@ struct LodBundleSelection {
     std::vector<std::span<const std::uint8_t>> companion_models;
 };
 
+struct WeaponBundleSelection {
+    std::span<const std::uint8_t> loadout;
+    std::span<const std::uint8_t> gun;
+    std::span<const std::uint8_t> missile;
+};
+
+bool is_gim(std::span<const std::uint8_t> bytes) {
+    return bytes.size() >= 4 && bytes[0] == 'G' && bytes[1] == 'I' &&
+           bytes[2] == 'M' && bytes[3] == 0;
+}
+
 bool read_bundle_slots(std::span<const std::uint8_t> file,
                        std::vector<BundleSlot>& slots) {
     std::uint32_t count = 0;
@@ -158,6 +169,74 @@ bool find_model(std::span<const std::uint8_t> file, ModelSelection& selection,
         return true;
     }
     return false;
+}
+
+bool find_weapon_bundle(std::span<const std::uint8_t> file,
+                        WeaponBundleSelection& selection, unsigned depth = 0) {
+    if (depth >= 4) return false;
+    std::vector<BundleSlot> slots;
+    if (!read_bundle_slots(file, slots)) return false;
+    const auto slot_at = [&slots](std::uint32_t index) -> const BundleSlot* {
+        const auto found = std::find_if(slots.begin(), slots.end(),
+            [index](const BundleSlot& slot) { return slot.index == index; });
+        return found == slots.end() ? nullptr : &*found;
+    };
+    const BundleSlot* loadout = slot_at(7);
+    const BundleSlot* gun = slot_at(8);
+    const BundleSlot* missile = slot_at(9);
+    if (loadout && gun && missile) {
+        AircraftWeaponRules validated;
+        std::string validation_error;
+        if (decode_aircraft_weapon_rules(loadout->bytes, gun->bytes,
+                                         missile->bytes, validated,
+                                         validation_error)) {
+            selection = {loadout->bytes, gun->bytes, missile->bytes};
+            return true;
+        }
+    }
+    for (const BundleSlot& slot : slots) {
+        if (find_weapon_bundle(slot.bytes, selection, depth + 1)) return true;
+    }
+    return false;
+}
+
+bool collect_bundle_textures(std::span<const std::uint8_t> file,
+                             std::vector<std::uint32_t>& slot_path,
+                             std::vector<AcmBundleTexture>& textures,
+                             std::size_t& decoded_bytes, std::string& error,
+                             unsigned depth = 0) {
+    if (depth >= 4) return true;
+    std::vector<BundleSlot> slots;
+    if (!read_bundle_slots(file, slots)) return true;
+    for (const BundleSlot& slot : slots) {
+        slot_path.push_back(slot.index);
+        if (is_gim(slot.bytes)) {
+            if (textures.size() >= 64) {
+                error = "ACM bundle contains more than 64 indexed textures";
+                return false;
+            }
+            AcmBundleTexture item;
+            if (!decode_gim(slot.bytes, item.texture, error, true)) {
+                error += " in bundle slot " + std::to_string(slot.index);
+                return false;
+            }
+            const std::size_t bytes = item.texture.rgba.size();
+            constexpr std::size_t max_decoded_texture_bytes = 512u * 1024u * 1024u;
+            if (bytes > max_decoded_texture_bytes - decoded_bytes) {
+                error = "ACM bundle decoded textures exceed the 512 MiB limit";
+                return false;
+            }
+            decoded_bytes += bytes;
+            item.bundle_slots = slot_path;
+            textures.push_back(std::move(item));
+        } else if (slot.bytes.size() >= 4 && !is_acm(slot.bytes)) {
+            if (!collect_bundle_textures(slot.bytes, slot_path, textures,
+                                         decoded_bytes, error, depth + 1))
+                return false;
+        }
+        slot_path.pop_back();
+    }
+    return true;
 }
 
 bool find_lod_bundle(std::span<const std::uint8_t> file,
@@ -651,6 +730,7 @@ bool parse_acm(std::span<const std::uint8_t> block, MeshData& mesh,
             output.translation_track = parts[i].words[5];
             output.rotation_track = parts[i].words[6];
             output.shape_track = parts[i].words[7];
+            output.source_words = parts[i].words;
             output.position = parts[i].position;
             output.rotation = parts[i].rotation;
         }
@@ -932,6 +1012,115 @@ bool load_acm_bundle_texture(const std::string& path, TextureData& texture,
         return false;
     } catch (const std::length_error&) {
         error = "ACM bundle texture exceeds the platform's vector limit: " + path;
+        return false;
+    }
+}
+
+bool load_acm_bundle_textures(const std::string& path,
+                              std::vector<AcmBundleTexture>& textures,
+                              std::string& error) {
+    std::vector<std::uint8_t> file;
+    if (!read_model_file(path, file, error)) return false;
+    try {
+        std::vector<AcmBundleTexture> decoded;
+        std::vector<std::uint32_t> slot_path;
+        std::size_t decoded_bytes = 0;
+        if (!collect_bundle_textures(file, slot_path, decoded, decoded_bytes, error))
+            return false;
+        textures = std::move(decoded);
+        error.clear();
+        return true;
+    } catch (const std::bad_alloc&) {
+        error = "ACM bundle texture allocation failed: " + path;
+        return false;
+    } catch (const std::length_error&) {
+        error = "ACM bundle textures exceed the platform's vector limit: " + path;
+        return false;
+    }
+}
+
+bool load_pm_texture_bundle(const std::string& path,
+                           std::vector<AcmBundleTexture>& textures,
+                           std::string& error) {
+    std::vector<std::uint8_t> file;
+    if (!read_model_file(path, file, error)) return false;
+    std::vector<BundleSlot> root;
+    if (!read_bundle_slots(file, root)) {
+        error = "PM texture file is not a supported root bundle: " + path;
+        return false;
+    }
+    const auto slot_at = [](const std::vector<BundleSlot>& slots,
+                            std::uint32_t index) -> const BundleSlot* {
+        const auto it = std::find_if(slots.begin(), slots.end(),
+            [index](const BundleSlot& slot) { return slot.index == index; });
+        return it == slots.end() ? nullptr : &*it;
+    };
+    const BundleSlot* palette_slot = slot_at(root, 0);
+    const BundleSlot* image_bundle = slot_at(root, 1);
+    if (!palette_slot || !is_gim(palette_slot->bytes) ||
+        palette_slot->bytes.size() < 0x20u + 256u * 4u || !image_bundle) {
+        error = "PM texture bundle is missing its shared palette or full-resolution set";
+        return false;
+    }
+    const auto palette = palette_slot->bytes.subspan(0x20u, 256u * 4u);
+    std::vector<BundleSlot> images;
+    if (!read_bundle_slots(image_bundle->bytes, images)) {
+        error = "PM full-resolution texture slot is not a valid bundle";
+        return false;
+    }
+    std::vector<AcmBundleTexture> decoded;
+    std::size_t total_bytes = 0;
+    for (const BundleSlot& slot : images) {
+        if (!is_gim(slot.bytes)) continue;
+        if (decoded.size() >= 256) {
+            error = "PM texture set contains more than 256 images";
+            return false;
+        }
+        AcmBundleTexture item;
+        if (!decode_gim_indexed_with_palette(slot.bytes, palette,
+                                              item.texture, error, true)) {
+            error += " in PM texture slot " + std::to_string(slot.index);
+            return false;
+        }
+        if (item.texture.rgba.size() > 512u * 1024u * 1024u - total_bytes) {
+            error = "PM texture set exceeds the 512 MiB decoded-size limit";
+            return false;
+        }
+        total_bytes += item.texture.rgba.size();
+        item.bundle_slots = {1u, slot.index};
+        decoded.push_back(std::move(item));
+    }
+    if (decoded.empty()) {
+        error = "PM full-resolution texture set contains no indexed images";
+        return false;
+    }
+    textures = std::move(decoded);
+    error.clear();
+    return true;
+}
+
+bool load_acm_weapon_rules(const std::string& path, AircraftWeaponRules& rules,
+                           bool& found, std::string& error) {
+    found = false;
+    std::vector<std::uint8_t> file;
+    if (!read_model_file(path, file, error)) return false;
+    try {
+        WeaponBundleSelection selected;
+        if (!find_weapon_bundle(file, selected)) return true;
+        AircraftWeaponRules decoded;
+        if (!decode_aircraft_weapon_rules(selected.loadout, selected.gun,
+                                          selected.missile, decoded, error)) {
+            error += " in aircraft weapon bundle: " + path;
+            return false;
+        }
+        rules = decoded;
+        found = true;
+        return true;
+    } catch (const std::bad_alloc&) {
+        error = "aircraft weapon bundle allocation failed: " + path;
+        return false;
+    } catch (const std::length_error&) {
+        error = "aircraft weapon bundle exceeds the platform's vector limit: " + path;
         return false;
     }
 }

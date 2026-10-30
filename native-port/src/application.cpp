@@ -7,7 +7,10 @@
 #include "flight_session.hpp"
 #include "input.hpp"
 #include "obj_loader.hpp"
+#include "projectile_mesh.hpp"
+#include "projectile_system.hpp"
 #include "texture_loader.hpp"
+#include "weapon_controller.hpp"
 #include "vulkan_renderer.hpp"
 
 #include <SDL3/SDL.h>
@@ -19,7 +22,9 @@
 #include <cmath>
 #include <cstdint>
 #include <filesystem>
+#include <limits>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -40,6 +45,17 @@ struct DemoFrame {
         : scene(scene_ref), model_transform(transform) {}
     Camera* camera = nullptr;
     std::optional<AircraftFlightSession> flight_session;
+    std::optional<AircraftWeaponRules> weapon_rules;
+    AircraftWeaponState weapon_state{};
+    AircraftProjectileSystem projectile_system{};
+    MeshId projectile_mesh = 0;
+    bool has_projectile_mesh = false;
+    std::uint32_t pending_weapon_switch_presses = 0;
+    std::uint32_t pending_primary_fire_presses = 0;
+    std::uint32_t pending_gun_fire_presses = 0;
+    std::array<AircraftWeaponShot, 24> weapon_shots{};
+    std::size_t weapon_shot_count = 0;
+    bool unsupported_special_sequence = false;
     AircraftAnimationRules animation_rules{};
     AircraftAnimationChannels animation_channels = [] {
         AircraftAnimationChannels channels{};
@@ -52,7 +68,6 @@ struct DemoFrame {
     AircraftGearController gear_controller{};
     std::uint32_t animation_controller_flags = 0;
     std::vector<std::size_t> part_draw_indices;
-    double animation_accumulator_seconds = 0.0;
     std::optional<AcmPartModel> animated_model;
     std::vector<TransformId> part_transforms;
     struct ShapeDraw {
@@ -213,29 +228,24 @@ void update_aircraft_part_animation(DemoFrame& frame) {
     }
 }
 
-void advance_demo_animation(DemoFrame& frame) {
-    if (!frame.flight_session) return;
-    if (frame.controls.gear_toggle.pressed) frame.gear_down = !frame.gear_down;
-    const AircraftFlightState& flight = frame.flight_session->state();
+void advance_demo_animation(DemoFrame& frame, const AircraftFlightState& flight,
+                            bool gear_down,
+                            AircraftAnimationChannels& channels,
+                            AircraftGearController& gear_controller) noexcept {
     AircraftAnimationInput input{};
     input.pitch = frame.controls.pitch;
     input.roll = frame.controls.roll;
     input.yaw = frame.controls.yaw;
     input.throttle_lever = frame.controls.throttle;
-    input.speed_kmh = std::max(0.0, flight.speed_units_per_tick * 60.0 / 1.4222219);
-    input.gear_down = frame.gear_down;
+    input.speed_kmh = std::max(0.0, flight.speed_units_per_tick * 60.0 /
+                                      aircraft_world_units_per_kmh_per_second);
+    input.speed_units_per_tick = flight.speed_units_per_tick;
+    input.gear_down = gear_down;
     input.model_flags = frame.animated_model ? frame.animated_model->model_flags : 0;
     input.controller_flags = frame.animation_controller_flags;
-    const AircraftAnimationChannels targets =
-        aircraft_animation_targets(frame.animation_rules, input);
-    frame.animation_accumulator_seconds += frame.delta_seconds;
-    constexpr double animation_tick = 1.0 / 60.0;
-    while (frame.animation_accumulator_seconds >= animation_tick) {
-        advance_aircraft_animation_channels(frame.animation_channels, targets);
-        request_aircraft_gear(frame.gear_controller, frame.gear_down);
-        advance_aircraft_retail_gear(frame.gear_controller, frame.animation_channels);
-        frame.animation_accumulator_seconds -= animation_tick;
-    }
+    advance_aircraft_animation_tick(channels, frame.animation_rules, input);
+    request_aircraft_gear(gear_controller, gear_down);
+    advance_aircraft_retail_gear(gear_controller, channels);
 }
 
 void select_demo_lod(Scene& scene, const DemoLod& lod, const Camera& camera) {
@@ -259,29 +269,196 @@ void select_demo_lod(Scene& scene, const DemoLod& lod, const Camera& camera) {
     scene.set_draw_texture(lod.draw_index, lod.textures[level]);
 }
 
+struct CameraFit {
+    float radius = 0.0f;
+    float distance = 0.0f;
+};
+
+bool fit_camera_to_scene(const Scene& scene, Camera& camera, CameraFit& fit) {
+    if (scene.draws().empty()) return false;
+    const std::vector<Mat4> world_transforms = scene.resolved_transforms();
+    const auto visit_points = [&](auto&& visitor) {
+        for (const DrawItem& draw : scene.draws()) {
+            if (!draw.visible || draw.mesh >= scene.meshes().size() ||
+                draw.transform >= world_transforms.size()) continue;
+            const Mat4 model = Mat4::multiply(world_transforms[draw.transform], draw.model);
+            for (const Vertex& vertex : scene.meshes()[draw.mesh].vertices) {
+                const float x = model.value[0] * vertex.position.x +
+                                model.value[4] * vertex.position.y +
+                                model.value[8] * vertex.position.z + model.value[12];
+                const float y = model.value[1] * vertex.position.x +
+                                model.value[5] * vertex.position.y +
+                                model.value[9] * vertex.position.z + model.value[13];
+                const float z = model.value[2] * vertex.position.x +
+                                model.value[6] * vertex.position.y +
+                                model.value[10] * vertex.position.z + model.value[14];
+                const float w = model.value[3] * vertex.position.x +
+                                model.value[7] * vertex.position.y +
+                                model.value[11] * vertex.position.z + model.value[15];
+                if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z) ||
+                    !std::isfinite(w) || std::abs(w) <= 1.0e-8f) continue;
+                const Vec3 point{x / w, y / w, z / w};
+                if (std::isfinite(point.x) && std::isfinite(point.y) &&
+                    std::isfinite(point.z)) visitor(point);
+            }
+        }
+    };
+    Vec3 minimum{std::numeric_limits<float>::infinity(),
+                 std::numeric_limits<float>::infinity(),
+                 std::numeric_limits<float>::infinity()};
+    Vec3 maximum{-std::numeric_limits<float>::infinity(),
+                 -std::numeric_limits<float>::infinity(),
+                 -std::numeric_limits<float>::infinity()};
+    std::size_t point_count = 0;
+    visit_points([&](Vec3 point) {
+        minimum.x = std::min(minimum.x, point.x);
+        minimum.y = std::min(minimum.y, point.y);
+        minimum.z = std::min(minimum.z, point.z);
+        maximum.x = std::max(maximum.x, point.x);
+        maximum.y = std::max(maximum.y, point.y);
+        maximum.z = std::max(maximum.z, point.z);
+        ++point_count;
+    });
+    if (point_count == 0) return false;
+    const Vec3 center{
+        static_cast<float>((static_cast<double>(minimum.x) + maximum.x) * 0.5),
+        static_cast<float>((static_cast<double>(minimum.y) + maximum.y) * 0.5),
+        static_cast<float>((static_cast<double>(minimum.z) + maximum.z) * 0.5)};
+    if (!std::isfinite(center.x) || !std::isfinite(center.y) ||
+        !std::isfinite(center.z)) return false;
+    double radius_squared = 0.0;
+    visit_points([&](Vec3 point) {
+        const double dx = static_cast<double>(point.x) - center.x;
+        const double dy = static_cast<double>(point.y) - center.y;
+        const double dz = static_cast<double>(point.z) - center.z;
+        radius_squared = std::max(radius_squared, dx * dx + dy * dy + dz * dz);
+    });
+    fit.radius = static_cast<float>(std::sqrt(radius_squared));
+    const float sine = std::sin(camera.vertical_fov_radians * 0.5f);
+    if (!std::isfinite(fit.radius) || fit.radius <= 1.0e-5f ||
+        !std::isfinite(sine) || sine <= 0.0f) return false;
+    fit.distance = fit.radius / sine * 1.2f;
+    if (!std::isfinite(fit.distance)) return false;
+    camera.target = center;
+    camera.position = {center.x, center.y + fit.radius * 0.12f,
+                       center.z - fit.distance};
+    camera.near_plane = std::max(1.0e-5f, fit.distance - fit.radius * 1.25f);
+    camera.far_plane = std::max(camera.near_plane + 1.0f,
+                                fit.distance + fit.radius * 1.25f);
+    return true;
+}
+
 void update_demo_scene(DemoFrame& frame, DemoStateMachine& scene_state) {
     if (frame.flight_session) {
+        frame.weapon_shot_count = 0;
+        frame.unsupported_special_sequence = false;
+        const auto queue_press = [](std::uint32_t& pending) {
+            if (pending != std::numeric_limits<std::uint32_t>::max()) ++pending;
+        };
+        if (frame.weapon_rules && frame.controls.primary_fire.pressed)
+            queue_press(frame.pending_primary_fire_presses);
+        if (frame.weapon_rules && frame.controls.secondary_fire.pressed)
+            queue_press(frame.pending_gun_fire_presses);
+        if (frame.weapon_rules && frame.controls.weapon_switch.pressed)
+            queue_press(frame.pending_weapon_switch_presses);
+        bool staged_gear_down = frame.gear_down;
+        if (frame.controls.gear_toggle.pressed) staged_gear_down = !staged_gear_down;
+        AircraftFlightSession staged_flight_session = *frame.flight_session;
+        bool approach_control_changed = false;
+        bool approach_control_enabled = false;
         if (frame.controls.approach_control.pressed) {
-            const bool enabled =
-                (frame.flight_session->state().flags.contact & 0x20u) == 0;
-            set_aircraft_approach_control(frame.flight_session->state().flags,
-                                           enabled);
-            std::fprintf(stderr, "Approach control %s\n",
-                         enabled ? "enabled" : "disabled");
+            approach_control_enabled =
+                (staged_flight_session.state().flags.contact & 0x20u) == 0;
+            set_aircraft_approach_control(staged_flight_session.state().flags,
+                                          approach_control_enabled);
+            approach_control_changed = true;
         }
         const std::array<double, 3> previous_position =
-            frame.flight_session->state().position;
+            staged_flight_session.state().position;
         AircraftFlightInput flight_input{};
         flight_input.pitch = frame.controls.pitch;
         flight_input.roll = frame.controls.roll;
         flight_input.yaw = frame.controls.yaw;
         flight_input.throttle_lever = frame.controls.throttle;
         flight_input.ticks_per_second = 60;
-        if (!frame.flight_session->advance_frame(frame.delta_seconds, flight_input)) {
+        AircraftAnimationChannels staged_animation_channels = frame.animation_channels;
+        AircraftGearController staged_gear_controller = frame.gear_controller;
+        AircraftWeaponState staged_weapon_state = frame.weapon_state;
+        AircraftProjectileSystem staged_projectiles = frame.projectile_system;
+        std::uint32_t staged_weapon_switch_presses =
+            frame.pending_weapon_switch_presses;
+        std::uint32_t staged_primary_fire_presses =
+            frame.pending_primary_fire_presses;
+        std::uint32_t staged_gun_fire_presses = frame.pending_gun_fire_presses;
+        std::array<AircraftWeaponShot, 24> staged_weapon_shots{};
+        std::size_t staged_weapon_shot_count = 0;
+        bool staged_unsupported_special_sequence = false;
+        std::array<double, 3> previous_tick_position =
+            staged_flight_session.state().position;
+        if (!staged_flight_session.advance_frame(
+                frame.delta_seconds, flight_input,
+                [&frame, staged_gear_down, &staged_animation_channels,
+                 &staged_gear_controller, &staged_weapon_state,
+                 &staged_projectiles,
+                 &staged_weapon_switch_presses, &staged_primary_fire_presses,
+                 &staged_gun_fire_presses,
+                 &staged_weapon_shots,
+                 &staged_weapon_shot_count, &previous_tick_position,
+                 &staged_unsupported_special_sequence](const AircraftFlightState& tick_state) noexcept {
+                    advance_demo_animation(frame, tick_state, staged_gear_down,
+                                           staged_animation_channels,
+                                           staged_gear_controller);
+                    if (frame.weapon_rules) {
+                        advance_aircraft_projectiles(staged_projectiles, 1.0 / 60.0);
+                        const AircraftWeaponInput weapon_input{
+                            .switch_weapon_pressed = staged_weapon_switch_presses != 0,
+                            .fire_selected_pressed = staged_primary_fire_presses != 0,
+                            .fire_gun_held = frame.controls.secondary_fire.held ||
+                                             staged_gun_fire_presses != 0};
+                        if (staged_weapon_switch_presses != 0)
+                            --staged_weapon_switch_presses;
+                        if (staged_primary_fire_presses != 0)
+                            --staged_primary_fire_presses;
+                        if (staged_gun_fire_presses != 0)
+                            --staged_gun_fire_presses;
+                        const AircraftWeaponTick output = advance_aircraft_weapons(
+                            *frame.weapon_rules, weapon_input, staged_weapon_state);
+                        staged_unsupported_special_sequence =
+                            staged_unsupported_special_sequence ||
+                            output.special_sequence_unavailable;
+                        std::array<double, 3> aircraft_velocity{};
+                        for (std::size_t axis = 0; axis < aircraft_velocity.size(); ++axis)
+                            aircraft_velocity[axis] =
+                                (tick_state.position[axis] - previous_tick_position[axis]) * 60.0;
+                        for (std::size_t i = 0; i < output.shot_count &&
+                             staged_weapon_shot_count < staged_weapon_shots.size(); ++i) {
+                            staged_weapon_shots[staged_weapon_shot_count++] = output.shots[i];
+                            (void)launch_aircraft_projectile(*frame.weapon_rules,
+                                output.shots[i], tick_state, aircraft_velocity,
+                                staged_projectiles);
+                        }
+                    }
+                    previous_tick_position = tick_state.position;
+                })) {
             std::fprintf(stderr, "Native flight session rejected its rules or state\n");
             scene_state.request_transition(DemoSceneState::Exiting);
             return;
         }
+        *frame.flight_session = std::move(staged_flight_session);
+        if (approach_control_changed)
+            std::fprintf(stderr, "Approach control %s\n",
+                         approach_control_enabled ? "enabled" : "disabled");
+        frame.gear_down = staged_gear_down;
+        frame.animation_channels = staged_animation_channels;
+        frame.gear_controller = staged_gear_controller;
+        frame.weapon_state = staged_weapon_state;
+        frame.projectile_system = staged_projectiles;
+        frame.pending_weapon_switch_presses = staged_weapon_switch_presses;
+        frame.pending_primary_fire_presses = staged_primary_fire_presses;
+        frame.pending_gun_fire_presses = staged_gun_fire_presses;
+        frame.weapon_shots = staged_weapon_shots;
+        frame.weapon_shot_count = staged_weapon_shot_count;
+        frame.unsupported_special_sequence = staged_unsupported_special_sequence;
         const AircraftFlightState& flight_state = frame.flight_session->state();
         const std::array<double, 3>& euler = flight_state.euler;
         const Mat4 rotation = Mat4::multiply(
@@ -306,7 +483,6 @@ void update_demo_scene(DemoFrame& frame, DemoStateMachine& scene_state) {
             frame.camera->target.y += movement.y;
             frame.camera->target.z += movement.z;
         }
-        advance_demo_animation(frame);
         update_aircraft_part_animation(frame);
         return;
     }
@@ -334,13 +510,17 @@ void update_demo_scene(DemoFrame& frame, DemoStateMachine& scene_state) {
 int Application::run(int argc, char** argv) {
     std::string model_path;
     std::string texture_path;
+    std::string material_textures_path;
     std::string flight_rules_path;
+    std::string weapon_rules_path;
     std::string animation_rules_path;
     const auto usage = [](FILE* stream) {
         std::fprintf(stream,
                      "usage: ac5_native [--model path.obj|model.mpl|model.bin] "
                      "[--texture image.ppm|image.tga|image.gim] "
+                     "[--material-textures aircraft.pmtex] "
                      "[--flight-rules aircraft.pmb] "
+                     "[--weapon-rules aircraft-member.bin] "
                      "[--animation-rules aircraft-animation.bin]\n"
                      "       ac5_native --help\n");
     };
@@ -351,7 +531,9 @@ int Application::run(int argc, char** argv) {
             return 0;
         }
         if (argument == "--model" || argument == "--texture" ||
-            argument == "--flight-rules" || argument == "--animation-rules") {
+            argument == "--material-textures" ||
+            argument == "--flight-rules" || argument == "--weapon-rules" ||
+            argument == "--animation-rules") {
             if (i + 1 >= argc) {
                 std::fprintf(stderr, "missing path after %s\n", argv[i]);
                 usage(stderr);
@@ -359,7 +541,9 @@ int Application::run(int argc, char** argv) {
             }
             if (argument == "--model") model_path = argv[++i];
             else if (argument == "--texture") texture_path = argv[++i];
+            else if (argument == "--material-textures") material_textures_path = argv[++i];
             else if (argument == "--flight-rules") flight_rules_path = argv[++i];
+            else if (argument == "--weapon-rules") weapon_rules_path = argv[++i];
             else animation_rules_path = argv[++i];
             continue;
         }
@@ -385,7 +569,19 @@ int Application::run(int argc, char** argv) {
                    [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
     const bool acm_model = extension == ".mpl" || extension == ".acm" ||
                            extension == ".bin";
+    if (!material_textures_path.empty() && (!acm_model || !texture_path.empty())) {
+        std::fprintf(stderr, "--material-textures requires an ACM model and cannot be combined with --texture\n");
+        SDL_Quit();
+        return 2;
+    }
+    if (!weapon_rules_path.empty() && (!acm_model || flight_rules_path.empty())) {
+        std::fprintf(stderr,
+                     "--weapon-rules requires an ACM model and --flight-rules\n");
+        SDL_Quit();
+        return 2;
+    }
     std::optional<AircraftFlightRules> flight_rules;
+    std::optional<AircraftWeaponRules> weapon_rules;
     std::optional<AircraftAnimationRules> animation_rules;
     std::optional<AcmPartModel> animated_model;
     std::vector<TransformId> part_transforms;
@@ -393,6 +589,30 @@ int Application::run(int argc, char** argv) {
     std::vector<std::size_t> part_draw_indices;
     AircraftGearController gear_controller{};
     std::uint32_t animation_controller_flags = 0;
+    if (acm_model) {
+        AircraftWeaponRules decoded_weapon_rules;
+        bool found_weapon_rules = false;
+        std::string weapon_error;
+        const std::string& weapon_source = weapon_rules_path.empty()
+            ? model_path : weapon_rules_path;
+        if (!load_acm_weapon_rules(weapon_source, decoded_weapon_rules,
+                                   found_weapon_rules, weapon_error)) {
+            std::fprintf(stderr, "Aircraft weapon data unavailable: %s\n",
+                         weapon_error.c_str());
+            if (!weapon_rules_path.empty()) {
+                SDL_Quit();
+                return 1;
+            }
+        } else if (found_weapon_rules) {
+            weapon_rules = decoded_weapon_rules;
+        } else if (!weapon_rules_path.empty()) {
+            std::fprintf(stderr,
+                         "No supported weapon records found in: %s\n",
+                         weapon_rules_path.c_str());
+            SDL_Quit();
+            return 1;
+        }
+    }
     if (!flight_rules_path.empty()) {
         if (!acm_model) {
             std::fprintf(stderr, "--flight-rules requires an ACM aircraft model\n");
@@ -422,8 +642,25 @@ int Application::run(int argc, char** argv) {
     }
     bool model_loaded = false;
     DemoLod demo_lod;
+    std::vector<TextureId> material_texture_ids;
+    if (!material_textures_path.empty()) {
+        std::vector<AcmBundleTexture> materials;
+        if (!load_pm_texture_bundle(material_textures_path, materials, load_error)) {
+            std::fprintf(stderr, "PM material texture load failed: %s\n", load_error.c_str());
+            SDL_Quit();
+            return 1;
+        }
+        std::uint32_t maximum_slot = 0;
+        for (const AcmBundleTexture& material : materials)
+            maximum_slot = std::max(maximum_slot, material.bundle_slots.back());
+        material_texture_ids.assign(static_cast<std::size_t>(maximum_slot) + 1u,
+                                     std::numeric_limits<TextureId>::max());
+        for (AcmBundleTexture& material : materials)
+            material_texture_ids[material.bundle_slots.back()] =
+                scene.add_texture(std::move(material.texture));
+    }
     if (acm_model) {
-        if (flight_rules) {
+        if (flight_rules || !material_textures_path.empty()) {
             animated_model.emplace();
             if (load_acm_part_model(model_path, *animated_model, load_error)) {
                 animation_controller_flags =
@@ -490,7 +727,21 @@ int Application::run(int argc, char** argv) {
                         }
                         part_draw_indices[part_transforms.size() - 1] =
                             scene.draws().size();
-                        scene.add_draw(shape.mesh, TextureId{0}, Mat4::identity(), transform);
+                        TextureId texture_id{0};
+                        if (!material_texture_ids.empty()) {
+                            const std::uint32_t material_slot = part.source_words[3];
+                            if (material_slot >= material_texture_ids.size() ||
+                                material_texture_ids[material_slot] ==
+                                    std::numeric_limits<TextureId>::max()) {
+                                std::fprintf(stderr,
+                                    "ACM part references unavailable PM material slot %u\n",
+                                    material_slot);
+                                SDL_Quit();
+                                return 1;
+                            }
+                            texture_id = material_texture_ids[material_slot];
+                        }
+                        scene.add_draw(shape.mesh, texture_id, Mat4::identity(), transform);
                     }
                 }
                 model_loaded = !scene.draws().empty();
@@ -526,7 +777,8 @@ int Application::run(int argc, char** argv) {
                 }
             }
         }
-        if (model_loaded && texture_path.empty() && !demo_lod.active) {
+        if (model_loaded && texture_path.empty() && material_textures_path.empty() &&
+            !demo_lod.active) {
             TextureData embedded_texture;
             bool found_texture = false;
             std::string texture_error;
@@ -596,8 +848,22 @@ int Application::run(int argc, char** argv) {
             if (flight_rules) {
                 AircraftFlightState flight_state{};
                 flight_state.speed_units_per_tick =
-                    flight_rules->speed.cruise_kmh * 1.4222219 / 60.0;
+                    flight_rules->speed.cruise_kmh *
+                    aircraft_world_units_per_kmh_per_second / 60.0;
                 frame.flight_session.emplace(*flight_rules, flight_state);
+            }
+            if (weapon_rules && frame.flight_session) {
+                AircraftWeaponState weapon_state{};
+                if (!initialize_aircraft_weapons(*weapon_rules, weapon_state)) {
+                    std::fprintf(stderr, "Aircraft weapon data is invalid\n");
+                    result = 1;
+                    scene_state.request_transition(DemoSceneState::Exiting);
+                } else {
+                    frame.weapon_rules = *weapon_rules;
+                    frame.weapon_state = weapon_state;
+                    frame.projectile_mesh = add_projectile_mesh(scene);
+                    frame.has_projectile_mesh = true;
+                }
             }
             InputSystem input;
             if (scene_state.current_state() == DemoSceneState::Viewing &&
@@ -608,15 +874,16 @@ int Application::run(int argc, char** argv) {
             }
             scene_state.commit_transition();
             Camera camera{};
-            if (acm_model) {
-                camera.position = {0.0f, 12.0f, -115.0f};
-                camera.target = {0.0f, 4.0f, 0.0f};
-                camera.far_plane = 20000.0f;
-            }
+            CameraFit camera_fit{};
+            const bool camera_fitted = fit_camera_to_scene(scene, camera, camera_fit);
+            if (acm_model && !camera_fitted) camera.far_plane = 20000.0f;
             if (flight_rules) {
                 camera.target = {0.0f, static_cast<float>(
                     frame.flight_session->state().position[1]), 0.0f};
-                camera.position = {0.0f, camera.target.y + 8.0f, -115.0f};
+                const float follow_height = camera_fitted ? camera_fit.radius * 0.12f : 8.0f;
+                const float follow_distance = camera_fitted ? camera_fit.distance : 115.0f;
+                camera.position = {0.0f, camera.target.y + follow_height,
+                                   -follow_distance};
                 frame.camera = &camera;
             }
             select_demo_lod(scene, demo_lod, camera);
@@ -680,6 +947,26 @@ int Application::run(int argc, char** argv) {
                     result = 1;
                     break;
                 }
+                if (frame.weapon_rules) {
+                    std::array<char, 160> title{};
+                    std::snprintf(title.data(), title.size(),
+                        "AC5 Native | SELECTED %s | MSL %u | SP %u | GUN %u%s | shots %zu%s",
+                        frame.weapon_state.selected == AircraftWeaponSlot::Standard
+                            ? "MSL" : "SP",
+                        static_cast<unsigned>(frame.weapon_state.missile_ammunition),
+                        static_cast<unsigned>(frame.weapon_state.special_ammunition),
+                        frame.weapon_state.unlimited_gun_ammunition
+                            ? 0u : static_cast<unsigned>(frame.weapon_state.gun_ammunition),
+                        frame.weapon_state.unlimited_gun_ammunition
+                            ? "(unlimited)" : "",
+                        frame.weapon_shot_count,
+                        frame.unsupported_special_sequence
+                            ? " | unsupported special sequence" : "");
+                    SDL_SetWindowTitle(window, title.data());
+                }
+                if (frame.has_projectile_mesh)
+                    update_projectile_mesh(frame.scene, frame.projectile_mesh,
+                                            frame.projectile_system);
                 select_demo_lod(scene, demo_lod, camera);
                 const Mat4 view_projection = camera.view_projection(aspect);
                 if (!renderer.draw_frame(view_projection, scene)) {
