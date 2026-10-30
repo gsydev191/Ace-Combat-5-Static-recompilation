@@ -14,6 +14,13 @@
 #include <unordered_set>
 #include <vector>
 
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
+
 using namespace ac5;
 
 namespace {
@@ -134,7 +141,26 @@ std::string portable_path_key(const std::filesystem::path& path) {
     std::string key;
     for (const auto& component : path) {
         if (!key.empty()) key.push_back('/');
-        std::string text = path_to_utf8(component);
+        std::string text;
+#ifdef _WIN32
+        const std::wstring native = component.native();
+        if (!native.empty() && native.size() <= static_cast<std::size_t>(INT_MAX)) {
+            const int input_length = static_cast<int>(native.size());
+            const int output_length = LCMapStringEx(
+                LOCALE_NAME_INVARIANT, LCMAP_LOWERCASE, native.data(), input_length,
+                nullptr, 0, nullptr, nullptr, 0);
+            if (output_length > 0) {
+                std::wstring folded(static_cast<std::size_t>(output_length), L'\0');
+                const int converted = LCMapStringEx(
+                    LOCALE_NAME_INVARIANT, LCMAP_LOWERCASE, native.data(), input_length,
+                    folded.data(), output_length, nullptr, nullptr, 0);
+                if (converted == output_length) {
+                    text = path_to_utf8(std::filesystem::path(folded));
+                }
+            }
+        }
+#endif
+        if (text.empty()) text = path_to_utf8(component);
         for (char& c : text) {
             if (c >= 'A' && c <= 'Z') c = static_cast<char>(c + ('a' - 'A'));
         }
