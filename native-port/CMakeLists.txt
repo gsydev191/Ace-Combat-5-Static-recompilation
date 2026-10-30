@@ -30,6 +30,8 @@ add_library(ac5_game_core STATIC
     src/acm_loader.hpp
     src/flight_controls.cpp
     src/flight_controls.hpp
+    src/flight_dynamics.cpp
+    src/flight_dynamics.hpp
     src/model_shading.cpp
     src/model_mesh_adapter.hpp
     src/obj_loader.cpp
@@ -76,6 +78,7 @@ install(FILES
     src/selection.hpp
     src/flight_input.hpp
     src/flight_controls.hpp
+    src/flight_dynamics.hpp
     src/obj_loader.hpp
     src/texture_loader.hpp
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/ac5_native")
