@@ -25,7 +25,7 @@ bool AircraftFlightSession::advance_frame(double elapsed_seconds,
                                        maximum_frame_seconds);
     AircraftFlightState next_state = state_;
     while (next_accumulator >= tick_seconds) {
-        if (!advance_aircraft_flight_tick(rules_, input, next_state)) return false;
+        if (!advance_aircraft_carrier_tick(rules_, input, next_state)) return false;
         next_accumulator -= tick_seconds;
     }
     state_ = std::move(next_state);
