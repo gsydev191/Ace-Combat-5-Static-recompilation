@@ -217,9 +217,9 @@ arithmetic, not guest CPU or hardware state) and are covered by
   shading output; wiring it requires decoded model/material data and matching
   render passes.
 
-Still blocked on supplied game files: `generated/`, `DATA.TBL`/`DATA.PAC`
+The generated code is present as behavioral reference. `DATA.TBL`, `DATA.PAC`,
 and `SLUS_208.51` are not in this checkout, so the model/texture container
-formats cannot be validated and no end-to-end asset decode exists yet.
+formats cannot be validated and no end-to-end game asset decode exists yet.
 
 ## Current limits and next work
 
