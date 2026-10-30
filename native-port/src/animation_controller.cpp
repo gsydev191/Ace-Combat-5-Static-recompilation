@@ -72,7 +72,8 @@ bool decode_aircraft_animation_rules(std::span<const std::uint8_t> bytes,
     }
     const auto& f = decoded.raw;
     if (f[3] < f[2] || f[4] < 0.0f || f[4] > 1.0f ||
-        f[6] < f[5] || f[12] < f[11] || f[14] < f[13] || f[16] < f[15]) {
+        f[6] < f[5] || f[8] < f[7] || f[10] < f[9] ||
+        f[12] < f[11] || f[14] < f[13] || f[16] < f[15]) {
         error = "aircraft animation config has invalid curve bounds";
         return false;
     }
@@ -129,6 +130,8 @@ AircraftAnimationChannels aircraft_animation_targets(
     const double flap = rules.available ? flap_curve(config[5], config[6]) : 0.0;
     const double secondary_flap = rules.available
         ? flap_curve(config[11], config[12]) : 0.0;
+    const double canard_curve = rules.available
+        ? reverse_speed_curve(speed, config[7], config[8]) : 0.0;
     const double channel16 = rules.available
         ? reverse_speed_curve(speed, config[9], config[10]) : 0.0;
     const double channel20 = rules.available
@@ -171,7 +174,18 @@ AircraftAnimationChannels aircraft_animation_targets(
     set(5, 50.0 + 50.0 * std::clamp(roll5, -1.0, 1.0) * authority);
     set(6, 50.0 + 50.0 * std::clamp(roll6, -1.0, 1.0) * authority);
     set(7, 50.0 - 50.0 * flap);
-    set(8, 50.0 + 25.0 * input.pitch * authority);
+    if ((input.controller_flags & 0x2u) != 0) {
+        const double canard_left = std::clamp(
+            -static_cast<double>(input.pitch) - input.roll, -1.0, 1.0) *
+            canard_curve;
+        const double canard_right = std::clamp(
+            static_cast<double>(input.roll) - input.pitch, -1.0, 1.0) *
+            canard_curve;
+        set(8, 50.0 + 50.0 * canard_left);
+        set(9, 50.0 + 50.0 * canard_right);
+    } else {
+        set(8, 50.0 - 50.0 * input.pitch * canard_curve);
+    }
     set(12, 50.0 - 50.0 * input.roll);
     set(13, 50.0 + 50.0 * input.roll);
     set(14, 50.0 * dry + 50.0 * afterburner);

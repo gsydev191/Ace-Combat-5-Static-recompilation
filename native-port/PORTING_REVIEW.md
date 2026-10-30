@@ -184,7 +184,9 @@ project does not build or link any of those files.
   until the flight state exposes a supported sideslip value. The `0x400`
   threshold comparison uses the recovered conversion from km/h to speed units
   per tick (`0.0237037018`). Aircraft-class meaning remains under
-  investigation.
+  investigation. The channel-8 speed curve and controller-flag `0x2` pair of
+  channels 8/9 are also represented; wiring that runtime controller flag from
+  aircraft setup remains open.
   `ac5_model_info --parts` reports the hierarchy and decoded track/key counts
   without opening Vulkan.
 - A Vulkan 1.3 renderer using SDL3, dynamic rendering, synchronization2,

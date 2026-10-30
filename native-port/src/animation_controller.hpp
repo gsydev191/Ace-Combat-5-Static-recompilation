@@ -28,6 +28,7 @@ struct AircraftAnimationInput {
     double speed_kmh = 0.0;
     bool gear_down = false;
     std::uint32_t model_flags = 0;
+    std::uint32_t controller_flags = 0;
 };
 
 struct AircraftGearController {
