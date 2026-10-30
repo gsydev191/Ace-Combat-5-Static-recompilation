@@ -20,6 +20,8 @@ public:
     VulkanRenderer(const VulkanRenderer&) = delete;
     VulkanRenderer& operator=(const VulkanRenderer&) = delete;
 
+    // Failed initialization releases partial Vulkan state; the same renderer
+    // may be initialized again after the underlying cause is corrected.
     bool initialize(SDL_Window* window);
     // Uploads mesh and texture data. Call again after changing static meshes,
     // mesh topology, or textures. Dynamic mesh vertices may change per frame.
@@ -27,8 +29,9 @@ public:
     // Draw items and transforms may change between frames; their IDs must refer
     // to the mesh and texture data most recently uploaded with upload_scene().
     // Asset changes are detected and require another upload_scene() call.
-    // A frame-fence reset or queue-submit failure is terminal for this renderer
-    // instance; inspect error() and destroy the renderer instead of retrying.
+    // A synchronization failure after image acquisition is terminal for this
+    // renderer instance; inspect error() and destroy the renderer instead of
+    // retrying.
     bool draw_frame(const Mat4& view_projection, const Scene& scene);
     void request_resize() { resize_requested_ = true; }
     void wait_idle();

@@ -5,6 +5,28 @@
 #include <cmath>
 
 namespace ac5 {
+
+bool update_aircraft_ground_contact(AircraftGroundContactState& state,
+                                    bool hit, int ticks_per_second,
+                                    bool suppress_effect) noexcept {
+    if (hit) {
+        const bool fresh = (state.flags & 0x01u) == 0;
+        if (fresh) {
+            state.flags = static_cast<std::uint8_t>(state.flags | 0x0du);
+            state.decay_ticks = 0;
+            return !suppress_effect;
+        }
+        state.flags = static_cast<std::uint8_t>(state.flags & ~0x0cu);
+        state.decay_ticks = 0;
+        return false;
+    }
+    const int half_second = std::max(1, ticks_per_second / 2);
+    // The original compares before incrementing, so it clears after the
+    // half-second threshold has already been reached.
+    if (state.decay_ticks < half_second) ++state.decay_ticks;
+    else state.flags = static_cast<std::uint8_t>(state.flags & 0xf2u);
+    return false;
+}
 namespace {
 
 using Matrix3 = std::array<std::array<double, 3>, 3>;
@@ -211,6 +233,116 @@ bool finite(const std::array<double, 3>& values) {
 
 } // namespace
 
+std::optional<std::array<double, 3>> aircraft_ground_marker_attitude(
+    const AircraftGroundMarkers& markers) noexcept {
+    for (const auto& point : markers)
+        for (double value : point)
+            if (!std::isfinite(value)) return std::nullopt;
+    std::array<double, 3> forward{}, lateral{};
+    for (std::size_t axis = 0; axis < 3; ++axis) {
+        forward[axis] = markers[0][axis] -
+            (markers[1][axis] + markers[2][axis]) * 0.5;
+        lateral[axis] = markers[2][axis] - markers[1][axis];
+    }
+    const double length = std::hypot(forward[0], forward[1], forward[2]);
+    if (!(length > 0.0) || !std::isfinite(length)) return std::nullopt;
+    const double yaw = std::atan2(forward[0], -forward[2]);
+    const double pitch = std::asin(std::clamp(forward[1] / length, -1.0, 1.0));
+    const auto unyawed = row_multiply(lateral, euler_matrix({0.0, -yaw, 0.0}));
+    const auto level = row_multiply(unyawed, euler_matrix({-pitch, 0.0, 0.0}));
+    if (!(std::hypot(level[0], level[1]) > 0.0)) return std::nullopt;
+    return std::array<double, 3>{pitch, yaw,
+                                 -std::atan2(level[1], -level[0])};
+}
+
+std::optional<AircraftGroundTraceResult> normal_aircraft_ground_trace(
+    AircraftFlightState& state, const AircraftGroundTraceModel& model,
+    const AircraftGroundTraceTerrain* terrain) {
+    AircraftGroundTraceResult result;
+    constexpr double roll_limit = 1.570796251296997;
+    if (state.euler[2] > roll_limit || state.euler[2] < -roll_limit) return result;
+    if (!model.sample || (terrain &&
+        (!terrain->height || !terrain->sweep || !terrain->vertical)))
+        return std::nullopt;
+    const auto channel = [&](double value) -> std::optional<double> {
+        return model.gear_state == 2 ? std::optional<double>(value) : std::nullopt;
+    };
+    const auto pose100 = model.sample(channel(100.0));
+    const auto pose50 = model.sample(channel(50.0));
+    if (!pose100 || !pose50) return std::nullopt;
+    for (const auto* pose : {&*pose100, &*pose50})
+        for (const auto& point : *pose)
+            for (double value : point)
+                if (!std::isfinite(value)) return std::nullopt;
+    if (!terrain) return result;
+
+    AircraftFlightState staged_state = state;
+    const Matrix3 rotation = euler_matrix(staged_state.euler);
+    const auto world = [&](const std::array<double, 3>& point,
+                           const Matrix3& matrix) {
+        auto output = row_multiply(point, matrix);
+        for (std::size_t axis = 0; axis < 3; ++axis)
+            output[axis] += staged_state.position[axis];
+        return output;
+    };
+    for (std::size_t index = 0; index < 3; ++index) {
+        auto end = (*pose50)[index];
+        auto full = (*pose100)[index];
+        if (index == 0) end[0] = full[0] = 0.0;
+        auto start = end;
+        for (std::size_t axis = 0; axis < 3; ++axis)
+            start[axis] += 10.0 * (full[axis] - end[axis]);
+        end = world(end, rotation);
+        start = world(start, rotation);
+        const double height = terrain->height(end);
+        if (!std::isfinite(height)) return std::nullopt;
+        if (end[1] < height) {
+            const AircraftGroundSweepHit hit = terrain->sweep(end, start);
+            if (hit.result != 0 && hit.normal_y > 0.5 && hit.kind != 2) {
+                if (!std::isfinite(hit.fraction)) return std::nullopt;
+                result.fractions[index] = hit.fraction;
+            }
+        }
+    }
+    const auto& fractions = result.fractions;
+    if (!(fractions[0] > 0.0 || fractions[1] > 0.0 || fractions[2] > 0.0))
+        return result;
+    const auto attitude = aircraft_ground_marker_attitude(*pose50);
+    if (!attitude) return std::nullopt;
+    auto aligned = to_euler(transpose(euler_matrix(*attitude)));
+    aligned[1] = staged_state.euler[1];
+    result.anchor = fractions[0] > fractions[1]
+        ? (fractions[0] > fractions[2] ? 0 : 2)
+        : (fractions[1] > fractions[2] ? 1 : 2);
+    result.hit = true;
+    staged_state.euler = aligned;
+
+    const auto anchor_pose = model.sample(channel(50.0));
+    if (!anchor_pose) return std::nullopt;
+    const auto& point = (*anchor_pose)[static_cast<std::size_t>(result.anchor)];
+    for (double value : point)
+        if (!std::isfinite(value)) return std::nullopt;
+    const Matrix3 aligned_rotation = euler_matrix(aligned);
+    const auto anchor = world(point, aligned_rotation);
+    auto upper = anchor;
+    auto lower = anchor;
+    upper[1] += 128.0;
+    lower[1] -= 128.0;
+    const AircraftGroundVerticalHit snap = terrain->vertical(upper, lower);
+    if (snap.result == 1) {
+        std::array<double, 3> delta{};
+        for (std::size_t axis = 0; axis < 3; ++axis) {
+            if (!std::isfinite(snap.point[axis])) return std::nullopt;
+            delta[axis] = snap.point[axis] - anchor[axis];
+        }
+        delta = row_multiply(delta, transpose(aligned_rotation));
+        for (std::size_t axis = 0; axis < 3; ++axis)
+            staged_state.position[axis] += delta[axis];
+    }
+    state = staged_state;
+    return result;
+}
+
 std::array<double, 3> aircraft_forward_direction(
     const std::array<double, 3>& euler) noexcept {
     return row_multiply({0.0, 0.0, -1.0}, euler_matrix(euler));
@@ -273,7 +405,8 @@ bool advance_aircraft_flight_tick(const AircraftFlightRules& rules,
         !std::isfinite(input.contact_acceleration_scale) ||
         !std::isfinite(input.contact_acceleration_bias)) return false;
 
-    const bool ground_contact = (state.flags.contact & 1u) != 0;
+    const bool ground_contact = input.ground_contact_override.value_or(
+        (state.flags.contact & 1u) != 0);
     const bool reduced_speed_mode = (state.flags.mode & 1u) != 0;
     const bool approach_control = (state.flags.contact & 0x20u) != 0;
     const FlightSpeedInput speed_input{
@@ -282,6 +415,16 @@ bool advance_aircraft_flight_tick(const AircraftFlightRules& rules,
         reduced_speed_mode};
     const FlightSpeedOutput speed = advance_airborne_speed(rules.speed, speed_input);
     if (!speed.valid) return false;
+
+    double ground_speed_cap = speed.maximum_units_per_tick;
+    if (ground_contact) {
+        FlightSpeedInput ground_cap_input = speed_input;
+        ground_cap_input.reduced_speed_mode = true;
+        const FlightSpeedOutput ground_cap =
+            advance_airborne_speed(rules.speed, ground_cap_input);
+        if (!ground_cap.valid) return false;
+        ground_speed_cap = ground_cap.maximum_units_per_tick;
+    }
 
     AircraftFlightState next = state;
     if (input.reset_contact_speed) {
@@ -293,7 +436,7 @@ bool advance_aircraft_flight_tick(const AircraftFlightRules& rules,
             state.speed_units_per_tick + acceleration *
                 (input.contact_acceleration_scale * input.throttle_lever +
                  input.contact_acceleration_bias),
-            0.0, speed.maximum_units_per_tick);
+            0.0, ground_speed_cap);
     } else {
         next.speed_units_per_tick = speed.speed_units_per_tick;
     }

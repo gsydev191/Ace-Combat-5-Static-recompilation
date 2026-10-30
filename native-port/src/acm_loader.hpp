@@ -6,6 +6,8 @@
 #include <array>
 #include <cstdint>
 #include <limits>
+#include <optional>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -32,6 +34,9 @@ struct AcmModelPart {
         std::numeric_limits<std::uint32_t>::max();
     std::uint32_t parent = no_parent;
     std::uint8_t kind = 0;
+    // Geometry-less ACM attachment parts encode their one-byte label in
+    // source word 4 when source word 2 is the no-link sentinel.
+    char attachment_code = '\0';
     std::uint32_t translation_track = no_parent;
     std::uint32_t rotation_track = no_parent;
     std::uint32_t shape_track = no_parent;
@@ -82,6 +87,11 @@ bool load_acm_model(const std::string& path, MeshData& mesh, std::string& error)
 // shape track tables instead of baking all part transforms into one static mesh.
 bool load_acm_part_model(const std::string& path, AcmPartModel& model,
                          std::string& error);
+// Return animated ACM attachment origins in I/K/J order and model units.
+// The first matching attachment in part order is used for each label.
+[[nodiscard]] std::optional<std::array<std::array<double, 3>, 3>>
+sample_acm_ground_markers(const AcmPartModel& model,
+                          std::span<const float> channels);
 [[nodiscard]] bool sample_acm_animation_track(
     const AcmAnimationTrack& track, double frame, Vec3& value) noexcept;
 bool load_acm_bundle_texture(const std::string& path, TextureData& texture,

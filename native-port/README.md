@@ -121,10 +121,13 @@ material slot usage and flags slots without a matching texture.
 `ac5_model_info --textures <model-file>` lists every supported indexed GIM
 reachable through bundle slots and prints each nested slot path and dimensions.
 To run the native flight model on an imported aircraft, provide its matching
-400-byte flight rules bundle with `--flight-rules`, for example:
+400-byte flight rules bundle with `--flight-rules`. For F-4G, extract the
+model and flight bundle from the supplied DATA.PAC first:
 
 ```text
-ac5_native --model f04g.mpl --flight-rules f04g.pmb
+ac5_extract BIN/DATA.TBL BIN/DATA.PAC 429 0 lodplane/f04gor.bin
+ac5_extract BIN/DATA.TBL BIN/DATA.PAC 429 1 mis/mpl/f04g.pmb
+ac5_native --model lodplane/f04gor.bin --flight-rules mis/mpl/f04g.pmb
 ```
 
 To render an image as a heightfield, pass a supported PPM, TGA, or GIM image;
@@ -169,6 +172,31 @@ renders them at their recovered world spacing. Member indexes refer to entries
 in the supplied DATA.PAC table. M01A's terrain is member 3 and its mission
 script pack is member 117. The native tools can extract an indexed member with
 `ac5_extract` for inspection.
+
+Mission terrain can also be combined with a native aircraft flight viewer.
+Provide the matching ACM model, `.pmb` flight rules, and aircraft mission-entry
+member so the six body extents are decoded from its AHM payload:
+
+```text
+ac5_native --mission-terrain BIN/DATA.TBL BIN/DATA.PAC 3 --model lodplane/f04gor.bin --flight-rules mis/mpl/f04g.pmb --aircraft-entry-index 252
+```
+
+`--aircraft-start x y z` overrides the default flight position `(0, 3000, 0)`;
+coordinates use the same mission world units as the decoded terrain. For
+example, start at the M01A origin with `--aircraft-start 0 0 0`. Add
+`--aircraft-gear-down` to start with the landing gear deployed; the title shows
+`MARKER TRACE` while the ACM I/K/J ground trace is being evaluated.
+
+Flight advances at 60 Hz. When the aircraft root falls below the sampled
+terrain plus the recovered 20-unit floor, the viewer checks the six body
+extremes. A hit while airborne stops and freezes the flight session on that
+tick; when already grounded, the aircraft is clamped back to the floor and the
+ground-speed law applies. When landing gear is fully down and the ACM contains
+I/K/J markers, the viewer samples them at the generated gear channels and runs
+the native terrain trace/alignment before the airframe-floor collision pass.
+Models without all three markers, or whose marker poses do not move with the
+gear channels, retain root-height contact sampling. Terrain and spawn markers
+keep fixed world transforms while the aircraft and follow camera move.
 
 Add `--mission-units` followed by the mission pack's DATA.PAC member index to
 overlay side-colored markers for decoded type-0 spawn orders. For M01A, use:
@@ -383,6 +411,25 @@ tick wrapper, which reduces to the normal tick outside carrier modes.
 `advance_frame_until` is also available when a caller must stop on a fixed tick
 (for example, on ground collision); it commits the event tick and leaves the
 unconsumed accumulator available to the owner of that stopped state.
+`advance_frame_until_contact` samples pre-tick spatial contact per fixed step,
+keeps it separate from script contact bits, and lets the observer adjust the
+post-physics position before the following tick. `update_aircraft_ground_contact`
+ports the generated runtime's half-second contact-loss latch for terrain-based
+ground state, avoiding a one-tick ground/air mode flip when the contact sample
+briefly misses. The core also exposes `normal_aircraft_ground_trace` and
+`aircraft_ground_marker_attitude` for gear-dependent landing alignment. The
+trace is renderer-independent: callers provide I/K/J marker samples and terrain
+height, sweep, and vertical-snap callbacks. The viewer now samples ACM I/K/J
+markers at the generated gear channels and traces against the rendered mission
+heightfield mesh when the gear is fully down. The native ACM loader derives each
+geometry-less attachment label from the part's no-link source word, and
+`ac5_model_info --parts` displays it. This makes I/K/J discovery possible from
+the model data without an external rig file.
+`ac5_model_info --ground-markers` evaluates and prints the animated marker
+origins in I/K/J order at neutral channel values; append a gear-channel value
+to compare poses. `ac5_mission_info --terrain-query DATA.TBL DATA.PAC 3 x z`
+reports both the recovered mission-height query and the rendered-mesh
+intersection at that world coordinate.
 `AircraftFlightFlags` keeps contact and mode bits as separate native bytes;
 `set_aircraft_flight_mode` and `set_aircraft_approach_control` preserve unrelated
 bits when changing modes. Each successful tick advances the recovered

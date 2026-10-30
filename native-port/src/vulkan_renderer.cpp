@@ -205,8 +205,20 @@ bool VulkanRenderer::initialize(SDL_Window* window) {
         return false;
     }
     window_ = window;
-    return create_instance() && create_surface() && choose_device() && create_device() &&
-           create_swapchain() && create_frames();
+    try {
+        if (create_instance() && create_surface() && choose_device() && create_device() &&
+            create_swapchain() && create_frames())
+            return true;
+    } catch (const std::bad_alloc&) {
+        error_ = "Vulkan initialization allocation failed";
+    } catch (const std::length_error&) {
+        error_ = "Vulkan initialization data exceeds a platform limit";
+    } catch (const std::exception& exception) {
+        error_ = std::string("Vulkan initialization failed: ") + exception.what();
+    }
+    cleanup();
+    window_ = nullptr;
+    return false;
 }
 
 bool VulkanRenderer::create_instance() {
@@ -1633,19 +1645,25 @@ bool VulkanRenderer::draw_frame(const Mat4& view_projection, const Scene& scene)
     if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
         return fail("vkAcquireNextImageKHR", result);
     const bool acquired_suboptimal = result == VK_SUBOPTIMAL_KHR;
+    const auto fail_after_acquire = [this](const char* operation, VkResult failure) {
+        // The acquire semaphore may be signaled and the image may be owned by
+        // this frame. Do not reuse either synchronization state after failure.
+        frame_submission_failed_ = true;
+        return fail(operation, failure);
+    };
     if (image_fences_[image_index] != VK_NULL_HANDLE) {
         result = vkWaitForFences(device_, 1, &image_fences_[image_index], VK_TRUE, UINT64_MAX);
-        if (result != VK_SUCCESS) return fail("vkWaitForFences(image)", result);
+        if (result != VK_SUCCESS) return fail_after_acquire("vkWaitForFences(image)", result);
     }
     image_fences_[image_index] = frame.in_flight;
 
     VkCommandBuffer command = command_buffers_[image_index];
     result = vkResetCommandBuffer(command, 0);
-    if (result != VK_SUCCESS) return fail("vkResetCommandBuffer", result);
+    if (result != VK_SUCCESS) return fail_after_acquire("vkResetCommandBuffer", result);
     auto begin = vk_struct<VkCommandBufferBeginInfo>(VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO);
     begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     result = vkBeginCommandBuffer(command, &begin);
-    if (result != VK_SUCCESS) return fail("vkBeginCommandBuffer", result);
+    if (result != VK_SUCCESS) return fail_after_acquire("vkBeginCommandBuffer", result);
 
     auto to_color = vk_struct<VkImageMemoryBarrier2>(VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2);
     to_color.srcStageMask = VK_PIPELINE_STAGE_2_NONE;
@@ -1759,7 +1777,7 @@ bool VulkanRenderer::draw_frame(const Mat4& view_projection, const Scene& scene)
     dependency.pImageMemoryBarriers = &to_present;
     vkCmdPipelineBarrier2(command, &dependency);
     result = vkEndCommandBuffer(command);
-    if (result != VK_SUCCESS) return fail("vkEndCommandBuffer", result);
+    if (result != VK_SUCCESS) return fail_after_acquire("vkEndCommandBuffer", result);
 
     result = vkResetFences(device_, 1, &frame.in_flight);
     if (result != VK_SUCCESS) {
@@ -1801,7 +1819,9 @@ bool VulkanRenderer::draw_frame(const Mat4& view_projection, const Scene& scene)
     frame_index_ = (frame_index_ + 1) % frames_in_flight;
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR ||
         resize_requested_ || acquired_suboptimal) return recreate_swapchain();
-    return result == VK_SUCCESS || fail("vkQueuePresentKHR", result);
+    if (result == VK_SUCCESS) return true;
+    frame_submission_failed_ = true;
+    return fail("vkQueuePresentKHR", result);
 }
 
 bool VulkanRenderer::recreate_swapchain() {
@@ -1920,11 +1940,14 @@ void VulkanRenderer::cleanup() {
         for (auto& frame : frames_) {
             if (frame.in_flight) vkDestroyFence(device_, frame.in_flight, nullptr);
             if (frame.image_available) vkDestroySemaphore(device_, frame.image_available, nullptr);
+            frame.in_flight = VK_NULL_HANDLE;
+            frame.image_available = VK_NULL_HANDLE;
         }
         if (texture_set_layout_)
             vkDestroyDescriptorSetLayout(device_, texture_set_layout_, nullptr);
         texture_set_layout_ = VK_NULL_HANDLE;
         if (command_pool_) vkDestroyCommandPool(device_, command_pool_, nullptr);
+        command_pool_ = VK_NULL_HANDLE;
         vkDestroyDevice(device_, nullptr);
         device_ = VK_NULL_HANDLE;
     }
@@ -1932,6 +1955,20 @@ void VulkanRenderer::cleanup() {
     if (instance_) vkDestroyInstance(instance_, nullptr);
     surface_ = VK_NULL_HANDLE;
     instance_ = VK_NULL_HANDLE;
+    physical_device_ = VK_NULL_HANDLE;
+    portability_subset_supported_ = false;
+    sampler_anisotropy_supported_ = VK_FALSE;
+    max_sampler_anisotropy_ = 1.0f;
+    graphics_queue_ = VK_NULL_HANDLE;
+    present_queue_ = VK_NULL_HANDLE;
+    graphics_family_ = UINT32_MAX;
+    present_family_ = UINT32_MAX;
+    swapchain_format_ = VK_FORMAT_UNDEFINED;
+    swapchain_extent_ = {};
+    frame_index_ = 0;
+    resize_requested_ = false;
+    frame_submission_failed_ = false;
+    uploaded_asset_revision_ = 0;
 }
 
 } // namespace ac5

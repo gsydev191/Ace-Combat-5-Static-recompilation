@@ -4,6 +4,8 @@
 
 #include <array>
 #include <cstdint>
+#include <functional>
+#include <optional>
 
 namespace ac5 {
 
@@ -15,6 +17,60 @@ struct AircraftFlightFlags {
     std::uint8_t contact = 0;
     std::uint8_t mode = 0;
 };
+
+// Spatial ground-contact latch mirrored from the generated runtime. A brief
+// loss of terrain contact does not immediately switch the aircraft to flight.
+struct AircraftGroundContactState {
+    std::uint8_t flags = 0;
+    int decay_ticks = 0;
+};
+
+using AircraftGroundMarkers = std::array<std::array<double, 3>, 3>;
+
+struct AircraftGroundTraceModel {
+    // The callback samples marker positions at a gear animation channel, or
+    // current channels when the argument is empty. Marker order is I, K, J.
+    std::uint8_t gear_state = 0;
+    std::function<std::optional<AircraftGroundMarkers>(std::optional<double>)> sample;
+};
+
+struct AircraftGroundSweepHit {
+    int result = 0;
+    double fraction = 0.0;
+    double normal_y = 0.0;
+    int kind = 0;
+};
+
+struct AircraftGroundVerticalHit {
+    int result = 0;
+    std::array<double, 3> point{};
+};
+
+struct AircraftGroundTraceTerrain {
+    std::function<double(const std::array<double, 3>&)> height;
+    std::function<AircraftGroundSweepHit(const std::array<double, 3>& end,
+                                         const std::array<double, 3>& start)> sweep;
+    std::function<AircraftGroundVerticalHit(const std::array<double, 3>& upper,
+                                            const std::array<double, 3>& lower)> vertical;
+};
+
+struct AircraftGroundTraceResult {
+    bool hit = false;
+    int anchor = -1; // I=0, K=1, J=2
+    std::array<double, 3> fractions{};
+};
+
+struct AircraftFlightState;
+
+[[nodiscard]] bool update_aircraft_ground_contact(
+    AircraftGroundContactState& state, bool hit, int ticks_per_second,
+    bool suppress_effect = false) noexcept;
+
+[[nodiscard]] std::optional<std::array<double, 3>> aircraft_ground_marker_attitude(
+    const AircraftGroundMarkers& markers) noexcept;
+[[nodiscard]] std::optional<AircraftGroundTraceResult> normal_aircraft_ground_trace(
+    AircraftFlightState& state, const AircraftGroundTraceModel& model,
+    const AircraftGroundTraceTerrain* terrain);
 
 struct AircraftFlightState {
     AircraftFlightFlags flags{};
@@ -39,6 +95,9 @@ struct AircraftFlightInput {
     bool reset_contact_speed = false;
     double contact_acceleration_scale = 1.0;
     double contact_acceleration_bias = 0.0;
+    // Spatial on-ground state supplied by a native world query. When absent,
+    // the recovered contact bit remains the source of the ground-speed mode.
+    std::optional<bool> ground_contact_override;
 };
 
 // Set the recovered ground/contact modes while preserving unrelated flag bits.

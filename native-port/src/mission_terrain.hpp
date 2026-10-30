@@ -32,6 +32,14 @@ struct Ac5MissionTerrain {
     Ac5MapTextureSet surface;
 };
 
+struct Ac5MissionTerrainMeshHit {
+    bool hit = false;
+    double fraction = 0.0;
+    double normal_y = 0.0;
+    int kind = 0;
+    std::array<double, 3> point{};
+};
+
 // Decode the map's `.mha` block selector and `.mhd` 33-by-33 byte blocks into
 // the generated 513-by-513 world-height grid.
 [[nodiscard]] bool decode_ac5_mha_mhd_heightfield(
@@ -56,5 +64,13 @@ struct Ac5MissionTerrain {
 [[nodiscard]] bool sample_ac5_mission_terrain_height(
     const Ac5MissionTerrain& terrain, double world_x, double world_z,
     float& world_y, std::string& error);
+
+// Trace against the same checkerboard triangles used to render mission
+// terrain. `kind == 2` marks the zero-height tile class used for water. Output
+// is unchanged on error.
+[[nodiscard]] bool trace_ac5_mission_terrain_mesh(
+    const Ac5MissionTerrain& terrain, const std::array<double, 3>& from,
+    const std::array<double, 3>& to, Ac5MissionTerrainMeshHit& hit,
+    std::string& error);
 
 } // namespace ac5

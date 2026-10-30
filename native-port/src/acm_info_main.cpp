@@ -2,6 +2,9 @@
 #include "command_line.hpp"
 
 #include <algorithm>
+#include <array>
+#include <charconv>
+#include <cmath>
 #include <cstdio>
 #include <limits>
 #include <map>
@@ -17,6 +20,9 @@ int main(int argc, char** argv) {
         return 2;
     }
     const bool parts_mode = arguments.size() == 3 && arguments[1] == "--parts";
+    const bool ground_markers_mode =
+        (arguments.size() == 3 || arguments.size() == 4) &&
+        arguments[1] == "--ground-markers";
     const bool weapons_mode = arguments.size() == 3 && arguments[1] == "--weapons";
     const bool textures_mode = arguments.size() == 3 && arguments[1] == "--textures";
     const bool pm_textures_mode = arguments.size() == 3 && arguments[1] == "--pm-textures";
@@ -24,18 +30,54 @@ int main(int argc, char** argv) {
     const bool simple_mode = arguments.size() == 2;
     const bool help = (simple_mode &&
                        (arguments[1] == "--help" || arguments[1] == "-h")) ||
-                      ((parts_mode || weapons_mode || textures_mode || pm_textures_mode ||
+                      ((parts_mode || ground_markers_mode || weapons_mode || textures_mode || pm_textures_mode ||
                         pm_materials_mode) &&
                        (arguments[2] == "--help" || arguments[2] == "-h"));
-    if (help || (!simple_mode && !parts_mode && !weapons_mode && !textures_mode &&
+    if (help || (!simple_mode && !parts_mode && !ground_markers_mode && !weapons_mode && !textures_mode &&
                  !pm_textures_mode && !pm_materials_mode)) {
         std::fprintf(help ? stdout : stderr,
-                     "usage: ac5_model_info [--parts|--weapons|--textures|--pm-textures] <model.acm|aircraft.mpl|model.bin>\n"
+                     "usage: ac5_model_info [--parts|--ground-markers|--weapons|--textures|--pm-textures] <model.acm|aircraft.mpl|model.bin>\n"
+                     "       ac5_model_info --ground-markers <model.acm|aircraft.mpl|model.bin> [gear-channel]\n"
                      "       ac5_model_info --pm-materials <model.acm|model.bin> <pmtex.bin>\n");
         return help ? 0 : 2;
     }
     const std::size_t path_index =
-        (parts_mode || weapons_mode || textures_mode || pm_textures_mode) ? 2 : 1;
+        (parts_mode || ground_markers_mode || weapons_mode || textures_mode || pm_textures_mode) ? 2 : 1;
+    if (ground_markers_mode) {
+        ac5::AcmPartModel model;
+        if (!ac5::load_acm_part_model(arguments[path_index], model, error)) {
+            std::fprintf(stderr, "Part model load failed: %s\n", error.c_str());
+            return 1;
+        }
+        std::array<float, 64> channels{};
+        channels.fill(50.0f);
+        if (arguments.size() == 4) {
+            float channel_value = 0.0f;
+            const std::string& text = arguments[3];
+            const auto parsed = std::from_chars(
+                text.data(), text.data() + text.size(), channel_value);
+            if (parsed.ec != std::errc{} ||
+                parsed.ptr != text.data() + text.size() ||
+                !std::isfinite(channel_value) || channel_value < 0.0f ||
+                channel_value > 100.0f) {
+                std::fprintf(stderr, "Ground marker gear channel must be in [0, 100]\n");
+                return 2;
+            }
+            for (std::size_t channel = 35; channel <= 37; ++channel)
+                channels[channel] = channel_value;
+        }
+        const auto markers = ac5::sample_acm_ground_markers(model, channels);
+        if (!markers) {
+            std::fprintf(stderr, "Model does not provide valid I/K/J ground markers\n");
+            return 1;
+        }
+        constexpr std::array<char, 3> labels{'I', 'K', 'J'};
+        for (std::size_t marker = 0; marker < markers->size(); ++marker)
+            std::printf("%c [%.6f %.6f %.6f]\n", labels[marker],
+                        (*markers)[marker][0], (*markers)[marker][1],
+                        (*markers)[marker][2]);
+        return 0;
+    }
     if (textures_mode || pm_textures_mode) {
         std::vector<ac5::AcmBundleTexture> textures;
         const bool loaded = pm_textures_mode
@@ -175,7 +217,10 @@ int main(int argc, char** argv) {
                     model.shape_tracks.size(), shape_keys);
         for (std::size_t i = 0; i < model.parts.size(); ++i) {
             const ac5::AcmModelPart& part = model.parts[i];
-            std::printf("  part %zu kind %u parent ", i, part.kind);
+            std::printf("  part %zu kind %u", i, part.kind);
+            if (part.attachment_code != '\0')
+                std::printf(" attachment '%c'", part.attachment_code);
+            std::printf(" parent ");
             if (part.parent == ac5::AcmModelPart::no_parent) std::printf("root");
             else std::printf("%u", part.parent);
             std::printf(" chain %u source [", part.source_words[2]);

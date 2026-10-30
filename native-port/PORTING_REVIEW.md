@@ -770,5 +770,38 @@ runtime dependency. The native `.pmb` flight-rule decoder does not provide
 those extents; generated `tools/export_ruleset.py` reads them from the tail of
 an `AHM` payload nested in mission-entry bundle slot 1. Native
 `load_ac5_aircraft_hit_extents` now mirrors that bounded lookup and the
-`ac5_mission_info --hit-extents` command exposes it. Terrain sampling and
-flight-session collision response still need to be wired together.
+`ac5_mission_info --hit-extents` command exposes it. The generated flight path
+only performs the six-point query below `max(20, max(0, terrain) + 20)` world
+units; an aircraft that does not hit is clamped back to that rolling floor.
+The native mission-terrain flight viewer samples the root floor per fixed tick,
+performs the six-point query only below it, and clamps clear ticks back to the
+floor. It uses the explicit `--aircraft-entry-index` for AHM extents and
+`--aircraft-start x y z` for reproducible world placement.
+`advance_frame_until_contact` samples spatial contact before every fixed tick
+and sets a ground-contact override without rewriting script contact bits. A
+root within one unit of the floor updates the generated ground-contact latch;
+the ground bit remains set through the original half-second miss-decay window
+before clearing. A latched root uses the native ground acceleration law; the
+reduced speed cap is evaluated at half scale while the unhalved speed tables
+remain available to the control-axis update. Below the floor, airborne hits
+stop the session, while a tick that began grounded clamps the plane. Runtime
+exercise with extracted F-4G data and M01A member 3 confirmed that starting at
+`(0, 0, 0)` displays `AIRFRAME CONTACT` and leaves the Vulkan process
+responsive. The flight core ports the generated normal ground-trace alignment
+and anchor snap behind renderer-independent marker and terrain callbacks. The
+ACM loader derives geometry-less attachment labels from the native no-link
+source word, matching the generated exporter's attachment rule; the viewer
+samples I/K/J from those labels at the generated gear channels. Its terrain
+segment query intersects the same checkerboard triangles used by the native
+mission terrain mesh and classifies zero-height tiles as kind 2. The viewer
+invokes the trace when mission terrain is loaded and the aircraft gear is fully
+down and the marker poses differ between the half/full gear channels. Models
+without all three markers or without gear-dependent marker travel retain the
+root-height contact fallback. The viewer exposes `--aircraft-gear-down` for a
+reproducible deployment start; `ac5_mission_info --terrain-query` reports both
+the source terrain query and a vertical intersection with the rendered mesh.
+
+Ground-trace evaluation stages attitude and position changes in a local flight
+state and commits them only after all terrain callbacks and anchor validation
+succeed. A missing or invalid callback result therefore cannot leave the
+caller's aircraft partially aligned.

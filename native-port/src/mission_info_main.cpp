@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <charconv>
 #include <array>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <limits>
@@ -26,18 +27,66 @@ int main(int argc, char** argv) {
                                   arguments[1] == "--hit-extents";
     const bool preview_mode = arguments.size() == 6 &&
                               arguments[1] == "--spawn-preview";
+    const bool terrain_query_mode = arguments.size() == 7 &&
+                                    arguments[1] == "--terrain-query";
     const bool raw_mode = arguments.size() == 2;
-    if ((!raw_mode && !archive_mode && !hit_extents_mode && !preview_mode) || arguments[1] == "--help" ||
+    if ((!raw_mode && !archive_mode && !hit_extents_mode && !preview_mode &&
+         !terrain_query_mode) || arguments[1] == "--help" ||
         arguments[1] == "-h") {
         std::fprintf(arguments.size() == 2 ? stdout : stderr,
                      "usage: ac5_mission_info <decompressed-mission.mmb>\n"
                      "       ac5_mission_info --archive <DATA.TBL> <DATA.PAC> <pack-member-index>\n"
                      "       ac5_mission_info --hit-extents <DATA.TBL> <DATA.PAC> <aircraft-entry-index>\n"
-                     "       ac5_mission_info --spawn-preview <DATA.TBL> <DATA.PAC> <terrain-member-index> <pack-member-index>\n");
+                     "       ac5_mission_info --spawn-preview <DATA.TBL> <DATA.PAC> <terrain-member-index> <pack-member-index>\n"
+                     "       ac5_mission_info --terrain-query <DATA.TBL> <DATA.PAC> <terrain-member-index> <x> <z>\n");
         return arguments.size() == 2 ? 0 : 2;
     }
 
     std::vector<ac5::Ac5MissionUnit> units;
+    if (terrain_query_mode) {
+        std::size_t terrain_member = 0;
+        const std::string& member_text = arguments[4];
+        const auto member_parse = std::from_chars(
+            member_text.data(), member_text.data() + member_text.size(),
+            terrain_member);
+        const auto parse_coordinate = [](const std::string& text,
+                                         double& value) {
+            const auto parsed = std::from_chars(
+                text.data(), text.data() + text.size(), value);
+            return parsed.ec == std::errc{} &&
+                   parsed.ptr == text.data() + text.size() &&
+                   std::isfinite(value);
+        };
+        double x = 0.0, z = 0.0;
+        if (member_parse.ec != std::errc{} ||
+            member_parse.ptr != member_text.data() + member_text.size() ||
+            !parse_coordinate(arguments[5], x) ||
+            !parse_coordinate(arguments[6], z)) {
+            std::fprintf(stderr, "Invalid mission terrain query coordinates or member index\n");
+            return 2;
+        }
+        ac5::DataArchive archive;
+        std::vector<ac5::ArchiveFile> files;
+        ac5::Ac5MissionTerrain terrain;
+        float source_height = 0.0f;
+        ac5::Ac5MissionTerrainMeshHit mesh_hit{};
+        if (!archive.open(path_from_utf8(arguments[2]),
+                          path_from_utf8(arguments[3]), error) ||
+            !archive.split_member(terrain_member, files, error) ||
+            !ac5::decode_ac5_mission_terrain(files, terrain, error) ||
+            !ac5::sample_ac5_mission_terrain_height(
+                terrain, x, z, source_height, error) ||
+            !ac5::trace_ac5_mission_terrain_mesh(
+                terrain, {x, 524288.0, z}, {x, -524288.0, z}, mesh_hit, error)) {
+            std::fprintf(stderr, "Mission terrain query failed: %s\n", error.c_str());
+            return 1;
+        }
+        std::printf("x %.3f z %.3f source_y %.3f mesh_hit %s mesh_y %.3f kind %d\n",
+                    x, z, source_height, mesh_hit.hit ? "yes" : "no",
+                    mesh_hit.hit ? mesh_hit.point[1] : 0.0,
+                    mesh_hit.hit ? mesh_hit.kind : -1);
+        return 0;
+    }
     if (hit_extents_mode) {
         std::size_t member_index = 0;
         const std::string& text = arguments[4];

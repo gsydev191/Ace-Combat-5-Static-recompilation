@@ -727,6 +727,8 @@ bool parse_acm(std::span<const std::uint8_t> block, MeshData& mesh,
             AcmModelPart& output = decoded_model.parts[i];
             output.parent = parents[i];
             output.kind = static_cast<std::uint8_t>(parts[i].words[4] & 0xffu);
+            if (parts[i].words[2] == no_link)
+                output.attachment_code = static_cast<char>(parts[i].words[4] & 0xffu);
             output.translation_track = parts[i].words[5];
             output.rotation_track = parts[i].words[6];
             output.shape_track = parts[i].words[7];
@@ -1256,6 +1258,80 @@ bool sample_acm_animation_track(const AcmAnimationTrack& track, double frame,
         static_cast<float>(low.value.z + (high.value.z - low.value.z) * fraction)};
     return std::isfinite(value.x) && std::isfinite(value.y) &&
            std::isfinite(value.z);
+}
+
+std::optional<std::array<std::array<double, 3>, 3>> sample_acm_ground_markers(
+    const AcmPartModel& model, std::span<const float> channels) {
+    if (model.parts.size() > 4096) return std::nullopt;
+    constexpr std::array<char, 3> codes{'I', 'K', 'J'};
+    std::array<std::uint32_t, 3> marker_parts{
+        AcmModelPart::no_parent, AcmModelPart::no_parent,
+        AcmModelPart::no_parent};
+    for (std::size_t part_index = 0; part_index < model.parts.size(); ++part_index) {
+        const char code = model.parts[part_index].attachment_code;
+        for (std::size_t marker = 0; marker < codes.size(); ++marker)
+            if (code == codes[marker] &&
+                marker_parts[marker] == AcmModelPart::no_parent)
+                marker_parts[marker] = static_cast<std::uint32_t>(part_index);
+    }
+    if (std::ranges::any_of(marker_parts, [](std::uint32_t part) {
+            return part == AcmModelPart::no_parent;
+        })) return std::nullopt;
+
+    const auto local_transform = [&](const AcmModelPart& part)
+        -> std::optional<Mat4> {
+        Vec3 position = part.position;
+        Vec3 rotation = part.rotation;
+        Vec3 animated{};
+        if (part.translation_track != AcmModelPart::no_parent) {
+            if (part.translation_track >= model.translation_tracks.size())
+                return std::nullopt;
+            const auto& track = model.translation_tracks[part.translation_track];
+            if (track.channel >= channels.size() ||
+                !sample_acm_animation_track(track, channels[track.channel], animated))
+                return std::nullopt;
+            position.x += animated.x;
+            position.y += animated.y;
+            position.z += animated.z;
+        }
+        if (part.rotation_track != AcmModelPart::no_parent) {
+            if (part.rotation_track >= model.rotation_tracks.size())
+                return std::nullopt;
+            const auto& track = model.rotation_tracks[part.rotation_track];
+            if (track.channel >= channels.size() ||
+                !sample_acm_animation_track(track, channels[track.channel], animated))
+                return std::nullopt;
+            rotation.x += animated.x;
+            rotation.y += animated.y;
+            rotation.z += animated.z;
+        }
+        return Mat4::multiply(Mat4::translation(position), Mat4::multiply(
+            Mat4::rotation_z(rotation.z), Mat4::multiply(
+                Mat4::rotation_y(rotation.y), Mat4::rotation_x(rotation.x))));
+    };
+
+    std::array<std::array<double, 3>, 3> markers{};
+    for (std::size_t marker = 0; marker < marker_parts.size(); ++marker) {
+        std::array<std::uint32_t, 4096> ancestry{};
+        std::size_t depth = 0;
+        std::uint32_t part = marker_parts[marker];
+        while (part != AcmModelPart::no_parent) {
+            if (part >= model.parts.size() || depth == ancestry.size())
+                return std::nullopt;
+            ancestry[depth++] = part;
+            part = model.parts[part].parent;
+        }
+        Mat4 world = Mat4::identity();
+        while (depth != 0) {
+            const auto local = local_transform(model.parts[ancestry[--depth]]);
+            if (!local) return std::nullopt;
+            world = Mat4::multiply(world, *local);
+        }
+        markers[marker] = {world.value[12], world.value[13], world.value[14]};
+        for (double value : markers[marker])
+            if (!std::isfinite(value)) return std::nullopt;
+    }
+    return markers;
 }
 
 } // namespace ac5

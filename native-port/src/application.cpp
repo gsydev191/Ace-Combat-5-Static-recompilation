@@ -1,6 +1,7 @@
 #include "application.hpp"
 
 #include "acm_loader.hpp"
+#include "aircraft_collision.hpp"
 #include "animation_controller.hpp"
 #include "data_archive.hpp"
 #include "flight_model.hpp"
@@ -31,6 +32,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <limits>
+#include <memory>
 #include <new>
 #include <optional>
 #include <span>
@@ -74,6 +76,12 @@ struct DemoFrame {
     Camera* camera = nullptr;
     Vec3 camera_follow_offset{};
     std::optional<AircraftFlightSession> flight_session;
+    std::shared_ptr<const Ac5MissionTerrain> mission_terrain;
+    std::optional<std::array<double, 6>> aircraft_hit_extents;
+    bool aircraft_crashed = false;
+    bool aircraft_on_ground = false;
+    bool aircraft_ground_trace_active = false;
+    AircraftGroundContactState terrain_ground_contact{};
     std::optional<AircraftWeaponRules> weapon_rules;
     AircraftWeaponState weapon_state{};
     AircraftProjectileSystem projectile_system{};
@@ -425,6 +433,7 @@ bool fit_camera_to_scene(const Scene& scene, Camera& camera, CameraFit& fit) {
 
 void update_demo_scene(DemoFrame& frame, DemoStateMachine& scene_state) {
     if (frame.flight_session) {
+        if (frame.aircraft_crashed) return;
         frame.weapon_shot_count = 0;
         frame.unsupported_special_sequence = false;
         const auto queue_press = [](std::uint32_t& pending) {
@@ -468,10 +477,130 @@ void update_demo_scene(DemoFrame& frame, DemoStateMachine& scene_state) {
         std::size_t staged_weapon_shot_count = 0;
         bool staged_unsupported_special_sequence = false;
         bool staged_gameplay_valid = true;
+        bool staged_aircraft_crashed = false;
+        bool staged_collision_query_failed = false;
+        bool staged_on_ground = frame.aircraft_on_ground;
+        bool staged_ground_trace_active = false;
+        bool staged_ground_trace_evaluated = false;
+        AircraftGroundContactState staged_ground_contact =
+            frame.terrain_ground_contact;
+        std::string collision_error;
+        collision_error.reserve(128);
         std::array<double, 3> previous_tick_position =
             staged_flight_session.state().position;
-        if (!staged_flight_session.advance_frame(
+        bool ground_trace_supported = false;
+        AircraftGroundTraceModel ground_trace_model{};
+        ground_trace_model.gear_state = staged_gear_controller.state;
+        ground_trace_model.sample = [&frame, &staged_animation_channels](
+            std::optional<double> gear_channel)
+                -> std::optional<AircraftGroundMarkers> {
+            if (!frame.animated_model) return std::nullopt;
+            AircraftAnimationChannels channels = staged_animation_channels;
+            if (gear_channel) {
+                if (!std::isfinite(*gear_channel)) return std::nullopt;
+                for (std::size_t index = 35; index <= 37; ++index)
+                    channels[index] = static_cast<float>(*gear_channel);
+            }
+            const auto model_markers = sample_acm_ground_markers(
+                *frame.animated_model, channels);
+            if (!model_markers) return std::nullopt;
+            AircraftGroundMarkers markers = *model_markers;
+            for (auto& marker : markers)
+                for (double& coordinate : marker)
+                    coordinate *= aircraft_world_units_per_meter;
+            return markers;
+        };
+        // The generated sweep uses the 50-to-100 gear-pose displacement as
+        // its probe segment. Static marker rigs produce a zero-length sweep,
+        // so keep the native root-height contact fallback for those models.
+        ground_trace_model.gear_state = 2;
+        const auto gear_down_markers = ground_trace_model.sample(50.0);
+        const auto gear_up_markers = ground_trace_model.sample(100.0);
+        if (gear_down_markers && gear_up_markers) {
+            ground_trace_supported = false;
+            for (std::size_t marker = 0; marker < 3; ++marker)
+                for (std::size_t axis = 0; axis < 3; ++axis)
+                    ground_trace_supported |= std::abs(
+                        (*gear_down_markers)[marker][axis] -
+                        (*gear_up_markers)[marker][axis]) > 1e-6;
+        }
+        ground_trace_model.gear_state = staged_gear_controller.state;
+        AircraftGroundTraceTerrain ground_trace_terrain{};
+        if (frame.mission_terrain) {
+            ground_trace_terrain.height = [&frame, &collision_error,
+                &staged_gameplay_valid, &staged_collision_query_failed](
+                    const std::array<double, 3>& point) {
+                Ac5MissionTerrainMeshHit hit{};
+                if (!trace_ac5_mission_terrain_mesh(*frame.mission_terrain,
+                        {point[0], 524288.0, point[2]},
+                        {point[0], -524288.0, point[2]}, hit, collision_error)) {
+                    staged_gameplay_valid = false;
+                    staged_collision_query_failed = true;
+                    return std::numeric_limits<double>::quiet_NaN();
+                }
+                return hit.hit ? hit.point[1] : 0.0;
+            };
+            ground_trace_terrain.sweep = [&frame, &collision_error,
+                &staged_gameplay_valid, &staged_collision_query_failed](
+                    const std::array<double, 3>& end,
+                    const std::array<double, 3>& start) {
+                Ac5MissionTerrainMeshHit hit{};
+                if (!trace_ac5_mission_terrain_mesh(*frame.mission_terrain,
+                        end, start, hit, collision_error)) {
+                    staged_gameplay_valid = false;
+                    staged_collision_query_failed = true;
+                    return AircraftGroundSweepHit{};
+                }
+                return AircraftGroundSweepHit{hit.hit ? 1 : 0, hit.fraction,
+                                               hit.normal_y, hit.kind};
+            };
+            ground_trace_terrain.vertical = [&frame, &collision_error,
+                &staged_gameplay_valid, &staged_collision_query_failed](
+                    const std::array<double, 3>& upper,
+                    const std::array<double, 3>& lower) {
+                Ac5MissionTerrainMeshHit hit{};
+                if (!trace_ac5_mission_terrain_mesh(*frame.mission_terrain,
+                        upper, lower, hit, collision_error)) {
+                    staged_gameplay_valid = false;
+                    staged_collision_query_failed = true;
+                    return AircraftGroundVerticalHit{};
+                }
+                return AircraftGroundVerticalHit{
+                    hit.hit ? 1 : 0, hit.point};
+            };
+        }
+        if (!staged_flight_session.advance_frame_until_contact(
                 frame.delta_seconds, flight_input,
+                [&frame, &collision_error, ground_trace_supported,
+                 &staged_gear_controller, &staged_gameplay_valid,
+                 &staged_on_ground, &staged_ground_contact,
+                 &staged_collision_query_failed](
+                    const AircraftFlightState& tick_state,
+                    AircraftFlightInput& tick_input) noexcept {
+                    if (!frame.mission_terrain || !frame.aircraft_hit_extents)
+                        return true;
+                    float root_ground = 0.0f;
+                    if (!sample_ac5_mission_terrain_height(
+                            *frame.mission_terrain, tick_state.position[0],
+                            tick_state.position[2], root_ground, collision_error)) {
+                        staged_gameplay_valid = false;
+                        staged_collision_query_failed = true;
+                        return false;
+                    }
+                    const double floor_y = std::max(
+                        20.0, std::max(0.0, static_cast<double>(root_ground)) + 20.0);
+                    const bool use_marker_trace = ground_trace_supported &&
+                        staged_gear_controller.state == 2;
+                    if (!use_marker_trace)
+                        (void)update_aircraft_ground_contact(
+                            staged_ground_contact,
+                            std::abs(tick_state.position[1] - floor_y) <= 1.0,
+                            tick_input.ticks_per_second, true);
+                    staged_on_ground =
+                        (staged_ground_contact.flags & 0x01u) != 0;
+                    tick_input.ground_contact_override = staged_on_ground;
+                    return true;
+                },
                 [&frame, staged_gear_down, &staged_animation_channels,
                  &staged_gear_controller, &staged_weapon_state,
                  &staged_projectiles,
@@ -481,11 +610,78 @@ void update_demo_scene(DemoFrame& frame, DemoStateMachine& scene_state) {
                  &staged_weapon_shots,
                  &staged_weapon_shot_count, &previous_tick_position,
                  &staged_unsupported_special_sequence,
-                 &staged_gameplay_valid](const AircraftFlightState& tick_state) noexcept {
-                    if (!staged_gameplay_valid) return;
+                 ground_trace_supported, &ground_trace_model,
+                 &ground_trace_terrain, &staged_ground_trace_active,
+                 &staged_ground_trace_evaluated,
+                 &staged_gameplay_valid, &staged_aircraft_crashed,
+                 &staged_on_ground, &staged_ground_contact,
+                 &staged_collision_query_failed,
+                 &collision_error](AircraftFlightState& tick_state) noexcept {
+                    if (!staged_gameplay_valid) return false;
                     advance_demo_animation(frame, tick_state, staged_gear_down,
                                            staged_animation_channels,
                                            staged_gear_controller);
+                    staged_ground_trace_active = false;
+                    staged_ground_trace_evaluated = ground_trace_supported &&
+                        static_cast<bool>(frame.mission_terrain);
+                    if (ground_trace_supported && frame.mission_terrain &&
+                        staged_gear_controller.state == 2) {
+                        ground_trace_model.gear_state =
+                            staged_gear_controller.state;
+                        const auto trace = normal_aircraft_ground_trace(
+                            tick_state, ground_trace_model, &ground_trace_terrain);
+                        if (!trace || !staged_gameplay_valid) {
+                            if (collision_error.empty())
+                                collision_error = "aircraft ground-marker trace failed";
+                            staged_gameplay_valid = false;
+                            staged_collision_query_failed = true;
+                            return false;
+                        }
+                        staged_ground_trace_active = true;
+                        (void)update_aircraft_ground_contact(
+                            staged_ground_contact, trace->hit, 60, true);
+                        staged_on_ground =
+                            (staged_ground_contact.flags & 0x01u) != 0;
+                    }
+                    if (frame.mission_terrain && frame.aircraft_hit_extents) {
+                        float root_ground = 0.0f;
+                        if (!sample_ac5_mission_terrain_height(
+                                *frame.mission_terrain, tick_state.position[0],
+                                tick_state.position[2], root_ground,
+                                collision_error)) {
+                            staged_gameplay_valid = false;
+                            staged_collision_query_failed = true;
+                            return false;
+                        }
+                        const double floor_y = std::max(
+                            20.0, std::max(0.0, static_cast<double>(root_ground)) + 20.0);
+                        if (tick_state.position[1] < floor_y) {
+                            const auto hits = count_airframe_surface_hits(
+                                tick_state.position,
+                                aircraft_body_axes(tick_state.euler),
+                                *frame.aircraft_hit_extents,
+                                [&frame, &collision_error](double x, double z,
+                                                           double& height) noexcept {
+                                    float sampled_height = 0.0f;
+                                    if (!sample_ac5_mission_terrain_height(
+                                            *frame.mission_terrain, x, z,
+                                            sampled_height, collision_error)) return false;
+                                    height = std::max(0.0, static_cast<double>(sampled_height));
+                                    return true;
+                                });
+                            if (!hits.has_value()) {
+                                staged_gameplay_valid = false;
+                                staged_collision_query_failed = true;
+                                return false;
+                            }
+                            if (*hits != 0 && !staged_on_ground) {
+                                staged_aircraft_crashed = true;
+                                return false;
+                            }
+                            if (!staged_ground_trace_active)
+                                tick_state.position[1] = floor_y;
+                        }
+                    }
                     if (frame.weapon_rules) {
                         AircraftProjectileImpacts ignored_impacts{};
                         if (!advance_aircraft_projectiles(staged_projectiles,
@@ -493,7 +689,7 @@ void update_demo_scene(DemoFrame& frame, DemoStateMachine& scene_state) {
                                 std::span<const ProjectileTargetSphere>{},
                                 ignored_impacts)) {
                             staged_gameplay_valid = false;
-                            return;
+                            return false;
                         }
                         const AircraftWeaponInput weapon_input{
                             .switch_weapon_pressed = staged_weapon_switch_presses != 0,
@@ -549,22 +745,41 @@ void update_demo_scene(DemoFrame& frame, DemoStateMachine& scene_state) {
                                     staged_projectiles, std::nullopt,
                                     gun_muzzle_position)) {
                                 staged_gameplay_valid = false;
-                                return;
+                                return false;
                             }
                         }
                     }
                     previous_tick_position = tick_state.position;
+                    return true;
                 })) {
-            std::fprintf(stderr, "Native flight session rejected its rules or state\n");
+            if (staged_collision_query_failed) {
+                std::fprintf(stderr, "Mission terrain contact query failed: %s\n",
+                             collision_error.c_str());
+            } else {
+                std::fprintf(stderr, "Native flight session rejected its rules or state\n");
+            }
             scene_state.request_transition(DemoSceneState::Exiting);
             return;
         }
         if (!staged_gameplay_valid) {
+            if (staged_collision_query_failed) {
+                std::fprintf(stderr, "Mission terrain collision query failed: %s\n",
+                             collision_error.c_str());
+                scene_state.request_transition(DemoSceneState::Exiting);
+                return;
+            }
             std::fprintf(stderr, "Native projectile simulation rejected its state\n");
             scene_state.request_transition(DemoSceneState::Exiting);
             return;
         }
         *frame.flight_session = std::move(staged_flight_session);
+        frame.aircraft_crashed = staged_aircraft_crashed;
+        frame.aircraft_on_ground = staged_on_ground;
+        if (staged_ground_trace_evaluated)
+            frame.aircraft_ground_trace_active = staged_ground_trace_active;
+        frame.terrain_ground_contact = staged_ground_contact;
+        if (staged_aircraft_crashed)
+            std::fprintf(stderr, "Aircraft crashed after airframe contact with mission terrain\n");
         if (approach_control_changed)
             std::fprintf(stderr, "Approach control %s\n",
                          approach_control_enabled ? "enabled" : "disabled");
@@ -633,6 +848,9 @@ int Application::run(int argc, char** argv) {
     std::array<std::string, 3> map_texture_paths{};
     std::array<std::string, 2> mission_archive_paths{};
     std::size_t mission_terrain_member = 0;
+    std::optional<std::size_t> aircraft_entry_member;
+    std::optional<std::array<double, 3>> aircraft_start_position;
+    bool aircraft_gear_down = false;
     std::optional<std::size_t> mission_units_member;
     bool has_mission_terrain_member = false;
     float heightmap_scale = 100.0f;
@@ -651,6 +869,9 @@ int Application::run(int argc, char** argv) {
                      "[--map-textures map.mti map.mtd map.mtc] "
                      "[--mission-terrain DATA.TBL DATA.PAC member-index] "
                      "[--mission-units mission-pack-member-index] "
+                     "[--aircraft-entry-index mission-entry-member-index] "
+                     "[--aircraft-start x y z] "
+                     "[--aircraft-gear-down] "
                      "[--texture image.ppm|image.tga|image.gim] "
                      "[--material-textures aircraft.pmtex] "
                      "[--flight-rules aircraft.pmb] "
@@ -663,6 +884,10 @@ int Application::run(int argc, char** argv) {
         if (argument == "--help" || argument == "-h") {
             usage(stdout);
             return 0;
+        }
+        if (argument == "--aircraft-gear-down") {
+            aircraft_gear_down = true;
+            continue;
         }
         if (argument == "--height-scale" || argument == "--height-spacing") {
             if (i + 1 >= argc) {
@@ -728,6 +953,47 @@ int Application::run(int argc, char** argv) {
             mission_units_member = parsed_member;
             continue;
         }
+        if (argument == "--aircraft-entry-index") {
+            if (i + 1 >= argc) {
+                std::fprintf(stderr,
+                             "--aircraft-entry-index requires a mission-entry member index\n");
+                return 2;
+            }
+            const std::string_view value(argv[++i]);
+            std::size_t parsed_member = 0;
+            const auto parsed = std::from_chars(value.data(), value.data() + value.size(),
+                                                parsed_member);
+            if (parsed.ec != std::errc{} || parsed.ptr != value.data() + value.size()) {
+                std::fprintf(stderr,
+                             "aircraft entry member index must be an unsigned integer\n");
+                return 2;
+            }
+            aircraft_entry_member = parsed_member;
+            continue;
+        }
+        if (argument == "--aircraft-start") {
+            if (i + 3 >= argc) {
+                std::fprintf(stderr, "--aircraft-start requires x, y, and z world coordinates\n");
+                return 2;
+            }
+            std::array<double, 3> position{};
+            bool valid = true;
+            for (double& coordinate : position) {
+                const std::string_view value(argv[++i]);
+                const auto parsed = std::from_chars(
+                    value.data(), value.data() + value.size(), coordinate);
+                valid = valid && parsed.ec == std::errc{} &&
+                    parsed.ptr == value.data() + value.size() &&
+                    std::isfinite(coordinate);
+            }
+            if (!valid) {
+                std::fprintf(stderr,
+                             "aircraft start coordinates must be finite numbers in world units\n");
+                return 2;
+            }
+            aircraft_start_position = position;
+            continue;
+        }
         if (argument == "--model" || argument == "--heightmap" ||
             argument == "--texture" ||
             argument == "--material-textures" ||
@@ -762,13 +1028,28 @@ int Application::run(int argc, char** argv) {
         std::fprintf(stderr, "--mission-units requires --mission-terrain\n");
         return 2;
     }
-    if (mission_terrain_mode &&
-        (!model_path.empty() || !heightmap_path.empty() || map_texture_mode ||
-         !texture_path.empty() || !material_textures_path.empty() ||
-         !flight_rules_path.empty() || !weapon_rules_path.empty() ||
-         !animation_rules_path.empty())) {
+    if (aircraft_entry_member.has_value() &&
+        (!mission_terrain_mode || flight_rules_path.empty() || model_path.empty())) {
         std::fprintf(stderr,
-                     "--mission-terrain is a standalone mission terrain viewer mode\n");
+                     "--aircraft-entry-index requires --mission-terrain, --model, and --flight-rules\n");
+        return 2;
+    }
+    if (aircraft_start_position.has_value() && flight_rules_path.empty()) {
+        std::fprintf(stderr, "--aircraft-start requires --flight-rules\n");
+        return 2;
+    }
+    if (aircraft_gear_down && (model_path.empty() || flight_rules_path.empty())) {
+        std::fprintf(stderr,
+                     "--aircraft-gear-down requires an aircraft model and --flight-rules\n");
+        return 2;
+    }
+    if (mission_terrain_mode &&
+        (!heightmap_path.empty() || map_texture_mode || !texture_path.empty() ||
+         !material_textures_path.empty() ||
+         (flight_rules_path.empty() != model_path.empty()) ||
+         (!flight_rules_path.empty() && !aircraft_entry_member.has_value()))) {
+        std::fprintf(stderr,
+                     "--mission-terrain can be viewed alone or combined with --model, --flight-rules, and --aircraft-entry-index\n");
         return 2;
     }
     if (map_texture_mode &&
@@ -873,10 +1154,13 @@ int Application::run(int argc, char** argv) {
     bool model_loaded = false;
     DemoLod demo_lod;
     std::vector<TextureId> material_texture_ids;
+    std::shared_ptr<Ac5MissionTerrain> mission_terrain_data;
+    std::optional<std::array<double, 6>> mission_aircraft_hit_extents;
     if (mission_terrain_mode) {
         DataArchive archive;
         std::vector<ArchiveFile> files;
-        Ac5MissionTerrain mission_terrain;
+        mission_terrain_data = std::make_shared<Ac5MissionTerrain>();
+        Ac5MissionTerrain& mission_terrain = *mission_terrain_data;
         MeshData terrain_mesh;
         const std::filesystem::path table_path =
             path_from_utf8(mission_archive_paths[0]);
@@ -892,11 +1176,23 @@ int Application::run(int argc, char** argv) {
             SDL_Quit();
             return 1;
         }
+        if (aircraft_entry_member.has_value()) {
+            std::array<double, 6> extents{};
+            if (!load_ac5_aircraft_hit_extents(archive, *aircraft_entry_member,
+                                               extents, load_error)) {
+                std::fprintf(stderr, "Aircraft hit extent load failed: %s\n",
+                             load_error.c_str());
+                SDL_Quit();
+                return 1;
+            }
+            mission_aircraft_hit_extents = extents;
+        }
         const MeshId terrain_mesh_id = scene.add_mesh(std::move(terrain_mesh));
         const TextureId terrain_texture_id =
             scene.add_texture(std::move(mission_terrain.surface.atlas));
+        const TransformId terrain_transform = scene.add_transform();
         scene.add_draw(terrain_mesh_id, terrain_texture_id, Mat4::identity(),
-                       model_transform);
+                       terrain_transform);
         if (mission_units_member.has_value()) {
             std::vector<Ac5MissionUnit> mission_units;
             if (!load_ac5_mission_units(archive, *mission_units_member,
@@ -941,7 +1237,7 @@ int Application::run(int argc, char** argv) {
                 marker.value[13] = static_cast<float>(position[1]);
                 marker.value[14] = static_cast<float>(position[2]);
                 const TransformId marker_transform =
-                    scene.add_transform(marker, model_transform);
+                    scene.add_transform(marker, terrain_transform);
                 scene.add_draw(marker_meshes[side], Mat4::identity(),
                                marker_transform);
                 ++visible_spawns;
@@ -1283,7 +1579,16 @@ int Application::run(int argc, char** argv) {
                 scene_state.request_transition(DemoSceneState::Exiting);
             }
             DemoFrame frame{scene, model_transform};
+            frame.mission_terrain = mission_terrain_data;
+            frame.aircraft_hit_extents = mission_aircraft_hit_extents;
             frame.gear_controller = gear_controller;
+            if (aircraft_gear_down) {
+                frame.gear_down = true;
+                frame.gear_controller.state = 2;
+                for (std::size_t channel = 33; channel <= 38; ++channel)
+                    frame.animation_channels[channel] = 50.0f;
+                frame.animation_channels[39] = 100.0f;
+            }
             frame.animation_controller_flags = animation_controller_flags;
             if (animation_rules) frame.animation_rules = *animation_rules;
             frame.animated_model = std::move(animated_model);
@@ -1292,6 +1597,8 @@ int Application::run(int argc, char** argv) {
             frame.part_draw_indices = std::move(part_draw_indices);
             if (flight_rules) {
                 AircraftFlightState flight_state{};
+                if (aircraft_start_position)
+                    flight_state.position = *aircraft_start_position;
                 flight_state.speed_units_per_tick =
                     flight_rules->speed.cruise_kmh *
                     aircraft_world_units_per_kmh_per_second / 60.0;
@@ -1323,10 +1630,16 @@ int Application::run(int argc, char** argv) {
             const bool camera_fitted = fit_camera_to_scene(scene, camera, camera_fit);
             if (acm_model && !camera_fitted) camera.far_plane = 20000.0f;
             if (flight_rules) {
+                if (frame.mission_terrain) {
+                    camera.near_plane = 1.0f;
+                    camera.far_plane = std::max(camera.far_plane, 1'000'000.0f);
+                }
                 camera.target = {0.0f, static_cast<float>(
                     frame.flight_session->state().position[1]), 0.0f};
-                const float follow_height = camera_fitted ? camera_fit.radius * 0.12f : 8.0f;
-                const float follow_distance = camera_fitted ? camera_fit.distance : 115.0f;
+                const float follow_height = camera_fitted && !frame.mission_terrain
+                    ? camera_fit.radius * 0.12f : 8.0f;
+                const float follow_distance = camera_fitted && !frame.mission_terrain
+                    ? camera_fit.distance : 115.0f;
                 frame.camera_follow_offset = {0.0f, follow_height, -follow_distance};
                 camera.position = {camera.target.x + frame.camera_follow_offset.x,
                                    camera.target.y + frame.camera_follow_offset.y,
@@ -1399,10 +1712,12 @@ int Application::run(int argc, char** argv) {
                     result = 1;
                     break;
                 }
-                if (frame.weapon_rules) {
+                if (frame.aircraft_crashed) {
+                    SDL_SetWindowTitle(window, "AC5 Native | AIRFRAME CONTACT");
+                } else if (frame.weapon_rules) {
                     std::array<char, 160> title{};
                     std::snprintf(title.data(), title.size(),
-                        "AC5 Native | SELECTED %s | MSL %u | SP %u | GUN %u%s | shots %zu%s",
+                        "AC5 Native | SELECTED %s | MSL %u | SP %u | GUN %u%s | shots %zu%s%s%s",
                         frame.weapon_state.selected == AircraftWeaponSlot::Standard
                             ? "MSL" : "SP",
                         static_cast<unsigned>(frame.weapon_state.missile_ammunition),
@@ -1413,7 +1728,18 @@ int Application::run(int argc, char** argv) {
                             ? "(unlimited)" : "",
                         frame.weapon_shot_count,
                         frame.unsupported_special_sequence
-                            ? " | unsupported special sequence" : "");
+                            ? " | unsupported special sequence" : "",
+                        frame.aircraft_on_ground ? " | GROUND ROLL" : "",
+                        frame.aircraft_ground_trace_active
+                            ? " | MARKER TRACE" : "");
+                    SDL_SetWindowTitle(window, title.data());
+                } else if (frame.flight_session) {
+                    std::array<char, 96> title{};
+                    std::snprintf(title.data(), title.size(), "%s%s%s",
+                        frame.aircraft_on_ground ? "AC5 Native | GROUND ROLL" :
+                                                   "AC5 Native | FLIGHT",
+                        frame.aircraft_ground_trace_active ? " | MARKER TRACE" : "",
+                        frame.gear_down ? " | GEAR DOWN" : "");
                     SDL_SetWindowTitle(window, title.data());
                 }
                 if (frame.has_projectile_mesh)

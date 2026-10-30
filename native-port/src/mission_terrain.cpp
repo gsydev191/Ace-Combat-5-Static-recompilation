@@ -385,4 +385,135 @@ bool sample_ac5_mission_terrain_height(const Ac5MissionTerrain& terrain,
     return true;
 }
 
+bool trace_ac5_mission_terrain_mesh(
+    const Ac5MissionTerrain& terrain, const std::array<double, 3>& from,
+    const std::array<double, 3>& to, Ac5MissionTerrainMeshHit& hit,
+    std::string& error) {
+    error.clear();
+    Ac5MissionTerrainMeshHit staged_hit;
+    constexpr std::uint32_t side = Ac5MissionTerrain::height_width;
+    constexpr double origin = Ac5MissionTerrain::height_origin_xz_world_units;
+    constexpr double spacing = Ac5MissionTerrain::height_spacing_world_units;
+    const std::size_t expected_samples = static_cast<std::size_t>(side) * side;
+    const std::size_t expected_tiles =
+        static_cast<std::size_t>(Ac5MissionTerrain::tile_width) *
+        Ac5MissionTerrain::tile_width;
+    if (terrain.elevations.size() != expected_samples ||
+        terrain.surface.map_entries.size() != expected_tiles) {
+        error = "AC5 mission terrain mesh dimensions are invalid";
+        return false;
+    }
+    for (double value : from)
+        if (!std::isfinite(value)) {
+            error = "AC5 mission terrain trace start is non-finite";
+            return false;
+        }
+    for (double value : to)
+        if (!std::isfinite(value)) {
+            error = "AC5 mission terrain trace end is non-finite";
+            return false;
+        }
+
+    const double half = spacing * (side - 1u) * 0.5;
+    const double min_x = std::max(-half, std::min(from[0], to[0]));
+    const double max_x = std::min(half, std::max(from[0], to[0]));
+    const double min_z = std::max(-half, std::min(from[2], to[2]));
+    const double max_z = std::min(half, std::max(from[2], to[2]));
+    if (min_x > max_x || min_z > max_z) {
+        hit = staged_hit;
+        return true;
+    }
+    const auto cell_index = [half](double coordinate) {
+        const double grid = std::clamp((coordinate + half) / spacing,
+                                       0.0, static_cast<double>(side - 1u));
+        return std::min(static_cast<std::uint32_t>(std::floor(grid)), side - 2u);
+    };
+    const std::uint32_t x_begin = cell_index(min_x);
+    const std::uint32_t x_end = cell_index(max_x);
+    const std::uint32_t z_begin = cell_index(min_z);
+    const std::uint32_t z_end = cell_index(max_z);
+    const auto vertex = [&](std::uint32_t x, std::uint32_t z) {
+        const std::size_t tile = static_cast<std::size_t>(z >> 1u) *
+            Ac5MissionTerrain::tile_width + (x >> 1u);
+        const bool zero_height =
+            (terrain.surface.map_entries[tile] & 0x0800u) != 0u;
+        const double y = zero_height ? 0.0 : terrain.elevations[
+            static_cast<std::size_t>(z) * side + x];
+        return std::array<double, 3>{origin + x * spacing, y,
+                                     origin + z * spacing};
+    };
+    const std::array<double, 3> direction{
+        to[0] - from[0], to[1] - from[1], to[2] - from[2]};
+    for (double value : direction)
+        if (!std::isfinite(value)) {
+            error = "AC5 mission terrain trace segment exceeds the numeric range";
+            return false;
+        }
+    const auto subtract = [](const auto& lhs, const auto& rhs) {
+        return std::array<double, 3>{lhs[0] - rhs[0], lhs[1] - rhs[1],
+                                     lhs[2] - rhs[2]};
+    };
+    const auto cross = [](const auto& lhs, const auto& rhs) {
+        return std::array<double, 3>{
+            lhs[1] * rhs[2] - lhs[2] * rhs[1],
+            lhs[2] * rhs[0] - lhs[0] * rhs[2],
+            lhs[0] * rhs[1] - lhs[1] * rhs[0]};
+    };
+    const auto dot = [](const auto& lhs, const auto& rhs) {
+        return lhs[0] * rhs[0] + lhs[1] * rhs[1] + lhs[2] * rhs[2];
+    };
+    const auto triangle = [&](const auto& a, const auto& b, const auto& c) {
+        const auto edge1 = subtract(b, a);
+        const auto edge2 = subtract(c, a);
+        const auto h = cross(direction, edge2);
+        const double determinant = dot(edge1, h);
+        if (std::abs(determinant) < 1e-12) return;
+        const auto offset = subtract(from, a);
+        const double u = dot(offset, h) / determinant;
+        if (u < -1e-10 || u > 1.0 + 1e-10) return;
+        const auto q = cross(offset, edge1);
+        const double v = dot(direction, q) / determinant;
+        if (v < -1e-10 || u + v > 1.0 + 1e-10) return;
+        const double fraction = dot(edge2, q) / determinant;
+        if (fraction < 0.0 || fraction > 1.0 ||
+            (staged_hit.hit && fraction >= staged_hit.fraction)) return;
+        const auto normal = cross(edge1, edge2);
+        const double normal_length = std::sqrt(dot(normal, normal));
+        if (!(normal_length > 0.0) || !std::isfinite(normal_length)) return;
+        staged_hit.hit = true;
+        staged_hit.fraction = fraction;
+        staged_hit.normal_y = normal[1] / normal_length;
+        for (std::size_t axis = 0; axis < 3; ++axis)
+            staged_hit.point[axis] = from[axis] + fraction * direction[axis];
+        const std::uint32_t hit_x = cell_index(staged_hit.point[0]);
+        const std::uint32_t hit_z = cell_index(staged_hit.point[2]);
+        const std::size_t tile = static_cast<std::size_t>(hit_z >> 1u) *
+            Ac5MissionTerrain::tile_width + (hit_x >> 1u);
+        staged_hit.kind = (terrain.surface.map_entries[tile] & 0x0800u) != 0u ? 2 : 0;
+    };
+
+    for (std::uint32_t z = z_begin; z <= z_end; ++z) {
+        for (std::uint32_t x = x_begin; x <= x_end; ++x) {
+            const auto a = vertex(x, z);
+            const auto b = vertex(x + 1u, z);
+            const auto c = vertex(x, z + 1u);
+            const auto d = vertex(x + 1u, z + 1u);
+            if (!std::isfinite(a[1]) || !std::isfinite(b[1]) ||
+                !std::isfinite(c[1]) || !std::isfinite(d[1])) {
+                error = "AC5 mission terrain trace encountered a non-finite vertex";
+                return false;
+            }
+            if (((x ^ z) & 1u) == 0u) {
+                triangle(a, c, d);
+                triangle(a, d, b);
+            } else {
+                triangle(a, c, b);
+                triangle(b, c, d);
+            }
+        }
+    }
+    hit = staged_hit;
+    return true;
+}
+
 } // namespace ac5
