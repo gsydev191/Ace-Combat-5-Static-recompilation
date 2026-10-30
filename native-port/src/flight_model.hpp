@@ -3,8 +3,14 @@
 #include "flight_rules_loader.hpp"
 
 #include <array>
+#include <cstdint>
 
 namespace ac5 {
+
+struct AircraftFlightFlags {
+    std::uint8_t contact = 0;
+    std::uint8_t mode = 0;
+};
 
 struct AircraftFlightState {
     std::array<double, 3> position{0.0, 3000.0, 0.0};
@@ -23,16 +29,20 @@ struct AircraftFlightInput {
     double yaw = 0.0;
     double throttle_lever = 0.0;
     int ticks_per_second = 60;
-    bool reduced_speed_mode = false;
+    AircraftFlightFlags flags{};
     bool suppress_inverted_sink = false;
-    bool approach_control = false;
-    bool ground_contact = false;
     bool reset_contact_speed = false;
     double contact_acceleration_scale = 1.0;
     double contact_acceleration_bias = 0.0;
 };
 
-// Advance one native flight tick. ground_contact selects the recovered scalar
+// Set the recovered ground/contact modes while preserving unrelated flag bits.
+void set_aircraft_flight_mode(AircraftFlightFlags& flags,
+                              std::uint8_t command) noexcept;
+void set_aircraft_approach_control(AircraftFlightFlags& flags,
+                                   bool enabled) noexcept;
+
+// Advance one native flight tick. Contact bit 0 selects the recovered scalar
 // contact-speed law; terrain collision and ground-marker alignment are separate.
 [[nodiscard]] bool advance_aircraft_flight_tick(
     const AircraftFlightRules& rules, const AircraftFlightInput& input,

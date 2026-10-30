@@ -211,6 +211,33 @@ bool finite(const std::array<double, 3>& values) {
 
 } // namespace
 
+void set_aircraft_flight_mode(AircraftFlightFlags& flags,
+                              std::uint8_t command) noexcept {
+    switch (command) {
+    case 0:
+        flags.mode = static_cast<std::uint8_t>(flags.mode & 0xfeu);
+        flags.contact = static_cast<std::uint8_t>(flags.contact & 0xfcu);
+        break;
+    case 1:
+        flags.mode = static_cast<std::uint8_t>(flags.mode | 1u);
+        flags.contact = static_cast<std::uint8_t>(flags.contact & 0xfcu);
+        break;
+    case 2:
+        flags.mode = static_cast<std::uint8_t>(flags.mode | 1u);
+        flags.contact = static_cast<std::uint8_t>((flags.contact & 0xfeu) | 2u);
+        break;
+    default:
+        break;
+    }
+}
+
+void set_aircraft_approach_control(AircraftFlightFlags& flags,
+                                   bool enabled) noexcept {
+    flags.contact = static_cast<std::uint8_t>(enabled
+        ? flags.contact | 0x20u
+        : flags.contact & static_cast<std::uint8_t>(~0x20u));
+}
+
 bool advance_aircraft_flight_tick(const AircraftFlightRules& rules,
                                   const AircraftFlightInput& input,
                                   AircraftFlightState& state) noexcept {
@@ -224,17 +251,20 @@ bool advance_aircraft_flight_tick(const AircraftFlightRules& rules,
         !std::isfinite(input.contact_acceleration_scale) ||
         !std::isfinite(input.contact_acceleration_bias)) return false;
 
+    const bool ground_contact = (input.flags.contact & 1u) != 0;
+    const bool reduced_speed_mode = (input.flags.mode & 1u) != 0;
+    const bool approach_control = (input.flags.contact & 0x20u) != 0;
     const FlightSpeedInput speed_input{
         state.position[1], state.euler[0], input.throttle_lever,
         state.speed_units_per_tick, input.ticks_per_second,
-        input.reduced_speed_mode};
+        reduced_speed_mode};
     const FlightSpeedOutput speed = advance_airborne_speed(rules.speed, speed_input);
     if (!speed.valid) return false;
 
     AircraftFlightState next = state;
     if (input.reset_contact_speed) {
         next.speed_units_per_tick = 0.0;
-    } else if (input.ground_contact) {
+    } else if (ground_contact) {
         const double acceleration = 35.555546 /
             input.ticks_per_second / input.ticks_per_second;
         next.speed_units_per_tick = std::clamp(
@@ -255,7 +285,7 @@ bool advance_aircraft_flight_tick(const AircraftFlightRules& rules,
     double pitch_command = input.pitch;
     double roll_command = -input.roll;
     double yaw_command = input.yaw;
-    if (input.approach_control)
+    if (approach_control)
         approach_commands(input, state.euler, next.approach_pitch,
                           pitch_command, roll_command, yaw_command);
     const FlightAxisOutput pitch = advance_flight_axis(
@@ -263,19 +293,19 @@ bool advance_aircraft_flight_tick(const AircraftFlightRules& rules,
     const FlightAxisOutput roll = advance_flight_axis(
         rules.roll, axis_input(roll_command, state.rates[2]));
     const FlightAxisOutput yaw = advance_flight_axis(
-        input.approach_control ? rules.pitch : rules.yaw,
+        approach_control ? rules.pitch : rules.yaw,
         axis_input(yaw_command, state.rates[1]));
     if (!pitch.valid || !roll.valid || !yaw.valid) return false;
 
-    next.stall_factor = input.ground_contact ? 0.0 : speed.stall_factor;
+    next.stall_factor = ground_contact ? 0.0 : speed.stall_factor;
     next.rates = {pitch.rate_radians_per_tick,
                   yaw.rate_radians_per_tick,
                   roll.rate_radians_per_tick};
-    if (!input.ground_contact)
+    if (!ground_contact)
         apply_airborne_trim_and_stall(rules, next.stall_factor,
                                       input.ticks_per_second,
                                       euler_matrix(state.euler), next.rates,
-                                      !input.approach_control);
+                                      !approach_control);
     if (next.rates[0] != 0.0 || next.rates[1] != 0.0 || next.rates[2] != 0.0)
         next.euler = to_euler(multiply(euler_matrix(next.rates),
                                        euler_matrix(state.euler)));
@@ -286,13 +316,13 @@ bool advance_aircraft_flight_tick(const AircraftFlightRules& rules,
     std::array<double, 3> velocity = row_multiply(
         {0.0, 0.0, -next.speed_units_per_tick}, euler_matrix(next.path_euler));
     velocity[1] -= next.stall_factor * next.stall_factor *
-                   (input.reduced_speed_mode ? 2.5 : 5.0);
-    if (!input.suppress_inverted_sink && !input.approach_control) {
+                   (reduced_speed_mode ? 2.5 : 5.0);
+    if (!input.suppress_inverted_sink && !approach_control) {
         const double normalized_roll = next.euler[2] / pi;
         velocity[1] -= normalized_roll * normalized_roll *
             (rules.speed.inverted_sink_mps * 5.12 / input.ticks_per_second);
     }
-    if (input.reduced_speed_mode) {
+    if (reduced_speed_mode) {
         const double half_cruise = rules.speed.cruise_kmh * 1.4222219 * 0.5 /
                                    input.ticks_per_second;
         if (next.speed_units_per_tick < half_cruise)

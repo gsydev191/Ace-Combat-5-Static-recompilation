@@ -211,7 +211,9 @@ project does not build or link any of those files.
   order and path-attitude lag. Approach-control mode has its own native stick
   law and captured-pitch state. Ground contact has a native acceleration law,
   configurable carrier scale/bias, and envelope speed cap. Terrain collision
-  and marker-based alignment remain separate.
+  and marker-based alignment remain separate. `AircraftFlightFlags` exposes
+  independent contact and mode bytes, and its native setters preserve
+  unrelated bits as the recovered mode setter does.
 - A bounded, resumable ULZ decoder and `DATA.TBL`/`DATA.PAC` reader. The
   decoder can yield after a caller-selected number of control words, and
   `ArchiveMemberLoad` exposes that budget at the member-loading boundary. Its

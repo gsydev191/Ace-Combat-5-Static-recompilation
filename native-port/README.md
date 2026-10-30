@@ -251,8 +251,11 @@ input slew law. `advance_aircraft_flight_tick` composes those scalar updates,
 applies recovered airborne trim and stall nose-drop, supports the explicit
 approach-control stick law, integrates native body attitude, and advances
 position with path lag and airborne sink terms. Approach mode captures the
-reference pitch and suppresses steady trim and inverted-flight sink. The
-ground-contact option uses the recovered per-tick acceleration and maximum
+reference pitch and suppresses steady trim and inverted-flight sink.
+`AircraftFlightFlags` keeps contact and mode bits as separate native bytes;
+`set_aircraft_flight_mode` and `set_aircraft_approach_control` preserve unrelated
+bits when changing modes. The ground-contact option uses the recovered
+per-tick acceleration and maximum
 speed clamp, with caller-supplied carrier scaling and bias; it does not perform
 terrain collision or marker-based alignment.
 `load_aircraft_flight_rules` reads the standalone 400-byte
