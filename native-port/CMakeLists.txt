@@ -26,6 +26,8 @@ target_include_directories(ac5_asset_core PUBLIC
 target_compile_features(ac5_asset_core PUBLIC cxx_std_20)
 
 add_library(ac5_game_core STATIC
+    src/animation_controller.cpp
+    src/animation_controller.hpp
     src/acm_loader.cpp
     src/acm_loader.hpp
     src/flight_controls.cpp
@@ -92,6 +94,7 @@ install(FILES
     src/flight_model.hpp
     src/flight_session.hpp
     src/flight_rules_loader.hpp
+    src/animation_controller.hpp
     src/obj_loader.hpp
     src/texture_loader.hpp
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/ac5_native")

@@ -171,7 +171,10 @@ project does not build or link any of those files.
   Compatible shape targets interpolate all decoded vertex attributes through
   per-frame dynamic Vulkan vertex buffers; differing topology falls back to
   nearest-key target selection. Aircraft-specific authority/configuration
-  curves and state-driven gear/flap channels remain open.
+  curves decode the 80-byte subfile-6 payload when supplied. Direct channel
+  targets now include the recovered speed curves and generic gear/flap easing;
+  retail gear-state transitions, fairing/leg visibility changes, and the
+  model-flag-dependent roll-surface mappings remain open.
   `ac5_model_info --parts` reports the hierarchy and decoded track/key counts
   without opening Vulkan.
 - A Vulkan 1.3 renderer using SDL3, dynamic rendering, synchronization2,

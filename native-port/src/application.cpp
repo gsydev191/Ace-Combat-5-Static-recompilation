@@ -1,6 +1,7 @@
 #include "application.hpp"
 
 #include "acm_loader.hpp"
+#include "animation_controller.hpp"
 #include "flight_model.hpp"
 #include "flight_rules_loader.hpp"
 #include "flight_session.hpp"
@@ -39,6 +40,13 @@ struct DemoFrame {
         : scene(scene_ref), model_transform(transform) {}
     Camera* camera = nullptr;
     std::optional<AircraftFlightSession> flight_session;
+    AircraftAnimationRules animation_rules{};
+    AircraftAnimationChannels animation_channels = [] {
+        AircraftAnimationChannels channels{};
+        channels.fill(50.0f);
+        return channels;
+    }();
+    bool gear_down = false;
     std::optional<AcmPartModel> animated_model;
     std::vector<TransformId> part_transforms;
     struct ShapeDraw {
@@ -64,43 +72,9 @@ struct DemoLod {
     bool active = false;
 };
 
-std::array<double, 64> aircraft_animation_channels(const FlightInput& controls) {
-    std::array<double, 64> channels{};
-    channels.fill(50.0);
-    const auto set = [&channels](std::size_t channel, double value) {
-        channels[channel] = std::clamp(value, 1.0, 100.0);
-    };
-    // These are the recovered direct stick mappings. Aircraft-specific
-    // authority and speed curves need the ACM's companion animation config.
-    set(1, 50.0 + 50.0 * controls.pitch);
-    set(3, 50.0 + 50.0 * controls.yaw);
-    set(5, 50.0 - 50.0 * controls.roll);
-    set(6, 50.0 + 50.0 * controls.roll);
-    set(8, 50.0 + 25.0 * controls.pitch);
-    set(12, 50.0 - 50.0 * controls.roll);
-    set(13, 50.0 + 50.0 * controls.roll);
-
-    const double lever = std::clamp(static_cast<double>(controls.throttle), -1.0, 1.0);
-    double dry = 0.0;
-    double afterburner = 0.0;
-    double airbrake = 0.0;
-    if (lever >= 0.9) {
-        dry = 1.0;
-        afterburner = (lever - 0.9) / 0.1;
-    } else if (lever >= -0.6) {
-        dry = (lever + 0.6) / 1.5;
-    } else {
-        airbrake = (-0.6 - lever) / 0.4;
-    }
-    set(14, 50.0 * dry + 50.0 * afterburner);
-    set(15, 50.0 + 50.0 * airbrake);
-    return channels;
-}
-
 void update_aircraft_part_animation(DemoFrame& frame) {
     if (!frame.animated_model ||
         frame.animated_model->parts.size() != frame.part_transforms.size()) return;
-    const std::array<double, 64> channels = aircraft_animation_channels(frame.controls);
     for (std::size_t i = 0; i < frame.animated_model->parts.size(); ++i) {
         const AcmModelPart& part = frame.animated_model->parts[i];
         Vec3 position = part.position;
@@ -109,8 +83,8 @@ void update_aircraft_part_animation(DemoFrame& frame) {
         if (part.translation_track != AcmModelPart::no_parent) {
             const AcmAnimationTrack& track =
                 frame.animated_model->translation_tracks[part.translation_track];
-            if (track.channel < channels.size() &&
-                sample_acm_animation_track(track, channels[track.channel], animated)) {
+            if (track.channel < frame.animation_channels.size() &&
+                sample_acm_animation_track(track, frame.animation_channels[track.channel], animated)) {
                 position.x += animated.x;
                 position.y += animated.y;
                 position.z += animated.z;
@@ -119,8 +93,8 @@ void update_aircraft_part_animation(DemoFrame& frame) {
         if (part.rotation_track != AcmModelPart::no_parent) {
             const AcmAnimationTrack& track =
                 frame.animated_model->rotation_tracks[part.rotation_track];
-            if (track.channel < channels.size() &&
-                sample_acm_animation_track(track, channels[track.channel], animated)) {
+            if (track.channel < frame.animation_channels.size() &&
+                sample_acm_animation_track(track, frame.animation_channels[track.channel], animated)) {
                 rotation.x += animated.x;
                 rotation.y += animated.y;
                 rotation.z += animated.z;
@@ -139,8 +113,8 @@ void update_aircraft_part_animation(DemoFrame& frame) {
             (shape_draw.shapes.empty() && shape_draw.static_variants.empty())) continue;
         const AcmAnimationTrack& track =
             frame.animated_model->shape_tracks[part.shape_track];
-        if (track.keys.empty() || track.channel >= channels.size()) continue;
-        const double channel = channels[track.channel];
+        if (track.keys.empty() || track.channel >= frame.animation_channels.size()) continue;
+        const double channel = frame.animation_channels[track.channel];
         const auto upper = std::lower_bound(track.keys.begin(), track.keys.end(), channel,
             [](const AcmAnimationKey& key, double value) { return key.frame < value; });
         const AcmAnimationKey* low = nullptr;
@@ -198,6 +172,22 @@ void update_aircraft_part_animation(DemoFrame& frame) {
                 frame.scene.set_draw_mesh(shape_draw.draw_index, variant->second);
         }
     }
+}
+
+void advance_demo_animation(DemoFrame& frame) {
+    if (!frame.flight_session) return;
+    if (frame.controls.gear_toggle.pressed) frame.gear_down = !frame.gear_down;
+    const AircraftFlightState& flight = frame.flight_session->state();
+    AircraftAnimationInput input{};
+    input.pitch = frame.controls.pitch;
+    input.roll = frame.controls.roll;
+    input.yaw = frame.controls.yaw;
+    input.throttle_lever = frame.controls.throttle;
+    input.speed_kmh = std::max(0.0, flight.speed_units_per_tick * 60.0 / 1.4222219);
+    input.gear_down = frame.gear_down;
+    const AircraftAnimationChannels targets =
+        aircraft_animation_targets(frame.animation_rules, input);
+    advance_aircraft_animation_channels(frame.animation_channels, targets);
 }
 
 void select_demo_lod(Scene& scene, const DemoLod& lod, const Camera& camera) {
@@ -268,6 +258,7 @@ void update_demo_scene(DemoFrame& frame, DemoStateMachine& scene_state) {
             frame.camera->target.y += movement.y;
             frame.camera->target.z += movement.z;
         }
+        advance_demo_animation(frame);
         update_aircraft_part_animation(frame);
         return;
     }
@@ -296,11 +287,13 @@ int Application::run(int argc, char** argv) {
     std::string model_path;
     std::string texture_path;
     std::string flight_rules_path;
+    std::string animation_rules_path;
     const auto usage = [](FILE* stream) {
         std::fprintf(stream,
                      "usage: ac5_native [--model path.obj|model.mpl|model.bin] "
                      "[--texture image.ppm|image.tga|image.gim] "
-                     "[--flight-rules aircraft.pmb]\n"
+                     "[--flight-rules aircraft.pmb] "
+                     "[--animation-rules aircraft-animation.bin]\n"
                      "       ac5_native --help\n");
     };
     for (int i = 1; i < argc; ++i) {
@@ -310,7 +303,7 @@ int Application::run(int argc, char** argv) {
             return 0;
         }
         if (argument == "--model" || argument == "--texture" ||
-            argument == "--flight-rules") {
+            argument == "--flight-rules" || argument == "--animation-rules") {
             if (i + 1 >= argc) {
                 std::fprintf(stderr, "missing path after %s\n", argv[i]);
                 usage(stderr);
@@ -318,7 +311,8 @@ int Application::run(int argc, char** argv) {
             }
             if (argument == "--model") model_path = argv[++i];
             else if (argument == "--texture") texture_path = argv[++i];
-            else flight_rules_path = argv[++i];
+            else if (argument == "--flight-rules") flight_rules_path = argv[++i];
+            else animation_rules_path = argv[++i];
             continue;
         }
         std::fprintf(stderr, "unknown argument: %s\n", argv[i]);
@@ -344,6 +338,7 @@ int Application::run(int argc, char** argv) {
     const bool acm_model = extension == ".mpl" || extension == ".acm" ||
                            extension == ".bin";
     std::optional<AircraftFlightRules> flight_rules;
+    std::optional<AircraftAnimationRules> animation_rules;
     std::optional<AcmPartModel> animated_model;
     std::vector<TransformId> part_transforms;
     std::vector<DemoFrame::ShapeDraw> shape_draws;
@@ -356,6 +351,20 @@ int Application::run(int argc, char** argv) {
         flight_rules.emplace();
         if (!load_aircraft_flight_rules(flight_rules_path, *flight_rules, load_error)) {
             std::fprintf(stderr, "Flight rules load failed: %s\n", load_error.c_str());
+            SDL_Quit();
+            return 1;
+        }
+    }
+    if (!animation_rules_path.empty()) {
+        if (!flight_rules) {
+            std::fprintf(stderr, "--animation-rules requires --flight-rules\n");
+            SDL_Quit();
+            return 2;
+        }
+        animation_rules.emplace();
+        if (!load_aircraft_animation_rules(animation_rules_path, *animation_rules,
+                                           load_error)) {
+            std::fprintf(stderr, "Animation rules load failed: %s\n", load_error.c_str());
             SDL_Quit();
             return 1;
         }
@@ -512,6 +521,7 @@ int Application::run(int argc, char** argv) {
                 scene_state.request_transition(DemoSceneState::Exiting);
             }
             DemoFrame frame{scene, model_transform};
+            if (animation_rules) frame.animation_rules = *animation_rules;
             frame.animated_model = std::move(animated_model);
             frame.part_transforms = std::move(part_transforms);
             frame.shape_draws = std::move(shape_draws);

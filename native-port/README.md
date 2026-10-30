@@ -110,14 +110,18 @@ ac5_native --model f04g.mpl --flight-rules f04g.pmb
 
 In this mode SDL pitch, roll, and yaw controls plus throttle drive the fixed
 60 Hz native flight tick, and the camera follows the simulated aircraft. Press
-P to toggle the recovered approach-control law. The flight viewer keeps each
-ACM part's local transform and parent link as separate scene draws. It decodes
-and evaluates translation and Euler-rotation tracks from the recovered direct
-stick and throttle channels. Shape tracks interpolate compatible alternate
-chains continuously through per-frame dynamic vertex buffers; meshes with
-different topology use a nearest-key fallback. Aircraft-specific authority
-curves, gear and flap state still need their companion animation configuration.
-The ordinary asset viewer remains the default when `--flight-rules` is omitted.
+P to toggle the recovered approach-control law; G toggles viewer gear state.
+To apply the aircraft's companion animation config, pass its 80-byte, 20-float
+subfile-6 payload with `--animation-rules aircraft-animation.bin`. This enables
+the per-aircraft control-authority and speed-driven flap, sweep, and secondary
+surface curves. The flight viewer keeps each ACM part's local transform and
+parent link as separate scene draws, and evaluates translation and
+Euler-rotation tracks from the recovered direct stick and throttle channels.
+Shape tracks interpolate compatible alternate chains continuously through
+per-frame dynamic vertex buffers; meshes with different topology use a
+nearest-key fallback. Gear and flap channels ease toward their targets over
+time. The ordinary asset viewer remains the default when `--flight-rules` is
+omitted.
 The native ACM loader decodes the observed VIF position, normal, color and UV
 streams, triangle strips, chain-to-part mapping, and static part hierarchy.
 It rejects duplicate or unresolved geometry-chain ownership, and
@@ -244,7 +248,7 @@ directory.
 
 Arrow keys/WASD pitch and roll, Q/E yaw, R/F set throttle input, Space is
 primary fire, either Ctrl key is secondary fire, and P toggles approach control
-in flight mode. Fire controls expose held,
+in flight mode; G toggles the viewer gear state. Fire controls expose held,
 pressed, and released states to native game systems. Demo pitch, roll, and yaw
 accumulate at a frame-rate-independent rate; throttle and fire are exposed to
 native game systems but are not yet consumed by the demo. The left gamepad stick

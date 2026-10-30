@@ -75,6 +75,7 @@ FlightInput InputSystem::sample() {
     input.primary_fire.held = down(SDL_SCANCODE_SPACE);
     input.secondary_fire.held = down(SDL_SCANCODE_LCTRL) || down(SDL_SCANCODE_RCTRL);
     input.approach_control.held = down(SDL_SCANCODE_P);
+    input.gear_toggle.held = down(SDL_SCANCODE_G);
     if (gamepad_) {
         input.pitch = combine(input.pitch,
             -axis_value(SDL_GetGamepadAxis(gamepad_, SDL_GAMEPAD_AXIS_LEFTY)));
@@ -100,9 +101,12 @@ FlightInput InputSystem::sample() {
                                      !previous_approach_control_;
     input.approach_control.released = !input.approach_control.held &&
                                       previous_approach_control_;
+    input.gear_toggle.pressed = input.gear_toggle.held && !previous_gear_toggle_;
+    input.gear_toggle.released = !input.gear_toggle.held && previous_gear_toggle_;
     previous_primary_fire_ = input.primary_fire.held;
     previous_secondary_fire_ = input.secondary_fire.held;
     previous_approach_control_ = input.approach_control.held;
+    previous_gear_toggle_ = input.gear_toggle.held;
     return input;
 }
 

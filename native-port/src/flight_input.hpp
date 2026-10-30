@@ -17,6 +17,7 @@ struct FlightInput {
     ButtonInput primary_fire;
     ButtonInput secondary_fire;
     ButtonInput approach_control;
+    ButtonInput gear_toggle;
 };
 
 } // namespace ac5

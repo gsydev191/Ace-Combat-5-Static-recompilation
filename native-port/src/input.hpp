@@ -23,6 +23,7 @@ private:
     bool previous_primary_fire_ = false;
     bool previous_secondary_fire_ = false;
     bool previous_approach_control_ = false;
+    bool previous_gear_toggle_ = false;
 };
 
 } // namespace ac5
