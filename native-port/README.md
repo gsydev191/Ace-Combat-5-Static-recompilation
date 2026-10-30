@@ -100,6 +100,16 @@ nested LOD bundles it also lists all five level thresholds, mesh sizes, and
 texture dimensions. The viewer uploads all five levels and switches meshes
 and textures by camera distance using the recovered retail thresholds; use the
 mouse wheel to move through the LOD ranges.
+To run the native flight model on an imported aircraft, provide its matching
+400-byte flight rules bundle with `--flight-rules`, for example:
+
+```text
+ac5_native --model f04g.mpl --flight-rules f04g.pmb
+```
+
+In this mode SDL pitch, roll, yaw, and throttle controls drive the fixed 60 Hz
+native flight tick, and the camera follows the simulated aircraft. The ordinary
+asset viewer remains the default when `--flight-rules` is omitted.
 The native ACM loader decodes the observed VIF position, normal, color and UV
 streams, triangle strips, chain-to-part mapping, and static part hierarchy.
 It rejects duplicate or unresolved geometry-chain ownership, and
@@ -228,9 +238,10 @@ pressed, and released states to native game systems. Demo pitch, roll, and yaw
 accumulate at a frame-rate-independent rate; throttle and fire are exposed to
 native game systems but are not yet consumed by the demo. The left gamepad stick
 controls pitch/roll, the right stick controls yaw, triggers provide throttle,
-and South/East provide the two fire actions. Pitch, roll, and yaw currently
-rotate the demo model's shared scene transform; throttle and fire are
-available in `FlightInput` for the flight model that has not been ported yet.
+and South/East provide the two fire actions. The default viewer rotates its
+demo model from pitch, roll, and yaw. With `--flight-rules`, these controls
+drive the native aircraft simulation; throttle and fire are also exposed in
+`FlightInput` for future game systems.
 `map_engine_lever` ports the generated throttle routine's split into dry power,
 afterburner, and airbrake channels. `advance_airborne_speed` ports the scalar
 airborne speed envelope, including density, climb/dive effects, spool response,
@@ -246,9 +257,9 @@ speed clamp, with caller-supplied carrier scaling and bias; it does not perform
 terrain collision or marker-based alignment.
 `load_aircraft_flight_rules` reads the standalone 400-byte
 aircraft `.pmb` parameter file, and `ac5_flight_info` reports its decoded
-speed and axis tables (for example, `ac5_flight_info f04g.pmb`). The demo does
-not yet run this flight model; terrain collision, marker-based ground
-alignment, and a runtime ruleset selection UI remain future work.
+speed and axis tables (for example, `ac5_flight_info f04g.pmb`). Terrain
+collision, marker-based ground alignment, and a runtime ruleset selection UI
+remain future work.
 The input system opens one connected gamepad at startup and scans the remaining
 connected devices when the active gamepad is removed. It also handles devices
 connected after startup.

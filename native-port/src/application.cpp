@@ -1,6 +1,8 @@
 #include "application.hpp"
 
 #include "acm_loader.hpp"
+#include "flight_model.hpp"
+#include "flight_rules_loader.hpp"
 #include "input.hpp"
 #include "obj_loader.hpp"
 #include "texture_loader.hpp"
@@ -10,10 +12,12 @@
 
 #include <cstdio>
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <cmath>
 #include <cstdint>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -30,7 +34,11 @@ using DemoStateMachine = SceneStateMachine<DemoSceneState, DemoSceneSubstate>;
 struct DemoFrame {
     Scene& scene;
     TransformId model_transform;
+    Camera* camera = nullptr;
+    const AircraftFlightRules* flight_rules = nullptr;
+    AircraftFlightState flight_state{};
     float delta_seconds = 0.0f;
+    float simulation_accumulator = 0.0f;
     FlightInput controls{};
     float pitch_angle = 0.0f;
     float roll_angle = 0.0f;
@@ -66,7 +74,53 @@ void select_demo_lod(Scene& scene, const DemoLod& lod, const Camera& camera) {
     scene.set_draw_texture(lod.draw_index, lod.textures[level]);
 }
 
-void update_demo_scene(DemoFrame& frame, DemoStateMachine&) {
+void update_demo_scene(DemoFrame& frame, DemoStateMachine& scene_state) {
+    if (frame.flight_rules) {
+        constexpr float fixed_step = 1.0f / 60.0f;
+        frame.simulation_accumulator = std::min(
+            frame.simulation_accumulator + frame.delta_seconds, 0.1f);
+        const std::array<double, 3> previous_position = frame.flight_state.position;
+        while (frame.simulation_accumulator >= fixed_step) {
+            AircraftFlightInput flight_input{};
+            flight_input.pitch = frame.controls.pitch;
+            flight_input.roll = frame.controls.roll;
+            flight_input.yaw = frame.controls.yaw;
+            flight_input.throttle_lever = frame.controls.throttle;
+            flight_input.ticks_per_second = 60;
+            if (!advance_aircraft_flight_tick(
+                    *frame.flight_rules, flight_input, frame.flight_state)) {
+                std::fprintf(stderr, "Native flight tick rejected its rules or state\n");
+                scene_state.request_transition(DemoSceneState::Exiting);
+                return;
+            }
+            frame.simulation_accumulator -= fixed_step;
+        }
+        const std::array<double, 3>& euler = frame.flight_state.euler;
+        const Mat4 rotation = Mat4::multiply(
+            Mat4::multiply(Mat4::rotation_y(static_cast<float>(euler[1])),
+                           Mat4::rotation_x(static_cast<float>(euler[0]))),
+            Mat4::rotation_z(static_cast<float>(euler[2])));
+        const Mat4 position = Mat4::translation({
+            static_cast<float>(frame.flight_state.position[0]),
+            static_cast<float>(frame.flight_state.position[1]),
+            static_cast<float>(frame.flight_state.position[2])});
+        frame.scene.set_transform(frame.model_transform,
+                                  Mat4::multiply(position, rotation));
+        if (frame.camera) {
+            const Vec3 movement{
+                static_cast<float>(frame.flight_state.position[0] - previous_position[0]),
+                static_cast<float>(frame.flight_state.position[1] - previous_position[1]),
+                static_cast<float>(frame.flight_state.position[2] - previous_position[2])};
+            frame.camera->position.x += movement.x;
+            frame.camera->position.y += movement.y;
+            frame.camera->position.z += movement.z;
+            frame.camera->target.x += movement.x;
+            frame.camera->target.y += movement.y;
+            frame.camera->target.z += movement.z;
+        }
+        return;
+    }
+
     constexpr float demo_rotation_rate = 1.2f;
     constexpr float full_turn = 6.28318530717958647692f;
     frame.pitch_angle = std::remainder(
@@ -90,10 +144,12 @@ void update_demo_scene(DemoFrame& frame, DemoStateMachine&) {
 int Application::run(int argc, char** argv) {
     std::string model_path;
     std::string texture_path;
+    std::string flight_rules_path;
     const auto usage = [](FILE* stream) {
         std::fprintf(stream,
                      "usage: ac5_native [--model path.obj|model.mpl|model.bin] "
-                     "[--texture image.ppm|image.tga|image.gim]\n"
+                     "[--texture image.ppm|image.tga|image.gim] "
+                     "[--flight-rules aircraft.pmb]\n"
                      "       ac5_native --help\n");
     };
     for (int i = 1; i < argc; ++i) {
@@ -102,14 +158,16 @@ int Application::run(int argc, char** argv) {
             usage(stdout);
             return 0;
         }
-        if (argument == "--model" || argument == "--texture") {
+        if (argument == "--model" || argument == "--texture" ||
+            argument == "--flight-rules") {
             if (i + 1 >= argc) {
                 std::fprintf(stderr, "missing path after %s\n", argv[i]);
                 usage(stderr);
                 return 2;
             }
             if (argument == "--model") model_path = argv[++i];
-            else texture_path = argv[++i];
+            else if (argument == "--texture") texture_path = argv[++i];
+            else flight_rules_path = argv[++i];
             continue;
         }
         std::fprintf(stderr, "unknown argument: %s\n", argv[i]);
@@ -134,6 +192,20 @@ int Application::run(int argc, char** argv) {
                    [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
     const bool acm_model = extension == ".mpl" || extension == ".acm" ||
                            extension == ".bin";
+    std::optional<AircraftFlightRules> flight_rules;
+    if (!flight_rules_path.empty()) {
+        if (!acm_model) {
+            std::fprintf(stderr, "--flight-rules requires an ACM aircraft model\n");
+            SDL_Quit();
+            return 2;
+        }
+        flight_rules.emplace();
+        if (!load_aircraft_flight_rules(flight_rules_path, *flight_rules, load_error)) {
+            std::fprintf(stderr, "Flight rules load failed: %s\n", load_error.c_str());
+            SDL_Quit();
+            return 1;
+        }
+    }
     bool model_loaded = false;
     DemoLod demo_lod;
     if (acm_model) {
@@ -226,6 +298,11 @@ int Application::run(int argc, char** argv) {
                 scene_state.request_transition(DemoSceneState::Exiting);
             }
             DemoFrame frame{scene, model_transform};
+            if (flight_rules) {
+                frame.flight_rules = &*flight_rules;
+                frame.flight_state.speed_units_per_tick =
+                    flight_rules->speed.cruise_kmh * 1.4222219 / 60.0;
+            }
             InputSystem input;
             if (scene_state.current_state() == DemoSceneState::Viewing &&
                 !renderer.upload_scene(scene)) {
@@ -239,6 +316,11 @@ int Application::run(int argc, char** argv) {
                 camera.position = {0.0f, 12.0f, -115.0f};
                 camera.target = {0.0f, 4.0f, 0.0f};
                 camera.far_plane = 20000.0f;
+            }
+            if (flight_rules) {
+                camera.target = {0.0f, static_cast<float>(frame.flight_state.position[1]), 0.0f};
+                camera.position = {0.0f, camera.target.y + 8.0f, -115.0f};
+                frame.camera = &camera;
             }
             select_demo_lod(scene, demo_lod, camera);
             const Uint64 counter_frequency = SDL_GetPerformanceFrequency();
@@ -293,7 +375,6 @@ int Application::run(int argc, char** argv) {
                 }
                 const float aspect = pixel_width > 0 && pixel_height > 0
                     ? static_cast<float>(pixel_width) / static_cast<float>(pixel_height) : 1.0f;
-                const Mat4 view_projection = camera.view_projection(aspect);
                 frame.delta_seconds = delta_seconds;
                 frame.controls = input.sample();
                 if (scene_state.commit_transition()) break;
@@ -303,6 +384,7 @@ int Application::run(int argc, char** argv) {
                     break;
                 }
                 select_demo_lod(scene, demo_lod, camera);
+                const Mat4 view_projection = camera.view_projection(aspect);
                 if (!renderer.draw_frame(view_projection, scene)) {
                     std::fprintf(stderr, "Vulkan frame failed: %s\n",
                                  renderer.error().c_str());
