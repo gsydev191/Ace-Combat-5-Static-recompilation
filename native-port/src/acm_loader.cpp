@@ -65,6 +65,7 @@ struct BundleSlot {
 
 struct ModelSelection {
     std::span<const std::uint8_t> model;
+    std::vector<std::span<const std::uint8_t>> companion_models;
     std::span<const std::uint8_t> texture;
 };
 
@@ -108,25 +109,39 @@ bool find_model(std::span<const std::uint8_t> file, ModelSelection& selection,
     if (depth >= 4) return false;
     std::vector<BundleSlot> slots;
     if (!read_bundle_slots(file, slots)) return false;
+    std::vector<std::span<const std::uint8_t>> direct_models;
     for (const BundleSlot& slot : slots) {
-        if (is_acm(slot.bytes)) {
-            selection.model = slot.bytes;
-            for (const BundleSlot& sibling : slots) {
-                if (sibling.index >= 6 && sibling.index > slot.index &&
-                    sibling.bytes.size() >= 4 && sibling.bytes[0] == 'G' &&
-                    sibling.bytes[1] == 'I' && sibling.bytes[2] == 'M' &&
-                    sibling.bytes[3] == 0) {
-                    selection.texture = sibling.bytes;
-                    break;
-                }
+        if (!is_acm(slot.bytes)) continue;
+        const bool already_present = std::any_of(
+            direct_models.begin(), direct_models.end(), [&slot](auto model) {
+                return model.data() == slot.bytes.data();
+            });
+        if (!already_present) direct_models.push_back(slot.bytes);
+        for (const BundleSlot& sibling : slots) {
+            if (sibling.index >= 6 && sibling.index > slot.index &&
+                sibling.bytes.size() >= 4 && sibling.bytes[0] == 'G' &&
+                sibling.bytes[1] == 'I' && sibling.bytes[2] == 'M' &&
+                sibling.bytes[3] == 0) {
+                if (selection.texture.empty()) selection.texture = sibling.bytes;
+                break;
             }
-            return true;
         }
+    }
+    for (const BundleSlot& slot : slots) {
+        if (is_acm(slot.bytes)) continue;
         ModelSelection nested;
         if (find_model(slot.bytes, nested, depth + 1)) {
+            // A nested LOD bundle is accompanied by independent ACM geometry
+            // in its parent. Preserve those meshes alongside its LOD0 model.
+            nested.companion_models.insert(nested.companion_models.end(),
+                                            direct_models.begin(), direct_models.end());
             selection = nested;
             return true;
         }
+    }
+    if (!direct_models.empty()) {
+        selection.model = direct_models.front();
+        return true;
     }
     return false;
 }
@@ -606,6 +621,23 @@ bool load_acm_model(const std::string& path, MeshData& mesh, std::string& error)
         block = selected.model;
         MeshData decoded;
         if (!parse_acm(block, decoded, error)) return false;
+        for (const auto companion : selected.companion_models) {
+            MeshData extra;
+            if (!parse_acm(companion, extra, error)) return false;
+            if (decoded.vertices.size() > std::numeric_limits<std::uint32_t>::max() ||
+                extra.vertices.size() > std::numeric_limits<std::uint32_t>::max() -
+                                            decoded.vertices.size()) {
+                error = "combined ACM meshes exceed the native vertex index limit";
+                return false;
+            }
+            const std::uint32_t vertex_offset =
+                static_cast<std::uint32_t>(decoded.vertices.size());
+            decoded.vertices.insert(decoded.vertices.end(), extra.vertices.begin(),
+                                    extra.vertices.end());
+            decoded.indices.reserve(decoded.indices.size() + extra.indices.size());
+            for (const std::uint32_t index : extra.indices)
+                decoded.indices.push_back(vertex_offset + index);
+        }
         mesh = std::move(decoded);
         return true;
     } catch (const std::bad_alloc&) {

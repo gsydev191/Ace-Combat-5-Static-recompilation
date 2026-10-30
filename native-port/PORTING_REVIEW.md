@@ -250,12 +250,13 @@ otherwise they use one level. MTL support handles `Kd`, scalar `d` dissolve,
 scalar `Tr` transparency, and simple `map_Kd` paths to PPM or uncompressed/RLE
 true-color TGA images. The sampler enables anisotropic filtering up to
 16x when the device supports it. The native ACM/VIF loader decodes supported
-static aircraft bundles, including the first (highest-detail) mesh and its
-texture from a nested `lodplane/*.bin` container. The GIM decoder handles
-indexed 4/8-bit textures. The OBJ importer remains an interchange path. Runtime
-LOD switching, additional ACM meshes stored beside the nested LOD container,
-ambiguous ACM part ownership, other texture formats, material assignment
-beyond the first bundle texture, and model animation remain open.
+static aircraft bundles, including the first (highest-detail) mesh, its
+companion ACM meshes, and texture from a nested `lodplane/*.bin` container.
+The F-16C and F-4G LOD bundles both load through this path. The GIM decoder
+handles indexed 4/8-bit textures. The OBJ importer remains an interchange
+path. Runtime LOD switching, ambiguous ACM part ownership, other texture
+formats, material assignment beyond the first bundle texture, and model
+animation remain open.
 
 Textures containing non-opaque alpha and meshes containing non-opaque vertex
 alpha use a separate blended Vulkan pipeline. Opaque draws retain depth writes;
@@ -265,8 +266,7 @@ correctly order intersecting or interleaved transparent surfaces, which need
 finer-grained sorting or a different transparency technique.
 
 The next model work is to resolve chain ownership for the F-16 player bundle,
-load additional ACM meshes stored beside LOD containers, add runtime LOD
-selection, and bind per-part material textures. Game-accurate flight
-behavior can follow once aircraft parameter and control routines have been
-mapped to native state. Archive files remain outside the repository; the
+add runtime LOD selection, and bind per-part material textures. Game-accurate
+flight behavior can follow once aircraft parameter and control routines have
+been mapped to native state. Archive files remain outside the repository; the
 source checkout contains only the filename index and native format code.
