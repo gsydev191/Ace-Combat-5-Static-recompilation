@@ -43,6 +43,9 @@ add_executable(ac5_native_tests tests/native_tests.cpp)
 target_link_libraries(ac5_native_tests PRIVATE ac5_asset_core ac5_game_core)
 add_test(NAME ac5_native_tests COMMAND ac5_native_tests)
 target_link_libraries(ac5_extract PRIVATE ac5_asset_core)
+if(WIN32)
+    target_link_libraries(ac5_extract PRIVATE shell32)
+endif()
 
 install(TARGETS ac5_asset_core ac5_game_core
     EXPORT ac5NativeCoreTargets
@@ -117,6 +120,9 @@ if(AC5_BUILD_RENDERER)
     target_include_directories(ac5_native PRIVATE src)
     target_link_libraries(ac5_native PRIVATE
         ac5_vulkan_renderer ac5_platform ac5_asset_core ac5_game_core)
+    if(WIN32)
+        target_link_libraries(ac5_native PRIVATE shell32)
+    endif()
 
     install(TARGETS ac5_vulkan_renderer ac5_platform
         EXPORT ac5NativeRendererTargets

@@ -1,4 +1,5 @@
 #include "data_archive.hpp"
+#include "command_line.hpp"
 #include "utf8_path.hpp"
 
 #include <charconv>
@@ -225,7 +226,7 @@ void print_usage() {
 
 } // namespace
 
-int main(int argc, char** argv) {
+static int run_extract(int argc, char** argv) {
     const bool named_mode = argc == 8 && std::string_view(argv[1]) == "--named";
     const bool all_mode = (argc == 6 || argc == 7) && std::string_view(argv[1]) == "--all";
     if (!named_mode && !all_mode && argc != 5 && argc != 6) {
@@ -291,4 +292,17 @@ int main(int argc, char** argv) {
     }
     std::cout << "wrote " << data.size() << " bytes\n";
     return 0;
+}
+
+int main(int argc, char** argv) {
+    std::vector<std::string> arguments;
+    std::string error;
+    if (!ac5::command_line_arguments_utf8(argc, argv, arguments, error)) {
+        std::cerr << error << '\n';
+        return 2;
+    }
+    std::vector<char*> argument_pointers;
+    argument_pointers.reserve(arguments.size());
+    for (std::string& argument : arguments) argument_pointers.push_back(argument.data());
+    return run_extract(static_cast<int>(argument_pointers.size()), argument_pointers.data());
 }

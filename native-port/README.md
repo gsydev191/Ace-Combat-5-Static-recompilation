@@ -171,6 +171,9 @@ ac5_extract --named DATA.TBL DATA.PAC pac_names.txt 251 plmodel/f04eo.mpl aircra
 ac5_extract --all DATA.TBL DATA.PAC pac_names.txt extracted
 ```
 
+On Windows, the native app and extractor convert the Unicode process command
+line to UTF-8 before interpreting file paths.
+
 The extracted bytes remain in their original game format; the OBJ renderer
 path currently consumes converted OBJ meshes. Name lookup accepts the
 `member index path` text format and compares paths without case sensitivity.
