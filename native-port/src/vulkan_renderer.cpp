@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <bit>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -21,6 +22,25 @@ struct DrawPushConstants {
     Mat4 view_projection_model;
     NormalMatrix normal_matrix;
 };
+
+struct DrawSubmission {
+    const DrawItem* item;
+    Mat4 world;
+    float depth;
+};
+
+float projected_depth(const Mat4& view_projection, Vec3 position) {
+    const auto& matrix = view_projection.value;
+    const double clip_z = matrix[2] * position.x + matrix[6] * position.y +
+                          matrix[10] * position.z + matrix[14];
+    const double clip_w = matrix[3] * position.x + matrix[7] * position.y +
+                          matrix[11] * position.z + matrix[15];
+    if (!std::isfinite(clip_z) || !std::isfinite(clip_w) || std::abs(clip_w) < 1.0e-12)
+        return 0.0f;
+    const double depth = clip_z / clip_w;
+    return std::isfinite(depth) ? static_cast<float>(depth) : 0.0f;
+}
+
 static_assert(std::is_standard_layout_v<DrawPushConstants>);
 static_assert(sizeof(NormalMatrix) == 48);
 static_assert(offsetof(DrawPushConstants, normal_matrix) == 64);
@@ -581,6 +601,18 @@ bool VulkanRenderer::create_pipeline() {
     pipeline_info.pDynamicState = &dynamic;
     pipeline_info.layout = pipeline_layout_;
     result = vkCreateGraphicsPipelines(device_, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &pipeline_);
+    if (result == VK_SUCCESS) {
+        depth.depthWriteEnable = VK_FALSE;
+        blend_attachment.blendEnable = VK_TRUE;
+        blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;
+        blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
+        result = vkCreateGraphicsPipelines(device_, VK_NULL_HANDLE, 1, &pipeline_info,
+                                           nullptr, &transparent_pipeline_);
+    }
     vkDestroyShaderModule(device_, fragment, nullptr);
     vkDestroyShaderModule(device_, vertex, nullptr);
     if (result != VK_SUCCESS) {
@@ -659,6 +691,13 @@ bool VulkanRenderer::upload_texture(const TextureData& texture, GpuTexture& gpu_
         texture.rgba.size() != pixels * 4u) {
         error_ = "scene texture dimensions do not match its RGBA data";
         return false;
+    }
+    gpu_texture.has_transparency = false;
+    for (std::size_t alpha = 3; alpha < texture.rgba.size(); alpha += 4) {
+        if (texture.rgba[alpha] != 255) {
+            gpu_texture.has_transparency = true;
+            break;
+        }
     }
     VkPhysicalDeviceProperties device_properties{};
     vkGetPhysicalDeviceProperties(physical_device_, &device_properties);
@@ -989,6 +1028,29 @@ bool VulkanRenderer::upload_scene(const Scene& scene) {
                 return false;
             }
         }
+        Vec3 minimum{std::numeric_limits<float>::infinity(),
+                     std::numeric_limits<float>::infinity(),
+                     std::numeric_limits<float>::infinity()};
+        Vec3 maximum{-std::numeric_limits<float>::infinity(),
+                     -std::numeric_limits<float>::infinity(),
+                     -std::numeric_limits<float>::infinity()};
+        for (const Vertex& vertex : source.vertices) {
+            if (!std::isfinite(vertex.position.x) || !std::isfinite(vertex.position.y) ||
+                !std::isfinite(vertex.position.z) || !std::isfinite(vertex.color.x) ||
+                !std::isfinite(vertex.color.y) || !std::isfinite(vertex.color.z) ||
+                !std::isfinite(vertex.uv.x) || !std::isfinite(vertex.uv.y) ||
+                !std::isfinite(vertex.normal.x) || !std::isfinite(vertex.normal.y) ||
+                !std::isfinite(vertex.normal.z)) {
+                error_ = "scene mesh contains a non-finite vertex attribute";
+                return false;
+            }
+            minimum.x = std::min(minimum.x, vertex.position.x);
+            minimum.y = std::min(minimum.y, vertex.position.y);
+            minimum.z = std::min(minimum.z, vertex.position.z);
+            maximum.x = std::max(maximum.x, vertex.position.x);
+            maximum.y = std::max(maximum.y, vertex.position.y);
+            maximum.z = std::max(maximum.z, vertex.position.z);
+        }
         if (source.vertices.size() > std::numeric_limits<VkDeviceSize>::max() / sizeof(Vertex) ||
             source.indices.size() > std::numeric_limits<VkDeviceSize>::max() / sizeof(std::uint32_t)) {
             error_ = "scene mesh byte size overflows Vulkan buffer limits";
@@ -1004,6 +1066,10 @@ bool VulkanRenderer::upload_scene(const Scene& scene) {
         target.vertex_offset = vertices.size() * sizeof(Vertex);
         target.first_index = static_cast<std::uint32_t>(indices.size());
         target.index_count = static_cast<std::uint32_t>(source.indices.size());
+        target.local_center = {
+            static_cast<float>((static_cast<double>(minimum.x) + maximum.x) * 0.5),
+            static_cast<float>((static_cast<double>(minimum.y) + maximum.y) * 0.5),
+            static_cast<float>((static_cast<double>(minimum.z) + maximum.z) * 0.5)};
         vertices.insert(vertices.end(), source.vertices.begin(), source.vertices.end());
         indices.insert(indices.end(), source.indices.begin(), source.indices.end());
     }
@@ -1235,6 +1301,30 @@ bool VulkanRenderer::draw_frame(const Mat4& view_projection, const Scene& scene)
         error_ = std::string("could not resolve scene transforms: ") + exception.what();
         return false;
     }
+    std::vector<DrawSubmission> opaque_draws;
+    std::vector<DrawSubmission> transparent_draws;
+    opaque_draws.reserve(scene.draws().size());
+    transparent_draws.reserve(scene.draws().size());
+    for (const DrawItem& draw : scene.draws()) {
+        const Mat4 world = Mat4::multiply(world_transforms[draw.transform], draw.model);
+        const GpuMesh& mesh = meshes_[draw.mesh];
+        const Vec3 center{
+            world.value[0] * mesh.local_center.x + world.value[4] * mesh.local_center.y +
+                world.value[8] * mesh.local_center.z + world.value[12],
+            world.value[1] * mesh.local_center.x + world.value[5] * mesh.local_center.y +
+                world.value[9] * mesh.local_center.z + world.value[13],
+            world.value[2] * mesh.local_center.x + world.value[6] * mesh.local_center.y +
+                world.value[10] * mesh.local_center.z + world.value[14]};
+        DrawSubmission submission{&draw, world, projected_depth(view_projection, center)};
+        if (textures_[draw.texture].has_transparency)
+            transparent_draws.push_back(submission);
+        else
+            opaque_draws.push_back(submission);
+    }
+    std::stable_sort(transparent_draws.begin(), transparent_draws.end(),
+        [](const DrawSubmission& left, const DrawSubmission& right) {
+            return left.depth > right.depth;
+        });
     if (resize_requested_) {
         int width = 0, height = 0;
         SDL_GetWindowSizeInPixels(window_, &width, &height);
@@ -1318,17 +1408,17 @@ bool VulkanRenderer::draw_frame(const Mat4& view_projection, const Scene& scene)
     rendering.pColorAttachments = &color;
     rendering.pDepthAttachment = &depth_attachment;
     vkCmdBeginRendering(command, &rendering);
-    vkCmdBindPipeline(command, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_);
     VkViewport viewport{0.0f, 0.0f, static_cast<float>(swapchain_extent_.width),
                         static_cast<float>(swapchain_extent_.height), 0.0f, 1.0f};
     VkRect2D scissor{{0, 0}, swapchain_extent_};
     vkCmdSetViewport(command, 0, 1, &viewport);
     vkCmdSetScissor(command, 0, 1, &scissor);
-    for (const DrawItem& draw : scene.draws()) {
+    const auto record_draw = [this, command, &view_projection](
+                                const DrawSubmission& submission) {
+        const DrawItem& draw = *submission.item;
         const GpuMesh& mesh = meshes_[draw.mesh];
-        const Mat4 world = Mat4::multiply(world_transforms[draw.transform], draw.model);
-        const Mat4 mvp = Mat4::multiply(view_projection, world);
-        const DrawPushConstants push_constants{mvp, Mat4::normal_matrix(world)};
+        const Mat4 mvp = Mat4::multiply(view_projection, submission.world);
+        const DrawPushConstants push_constants{mvp, Mat4::normal_matrix(submission.world)};
         const VkDeviceSize offset = mesh.vertex_offset;
         vkCmdBindVertexBuffers(command, 0, 1, &vertex_buffer_, &offset);
         vkCmdBindIndexBuffer(command, index_buffer_, 0, VK_INDEX_TYPE_UINT32);
@@ -1338,6 +1428,14 @@ bool VulkanRenderer::draw_frame(const Mat4& view_projection, const Scene& scene)
         vkCmdPushConstants(command, pipeline_layout_, VK_SHADER_STAGE_VERTEX_BIT,
                            0, sizeof(push_constants), &push_constants);
         vkCmdDrawIndexed(command, mesh.index_count, 1, mesh.first_index, 0, 0);
+    };
+    if (!opaque_draws.empty()) {
+        vkCmdBindPipeline(command, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_);
+        for (const DrawSubmission& draw : opaque_draws) record_draw(draw);
+    }
+    if (!transparent_draws.empty()) {
+        vkCmdBindPipeline(command, VK_PIPELINE_BIND_POINT_GRAPHICS, transparent_pipeline_);
+        for (const DrawSubmission& draw : transparent_draws) record_draw(draw);
     }
     vkCmdEndRendering(command);
 
@@ -1443,8 +1541,10 @@ void VulkanRenderer::destroy_swapchain() {
 void VulkanRenderer::destroy_pipeline() {
     if (device_ == VK_NULL_HANDLE) return;
     if (pipeline_) vkDestroyPipeline(device_, pipeline_, nullptr);
+    if (transparent_pipeline_) vkDestroyPipeline(device_, transparent_pipeline_, nullptr);
     if (pipeline_layout_) vkDestroyPipelineLayout(device_, pipeline_layout_, nullptr);
     pipeline_ = VK_NULL_HANDLE;
+    transparent_pipeline_ = VK_NULL_HANDLE;
     pipeline_layout_ = VK_NULL_HANDLE;
 }
 

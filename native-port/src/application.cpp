@@ -143,6 +143,16 @@ int Application::run(int argc, char** argv) {
             const Camera camera{};
             const Uint64 counter_frequency = SDL_GetPerformanceFrequency();
             Uint64 previous_counter = SDL_GetPerformanceCounter();
+            const auto process_event = [&](const SDL_Event& event) {
+                input.handle_event(event);
+                if (event.type == SDL_EVENT_QUIT ||
+                    (event.type == SDL_EVENT_KEY_DOWN &&
+                     event.key.key == SDLK_ESCAPE)) {
+                    scene_state.request_transition(DemoSceneState::Exiting);
+                } else if (event.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
+                    renderer.request_resize();
+                }
+            };
             while (scene_state.current_state() == DemoSceneState::Viewing) {
                 const Uint64 current_counter = SDL_GetPerformanceCounter();
                 const float delta_seconds = counter_frequency != 0
@@ -152,18 +162,19 @@ int Application::run(int argc, char** argv) {
                     : 0.0f;
                 previous_counter = current_counter;
                 SDL_Event event;
-                while (SDL_PollEvent(&event)) {
-                    input.handle_event(event);
-                    if (event.type == SDL_EVENT_QUIT ||
-                        (event.type == SDL_EVENT_KEY_DOWN &&
-                         event.key.key == SDLK_ESCAPE)) {
-                        scene_state.request_transition(DemoSceneState::Exiting);
-                    } else if (event.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
-                        renderer.request_resize();
-                    }
-                }
+                while (SDL_PollEvent(&event)) process_event(event);
+                if (scene_state.commit_transition()) break;
                 int pixel_width = 0, pixel_height = 0;
                 SDL_GetWindowSizeInPixels(window, &pixel_width, &pixel_height);
+                if (pixel_width <= 0 || pixel_height <= 0) {
+                    if (!SDL_WaitEvent(&event)) {
+                        std::fprintf(stderr, "SDL_WaitEvent: %s\n", SDL_GetError());
+                        result = 1;
+                        break;
+                    }
+                    process_event(event);
+                    continue;
+                }
                 const float aspect = pixel_width > 0 && pixel_height > 0
                     ? static_cast<float>(pixel_width) / static_cast<float>(pixel_height) : 1.0f;
                 const Mat4 view_projection = camera.view_projection(aspect);

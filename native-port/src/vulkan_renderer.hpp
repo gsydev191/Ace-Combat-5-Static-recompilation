@@ -43,6 +43,7 @@ private:
         VkDeviceSize vertex_offset = 0;
         std::uint32_t first_index = 0;
         std::uint32_t index_count = 0;
+        Vec3 local_center{};
     };
 
     struct GpuTexture {
@@ -52,6 +53,7 @@ private:
         VkSampler sampler = VK_NULL_HANDLE;
         VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
         std::uint32_t mip_levels = 1;
+        bool has_transparency = false;
     };
 
     bool create_instance();
@@ -96,6 +98,7 @@ private:
     VkFormat depth_format_ = VK_FORMAT_UNDEFINED;
     VkPipelineLayout pipeline_layout_ = VK_NULL_HANDLE;
     VkPipeline pipeline_ = VK_NULL_HANDLE;
+    VkPipeline transparent_pipeline_ = VK_NULL_HANDLE;
     VkDescriptorSetLayout texture_set_layout_ = VK_NULL_HANDLE;
     VkDescriptorPool texture_descriptor_pool_ = VK_NULL_HANDLE;
     std::vector<GpuTexture> textures_;

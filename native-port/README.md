@@ -1,5 +1,7 @@
 # AC5 Native Port
 
+This project is licensed under Apache-2.0; see `LICENSE`.
+
 This directory is an independent C++20/Vulkan starting point for a future
 standalone repository. It does not include, link, or compile code from the
 PS2 recompiler/runtime project. The renderer build requires SDL3, Vulkan 1.3,
@@ -15,6 +17,8 @@ normal generation when absent, per-draw inverse-transpose normal matrices,
 diffuse lighting, and sRGB textures with GPU generated mipmaps where linear
 blits are supported. When available, the renderer enables Vulkan portability
 enumeration and the device portability subset for layered Vulkan platforms.
+Textures with non-opaque alpha use a blending pipeline and are sorted by the
+transformed mesh bounds center; opaque meshes keep depth writes enabled.
 Scene replacement uploads are staged in separate Vulkan buffers, textures,
 and descriptors; a failed upload leaves the previously uploaded scene usable.
 OBJ/MTL and PPM/TGA importers,

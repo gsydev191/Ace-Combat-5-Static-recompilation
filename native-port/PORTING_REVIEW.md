@@ -208,6 +208,13 @@ OBJ importer is an interchange path, not an AC5 format decoder. The archive
 tool extracts original files but does not decode packed aircraft models,
 textures, or animation.
 
+Textures containing non-opaque alpha use a separate blended Vulkan pipeline.
+Opaque draws retain depth writes; transparent draws are sorted by the
+transformed mesh bounds center and rendered back-to-front with depth writes
+disabled. This object-level ordering does not correctly order intersecting or
+interleaved transparent surfaces, which need finer-grained sorting or a
+different transparency technique.
+
 The next game-specific work is to decode one real aircraft model from the
 archive into `MeshData`, then add material/texture support without importing
 the GS register protocol. Game-accurate flight behavior can follow once the
