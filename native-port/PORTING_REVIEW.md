@@ -175,8 +175,9 @@ project does not build or link any of those files.
   targets include the recovered speed curves and 60 Hz gear/flap easing. The
   four-state retail gear transition updates channels 33-39, derives its
   capability flags from part tags, and swaps fairing/leg visibility. The
-  model-flag-dependent roll-surface mappings and full aircraft controller
-  input path remain open.
+  default channel-5/6 roll mapping now uses the recovered shared authority
+  factor. Alternate mappings selected by model flags and the full aircraft
+  controller input path remain open.
   `ac5_model_info --parts` reports the hierarchy and decoded track/key counts
   without opening Vulkan.
 - A Vulkan 1.3 renderer using SDL3, dynamic rendering, synchronization2,

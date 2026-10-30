@@ -145,8 +145,10 @@ AircraftAnimationChannels aircraft_animation_targets(
     };
     set(1, 50.0 - 50.0 * input.pitch * authority);
     set(3, 50.0 + 50.0 * input.yaw);
-    set(5, 50.0 - 50.0 * input.roll);
-    set(6, 50.0 + 50.0 * input.roll);
+    // With no model-specific mapping flags, the retail controller selects
+    // opposite roll inputs and applies the same authority factor as pitch.
+    set(5, 50.0 - 50.0 * input.roll * authority);
+    set(6, 50.0 + 50.0 * input.roll * authority);
     set(7, 50.0 - 50.0 * flap);
     set(8, 50.0 + 25.0 * input.pitch * authority);
     set(12, 50.0 - 50.0 * input.roll);
