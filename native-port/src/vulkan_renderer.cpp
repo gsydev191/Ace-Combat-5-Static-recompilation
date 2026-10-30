@@ -1356,6 +1356,7 @@ bool VulkanRenderer::draw_frame(const Mat4& view_projection, const Scene& scene)
     opaque_draws.reserve(scene.draws().size());
     transparent_draws.reserve(scene.draws().size());
     for (const DrawItem& draw : scene.draws()) {
+        if (!draw.visible) continue;
         const Mat4 world = Mat4::multiply(world_transforms[draw.transform], draw.model);
         const Mat4 view_projection_model = Mat4::multiply(view_projection, world);
         if (!finite_matrix(world) || !finite_matrix(view_projection_model)) {

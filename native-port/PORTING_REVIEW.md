@@ -253,10 +253,11 @@ true-color TGA images. The sampler enables anisotropic filtering up to
 static aircraft bundles, including all five LOD meshes, parent-level companion
 ACM meshes, thresholds, and per-level textures from nested `lodplane/*.bin`
 containers. The F-16C and F-4G bundles both import through this path. The viewer
-still displays LOD0; runtime distance selection remains open. The GIM decoder
-handles indexed 4/8-bit textures. The OBJ importer remains an interchange
-path. Ambiguous ACM part ownership, other texture formats, material assignment
-beyond the first bundle texture, and model animation remain open.
+selects among all five levels using the recovered distance thresholds and
+mouse-wheel camera zoom. The GIM decoder handles indexed 4/8-bit textures. The
+OBJ importer remains an interchange path. Ambiguous ACM part ownership, other
+texture formats, material assignment beyond the first bundle texture, and
+model animation remain open.
 
 Textures containing non-opaque alpha and meshes containing non-opaque vertex
 alpha use a separate blended Vulkan pipeline. Opaque draws retain depth writes;
@@ -265,8 +266,8 @@ back-to-front with depth writes disabled. This object-level ordering does not
 correctly order intersecting or interleaved transparent surfaces, which need
 finer-grained sorting or a different transparency technique.
 
-The next model work is to resolve chain ownership for the F-16 player bundle,
-add runtime LOD selection, and bind per-part material textures. Game-accurate
+The next model work is to resolve chain ownership for the F-16 player bundle
+and bind per-part material textures. Game-accurate
 flight behavior can follow once aircraft parameter and control routines have
 been mapped to native state. Archive files remain outside the repository; the
 source checkout contains only the filename index and native format code.

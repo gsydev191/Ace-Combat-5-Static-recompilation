@@ -96,7 +96,9 @@ its first supported ACM mesh. Nested `lodplane/*.bin` bundles load the first
 LOD mesh and its companion ACM geometry. `ac5_model_info <model-file>` reports
 imported mesh counts and assembled bounds without opening the renderer; for
 nested LOD bundles it also lists all five level thresholds, mesh sizes, and
-texture dimensions.
+texture dimensions. The viewer uploads all five levels and switches meshes
+and textures by camera distance using the recovered retail thresholds; use the
+mouse wheel to move through the LOD ranges.
 The native ACM loader decodes the observed VIF position, normal, color and UV
 streams, triangle strips, chain-to-part mapping, and static part hierarchy.
 It rejects ACM blocks whose geometry-chain ownership is ambiguous, and

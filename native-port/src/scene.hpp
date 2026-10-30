@@ -48,6 +48,7 @@ struct DrawItem {
     Mat4 model;
     TransformId transform;
     TextureId environment_texture = no_environment_texture;
+    bool visible = true;
 };
 
 class Scene {
@@ -119,6 +120,22 @@ public:
 
     void set_model(std::size_t draw_index, Mat4 model) {
         draws_.at(draw_index).model = model;
+    }
+
+    void set_draw_mesh(std::size_t draw_index, MeshId mesh) {
+        if (mesh >= meshes_.size())
+            throw std::out_of_range("draw mesh is not in the scene");
+        draws_.at(draw_index).mesh = mesh;
+    }
+
+    void set_draw_texture(std::size_t draw_index, TextureId texture) {
+        if (texture >= textures_.size())
+            throw std::out_of_range("draw texture is not in the scene");
+        draws_.at(draw_index).texture = texture;
+    }
+
+    void set_draw_visible(std::size_t draw_index, bool visible) {
+        draws_.at(draw_index).visible = visible;
     }
 
     void set_all_models(Mat4 model) {

@@ -37,6 +37,35 @@ struct DemoFrame {
     float yaw_angle = 0.0f;
 };
 
+struct DemoLod {
+    std::vector<MeshId> meshes;
+    std::vector<TextureId> textures;
+    std::vector<float> thresholds;
+    std::size_t draw_index = 0;
+    bool active = false;
+};
+
+void select_demo_lod(Scene& scene, const DemoLod& lod, const Camera& camera) {
+    if (!lod.active || lod.meshes.empty()) return;
+    const Vec3 offset{camera.position.x - camera.target.x,
+                      camera.position.y - camera.target.y,
+                      camera.position.z - camera.target.z};
+    const float distance = std::sqrt(offset.x * offset.x + offset.y * offset.y +
+                                     offset.z * offset.z);
+    constexpr float retail_scale = 627.87f;
+    const float scaled_distance = distance * 512.0f / retail_scale;
+    std::size_t level = 0;
+    while (level < lod.thresholds.size() &&
+           !(scaled_distance < lod.thresholds[level])) ++level;
+    if (level >= lod.meshes.size()) {
+        scene.set_draw_visible(lod.draw_index, false);
+        return;
+    }
+    scene.set_draw_visible(lod.draw_index, true);
+    scene.set_draw_mesh(lod.draw_index, lod.meshes[level]);
+    scene.set_draw_texture(lod.draw_index, lod.textures[level]);
+}
+
 void update_demo_scene(DemoFrame& frame, DemoStateMachine&) {
     constexpr float demo_rotation_rate = 1.2f;
     constexpr float full_turn = 6.28318530717958647692f;
@@ -106,13 +135,37 @@ int Application::run(int argc, char** argv) {
     const bool acm_model = extension == ".mpl" || extension == ".acm" ||
                            extension == ".bin";
     bool model_loaded = false;
+    DemoLod demo_lod;
     if (acm_model) {
-        MeshData mesh;
-        if (load_acm_model(model_path, mesh, load_error)) {
-            const MeshId mesh_id = scene.add_mesh(std::move(mesh));
-            scene.add_draw(mesh_id, TextureId{0}, Mat4::identity(), model_transform);
+        AcmLodBundle lod_bundle;
+        bool has_lod_bundle = false;
+        if (!load_acm_lod_bundle(model_path, lod_bundle, has_lod_bundle, load_error)) {
+            model_loaded = false;
+        } else if (has_lod_bundle) {
+            demo_lod.meshes.reserve(lod_bundle.levels.size());
+            demo_lod.textures.reserve(lod_bundle.levels.size());
+            demo_lod.thresholds.reserve(lod_bundle.levels.size());
+            for (AcmLodLevel& level : lod_bundle.levels) {
+                demo_lod.meshes.push_back(scene.add_mesh(std::move(level.mesh)));
+                demo_lod.textures.push_back(
+                    texture_path.empty() && level.has_texture
+                        ? scene.add_texture(std::move(level.texture))
+                        : TextureId{0});
+                demo_lod.thresholds.push_back(level.maximum_distance);
+            }
+            demo_lod.draw_index = scene.draws().size();
+            scene.add_draw(demo_lod.meshes.front(), demo_lod.textures.front(),
+                           Mat4::identity(), model_transform);
+            demo_lod.active = true;
             model_loaded = true;
-            if (texture_path.empty()) {
+        } else {
+            MeshData mesh;
+            if (load_acm_model(model_path, mesh, load_error)) {
+                const MeshId mesh_id = scene.add_mesh(std::move(mesh));
+                scene.add_draw(mesh_id, TextureId{0}, Mat4::identity(), model_transform);
+                model_loaded = true;
+            }
+            if (model_loaded && texture_path.empty()) {
                 TextureData embedded_texture;
                 bool found_texture = false;
                 std::string texture_error;
@@ -185,8 +238,9 @@ int Application::run(int argc, char** argv) {
             if (acm_model) {
                 camera.position = {0.0f, 12.0f, -115.0f};
                 camera.target = {0.0f, 4.0f, 0.0f};
-                camera.far_plane = 300.0f;
+                camera.far_plane = 20000.0f;
             }
+            select_demo_lod(scene, demo_lod, camera);
             const Uint64 counter_frequency = SDL_GetPerformanceFrequency();
             Uint64 previous_counter = SDL_GetPerformanceCounter();
             const auto process_event = [&](const SDL_Event& event) {
@@ -197,6 +251,21 @@ int Application::run(int argc, char** argv) {
                     scene_state.request_transition(DemoSceneState::Exiting);
                 } else if (event.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
                     renderer.request_resize();
+                } else if (event.type == SDL_EVENT_MOUSE_WHEEL) {
+                    const Vec3 offset{camera.position.x - camera.target.x,
+                                      camera.position.y - camera.target.y,
+                                      camera.position.z - camera.target.z};
+                    const float distance = std::sqrt(offset.x * offset.x +
+                                                     offset.y * offset.y +
+                                                     offset.z * offset.z);
+                    if (distance > 1.0e-5f) {
+                        const float zoomed = std::clamp(
+                            distance * std::pow(0.85f, event.wheel.y), 2.0f, 18000.0f);
+                        const float ratio = zoomed / distance;
+                        camera.position = {camera.target.x + offset.x * ratio,
+                                           camera.target.y + offset.y * ratio,
+                                           camera.target.z + offset.z * ratio};
+                    }
                 }
             };
             while (scene_state.current_state() == DemoSceneState::Viewing) {
@@ -233,6 +302,7 @@ int Application::run(int argc, char** argv) {
                     result = 1;
                     break;
                 }
+                select_demo_lod(scene, demo_lod, camera);
                 if (!renderer.draw_frame(view_projection, scene)) {
                     std::fprintf(stderr, "Vulkan frame failed: %s\n",
                                  renderer.error().c_str());
