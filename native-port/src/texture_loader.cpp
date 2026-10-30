@@ -65,6 +65,107 @@ std::uint16_t read_u16_le(const std::uint8_t* data) {
            static_cast<std::uint16_t>(static_cast<std::uint16_t>(data[1]) << 8);
 }
 
+bool decode_gim_impl(std::span<const std::uint8_t> bytes, TextureData& texture,
+                     std::string& error, bool force_opaque) {
+    if (bytes.size() < 0x20 || bytes[0] != 'G' || bytes[1] != 'I' ||
+        bytes[2] != 'M' || bytes[3] != 0) {
+        error = "texture is not a supported GIM image";
+        return false;
+    }
+    const std::uint32_t format = (static_cast<std::uint32_t>(bytes[0x10]) << 24) |
+        (static_cast<std::uint32_t>(bytes[0x11]) << 16) |
+        (static_cast<std::uint32_t>(bytes[0x12]) << 8) | bytes[0x13];
+    std::uint32_t bits_per_pixel = 0;
+    if (format == 0x13 || format == 0x113 || format == 0x1b ||
+        (format >= 0x200 && format <= 0x5ff && (format & 0xffu) == 0x13u))
+        bits_per_pixel = 8;
+    else if (format == 0x14 || format == 0x114 ||
+             (format >= 0x200 && format <= 0x5ff && (format & 0xffu) == 0x14u))
+        bits_per_pixel = 4;
+    else {
+        error = "GIM uses an unsupported or palette-only format marker";
+        return false;
+    }
+
+    const std::uint32_t width = read_u16_le(bytes.data() + 0x1c);
+    const std::uint32_t height = read_u16_le(bytes.data() + 0x1e);
+    if (width == 0 || height == 0) {
+        error = "GIM dimensions are zero";
+        return false;
+    }
+    constexpr std::uint64_t max_rgba_bytes = 256ull * 1024ull * 1024ull;
+    const std::uint64_t pixel_count = static_cast<std::uint64_t>(width) * height;
+    if (pixel_count > max_rgba_bytes / 4u) {
+        error = "GIM decoded image exceeds the 256 MiB limit";
+        return false;
+    }
+    const std::size_t palette_entries = bits_per_pixel == 4 ? 16u : 256u;
+    const std::size_t palette_bytes = palette_entries * 4u;
+    const std::size_t packed_bytes = static_cast<std::size_t>(
+        bits_per_pixel == 4 ? (pixel_count + 1u) / 2u : pixel_count);
+
+    std::size_t pixels_offset = 0x30u + palette_bytes;
+    std::size_t palette_offset = 0x30u;
+    constexpr std::size_t livery_data_offset = 0x20u;
+    if (packed_bytes <= bytes.size() - std::min(bytes.size(), livery_data_offset) &&
+        livery_data_offset + packed_bytes + 0x10u + palette_bytes <= bytes.size() &&
+        livery_data_offset + packed_bytes + 0x0cu + 4u <= bytes.size() &&
+        bytes[livery_data_offset + packed_bytes + 0x0cu] == 0x10 &&
+        bytes[livery_data_offset + packed_bytes + 0x0du] == 0 &&
+        bytes[livery_data_offset + packed_bytes + 0x0eu] == 0x10 &&
+        bytes[livery_data_offset + packed_bytes + 0x0fu] == 0) {
+        pixels_offset = livery_data_offset;
+        palette_offset = livery_data_offset + packed_bytes + 0x10u;
+    }
+    if (pixels_offset > bytes.size() || packed_bytes > bytes.size() - pixels_offset ||
+        palette_offset > bytes.size() || palette_bytes > bytes.size() - palette_offset) {
+        error = "GIM palette or indexed pixel payload is truncated";
+        return false;
+    }
+
+    std::array<std::uint8_t, 256> palette_order{};
+    for (std::size_t i = 0; i < palette_entries; ++i) palette_order[i] = static_cast<std::uint8_t>(i);
+    if (bits_per_pixel == 8) {
+        for (std::size_t group = 0; group < 256; group += 32) {
+            for (std::size_t i = 0; i < 8; ++i) {
+                palette_order[group + 8 + i] = static_cast<std::uint8_t>(group + 16 + i);
+                palette_order[group + 16 + i] = static_cast<std::uint8_t>(group + 8 + i);
+            }
+        }
+    }
+
+    TextureData decoded;
+    decoded.width = width;
+    decoded.height = height;
+    try {
+        decoded.rgba.resize(static_cast<std::size_t>(pixel_count) * 4u);
+    } catch (const std::bad_alloc&) {
+        error = "GIM texture allocation failed";
+        return false;
+    } catch (const std::length_error&) {
+        error = "GIM texture exceeds the platform's vector limit";
+        return false;
+    }
+    for (std::uint64_t pixel = 0; pixel < pixel_count; ++pixel) {
+        std::uint8_t index = 0;
+        if (bits_per_pixel == 8) {
+            index = bytes[pixels_offset + static_cast<std::size_t>(pixel)];
+        } else {
+            const std::uint8_t packed = bytes[pixels_offset + static_cast<std::size_t>(pixel / 2u)];
+            index = static_cast<std::uint8_t>((pixel & 1u) == 0 ? packed >> 4 : packed & 0x0fu);
+        }
+        const std::size_t palette_index = palette_order[index];
+        const std::size_t source = palette_offset + palette_index * 4u;
+        const std::size_t target = static_cast<std::size_t>(pixel) * 4u;
+        decoded.rgba[target] = bytes[source];
+        decoded.rgba[target + 1] = bytes[source + 1];
+        decoded.rgba[target + 2] = bytes[source + 2];
+        decoded.rgba[target + 3] = force_opaque ? 255 : bytes[source + 3];
+    }
+    texture = std::move(decoded);
+    return true;
+}
+
 bool load_tga(const std::string& path, TextureData& texture, std::string& error) {
     std::ifstream input(path_from_utf8(path), std::ios::binary);
     if (!input) {
@@ -176,6 +277,45 @@ bool load_tga(const std::string& path, TextureData& texture, std::string& error)
 
 } // namespace
 
+bool decode_gim(std::span<const std::uint8_t> bytes, TextureData& texture,
+                std::string& error, bool force_opaque) {
+    return decode_gim_impl(bytes, texture, error, force_opaque);
+}
+
+bool load_gim(const std::string& path, TextureData& texture, std::string& error) {
+    std::ifstream input(path_from_utf8(path), std::ios::binary);
+    if (!input) {
+        error = "cannot open GIM texture: " + path;
+        return false;
+    }
+    input.seekg(0, std::ios::end);
+    const std::streamoff length = input.tellg();
+    if (length <= 0 || static_cast<std::uint64_t>(length) > 512ull * 1024ull * 1024ull) {
+        error = "GIM file is empty or exceeds the 512 MiB input limit: " + path;
+        return false;
+    }
+    input.seekg(0, std::ios::beg);
+    std::vector<std::uint8_t> bytes;
+    try {
+        bytes.resize(static_cast<std::size_t>(length));
+    } catch (const std::bad_alloc&) {
+        error = "GIM file allocation failed: " + path;
+        return false;
+    } catch (const std::length_error&) {
+        error = "GIM file exceeds the platform's vector limit: " + path;
+        return false;
+    }
+    if (!input.read(reinterpret_cast<char*>(bytes.data()), length)) {
+        error = "GIM file read failed: " + path;
+        return false;
+    }
+    if (!decode_gim(bytes, texture, error)) {
+        error += ": " + path;
+        return false;
+    }
+    return true;
+}
+
 bool load_ppm(const std::string& path, TextureData& texture, std::string& error) {
     std::ifstream input(path_from_utf8(path), std::ios::binary);
     if (!input) {
@@ -274,6 +414,7 @@ bool load_texture_image(const std::string& path, TextureData& texture,
     if (extension == ".ppm" || extension == ".pnm")
         return load_ppm(path, texture, error);
     if (extension == ".tga") return load_tga(path, texture, error);
+    if (extension == ".gim") return load_gim(path, texture, error);
     error = "unsupported texture image extension: " + extension;
     return false;
 }

@@ -10,5 +10,7 @@ namespace ac5 {
 // bundle into one flattened, indexed native mesh. Part animation and material
 // textures are not included in this static geometry import.
 bool load_acm_model(const std::string& path, MeshData& mesh, std::string& error);
+bool load_acm_bundle_texture(const std::string& path, TextureData& texture,
+                             bool& found, std::string& error);
 
 } // namespace ac5

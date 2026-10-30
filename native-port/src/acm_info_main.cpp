@@ -43,5 +43,9 @@ int main(int argc, char** argv) {
                 "bounds: [%.3f, %.3f, %.3f] to [%.3f, %.3f, %.3f]\n",
                 mesh.vertices.size(), mesh.indices.size() / 3,
                 minimum.x, minimum.y, minimum.z, maximum.x, maximum.y, maximum.z);
+    ac5::TextureData texture;
+    bool has_texture = false;
+    if (ac5::load_acm_bundle_texture(arguments[1], texture, has_texture, error) && has_texture)
+        std::printf("bundled texture: %ux%u\n", texture.width, texture.height);
     return 0;
 }

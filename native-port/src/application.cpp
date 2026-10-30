@@ -63,7 +63,8 @@ int Application::run(int argc, char** argv) {
     std::string texture_path;
     const auto usage = [](FILE* stream) {
         std::fprintf(stream,
-                     "usage: ac5_native [--model path.obj] [--texture image.ppm|image.tga]\n"
+                     "usage: ac5_native [--model path.obj|model.mpl|model.bin] "
+                     "[--texture image.ppm|image.tga|image.gim]\n"
                      "       ac5_native --help\n");
     };
     for (int i = 1; i < argc; ++i) {
@@ -111,6 +112,19 @@ int Application::run(int argc, char** argv) {
             const MeshId mesh_id = scene.add_mesh(std::move(mesh));
             scene.add_draw(mesh_id, TextureId{0}, Mat4::identity(), model_transform);
             model_loaded = true;
+            if (texture_path.empty()) {
+                TextureData embedded_texture;
+                bool found_texture = false;
+                std::string texture_error;
+                if (load_acm_bundle_texture(model_path, embedded_texture,
+                                            found_texture, texture_error) && found_texture) {
+                    const TextureId texture_id = scene.add_texture(std::move(embedded_texture));
+                    scene.set_all_draw_textures(texture_id);
+                } else if (!texture_error.empty()) {
+                    std::fprintf(stderr, "Embedded model texture unavailable: %s\n",
+                                 texture_error.c_str());
+                }
+            }
         }
     } else {
         model_loaded = load_obj_scene(model_path, scene, load_error,

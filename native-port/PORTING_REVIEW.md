@@ -144,8 +144,9 @@ project does not build or link any of those files.
     `TRXREG`, and `TRXDIR` state, then submits the transfer through the guest
     graphics path. The `CTim2::setVpos` routines similarly update resident
     texture state. These are PS2 upload operations, not evidence for a
-    standalone decoder for `pmtex*.bin`; native Vulkan upload therefore takes
-    decoded `TextureData`, and the game texture-file format remains unknown.
+    standalone decoder for `pmtex*.bin`; indexed aircraft GIMs are decoded to
+    `TextureData`, while the separate terrain/material texture format remains
+    unknown.
 
 ## Work in `native-port/`
 
@@ -229,9 +230,11 @@ arithmetic, not guest CPU or hardware state) and are covered by
   base-pass colors as pre-lit so the demo diffuse light is skipped. Wiring the
   game-specific output still requires decoded model/material data.
 
-The generated code is present as behavioral reference. `DATA.TBL`, `DATA.PAC`,
-and `SLUS_208.51` are not in this checkout, so the model/texture container
-formats cannot be validated and no end-to-end game asset decode exists yet.
+The generated code is present as behavioral reference. Game archives are not
+checked into this repository; local copies in Downloads were used read-only to
+validate an F-4G ACM/GIM bundle through the native loader. ACM blocks with
+ambiguous chain ownership, other texture formats, and animation still need
+work.
 
 ## Current limits and next work
 
@@ -243,10 +246,11 @@ generate a GPU mip chain when the selected sRGB format supports linear blits,
 otherwise they use one level. MTL support handles `Kd`, scalar `d` dissolve,
 scalar `Tr` transparency, and simple `map_Kd` paths to PPM or uncompressed/RLE
 true-color TGA images. The sampler enables anisotropic filtering up to
-16x when the device supports it. AC5 format decoding remains future work. The
-OBJ importer is an interchange path, not an AC5 format decoder. The archive
-tool extracts original files but does not decode packed aircraft models,
-textures, or animation.
+16x when the device supports it. The native ACM/VIF loader decodes supported
+static aircraft bundles, and the GIM decoder handles indexed 4/8-bit textures.
+The OBJ importer remains an interchange path. LOD variants, ambiguous ACM part
+ownership, other texture formats, material assignment beyond the first bundle
+texture, and model animation remain open.
 
 Textures containing non-opaque alpha and meshes containing non-opaque vertex
 alpha use a separate blended Vulkan pipeline. Opaque draws retain depth writes;
@@ -255,10 +259,8 @@ back-to-front with depth writes disabled. This object-level ordering does not
 correctly order intersecting or interleaved transparent surfaces, which need
 finer-grained sorting or a different transparency technique.
 
-The next game-specific work is to decode one real aircraft model from the
-archive into `MeshData`, then add material/texture support without importing
-the GS register protocol. Game-accurate flight behavior can follow once the
-aircraft parameter and control routines have been mapped to native state. The
-current checkout contains the archive filename index but no `DATA.TBL`,
-`DATA.PAC`, or disc image, so validating the parameter parser and model
-conversion against game assets requires those source files to be supplied.
+The next model work is to resolve chain ownership for the F-16 player bundle,
+support LOD meshes, and bind per-part material textures. Game-accurate flight
+behavior can follow once aircraft parameter and control routines have been
+mapped to native state. Archive files remain outside the repository; the
+source checkout contains only the filename index and native format code.

@@ -1,6 +1,7 @@
 #include "acm_loader.hpp"
 
 #include "utf8_path.hpp"
+#include "texture_loader.hpp"
 
 #include <algorithm>
 #include <array>
@@ -510,35 +511,90 @@ bool parse_acm(std::span<const std::uint8_t> block, MeshData& mesh,
     return true;
 }
 
-} // namespace
-
-bool load_acm_model(const std::string& path, MeshData& mesh, std::string& error) {
+bool read_model_file(const std::string& path, std::vector<std::uint8_t>& file,
+                     std::string& error) {
     std::ifstream input(path_from_utf8(path), std::ios::binary);
     if (!input) {
-        error = "cannot open ACM model: " + path;
+        error = "cannot open model bundle: " + path;
         return false;
     }
     input.seekg(0, std::ios::end);
     const std::streamoff length = input.tellg();
     if (length <= 0 || static_cast<std::uint64_t>(length) > max_model_file_size) {
-        error = "ACM model file is empty or exceeds the 128 MiB size limit: " + path;
+        error = "model bundle is empty or exceeds the 128 MiB size limit: " + path;
         return false;
     }
     input.seekg(0, std::ios::beg);
-    std::vector<std::uint8_t> file;
     try {
         file.resize(static_cast<std::size_t>(length));
     } catch (const std::bad_alloc&) {
-        error = "ACM model allocation failed: " + path;
+        error = "model bundle allocation failed: " + path;
         return false;
     } catch (const std::length_error&) {
-        error = "ACM model exceeds the platform's vector limit: " + path;
+        error = "model bundle exceeds the platform's vector limit: " + path;
         return false;
     }
     if (!input.read(reinterpret_cast<char*>(file.data()), length)) {
-        error = "ACM model read failed: " + path;
+        error = "model bundle read failed: " + path;
         return false;
     }
+    return true;
+}
+
+} // namespace
+
+bool load_acm_bundle_texture(const std::string& path, TextureData& texture,
+                             bool& found, std::string& error) {
+    found = false;
+    std::vector<std::uint8_t> file;
+    if (!read_model_file(path, file, error)) return false;
+    if (is_acm(file)) return true;
+    std::uint32_t count = 0;
+    if (!read_u32(file, 0, count) || count == 0 || count > max_parts_or_chains ||
+        count > (file.size() - std::min<std::size_t>(file.size(), 4)) / 4) {
+        error = "model bundle has an invalid slot table: " + path;
+        return false;
+    }
+    const std::size_t table_end = 4 + static_cast<std::size_t>(count) * 4;
+    for (std::uint32_t slot = 6; slot < count; ++slot) {
+        std::uint32_t offset = 0;
+        if (!read_u32(file, 4 + static_cast<std::size_t>(slot) * 4, offset)) {
+            error = "model bundle texture offset is truncated: " + path;
+            return false;
+        }
+        if (offset == 0) continue;
+        if (offset < table_end || offset > file.size()) {
+            error = "model bundle texture offset is invalid: " + path;
+            return false;
+        }
+        std::size_t end = file.size();
+        for (std::uint32_t other = 0; other < count; ++other) {
+            std::uint32_t candidate = 0;
+            if (!read_u32(file, 4 + static_cast<std::size_t>(other) * 4, candidate)) {
+                error = "model bundle slot table is truncated: " + path;
+                return false;
+            }
+            if (candidate > offset && candidate < end) end = candidate;
+        }
+        if (end <= offset || end - offset < 4) continue;
+        const auto bytes = std::span<const std::uint8_t>(file).subspan(offset, end - offset);
+        if (bytes[0] != 'G' || bytes[1] != 'I' || bytes[2] != 'M' || bytes[3] != 0)
+            continue;
+        TextureData decoded;
+        if (!decode_gim(bytes, decoded, error, true)) {
+            error += " in model bundle: " + path;
+            return false;
+        }
+        texture = std::move(decoded);
+        found = true;
+        return true;
+    }
+    return true;
+}
+
+bool load_acm_model(const std::string& path, MeshData& mesh, std::string& error) {
+    std::vector<std::uint8_t> file;
+    if (!read_model_file(path, file, error)) return false;
     try {
         std::span<const std::uint8_t> block;
         if (!first_bundle_model(file, block, error)) return false;

@@ -28,11 +28,12 @@ shader then perspective-interpolates those UVs across the triangle. The sample
 does not yet populate these fields from decoded AC5 materials.
 Scene replacement uploads are staged in separate Vulkan buffers, textures,
 and descriptors; a failed upload leaves the previously uploaded scene usable.
-OBJ/MTL and PPM/TGA importers,
-platform-independent camera/scene/input types, native SDL input, and a DATA.PAC/ULZ
-reader live entirely in this directory. The project does not yet decode the
-game's packed model, texture, or animation
-assets or contain game-accurate gameplay systems.
+OBJ/MTL, PPM/TGA/GIM importers, a bounds-checked ACM/VIF aircraft mesh loader,
+platform-independent camera/scene/input types, native SDL input, and a
+DATA.PAC/ULZ reader live entirely in this directory. The loader currently
+supports static bundles with unambiguous part ownership and the first bundled
+aircraft texture; other model families, animation, and game-accurate gameplay
+systems remain unported.
 
 The portable `model_shading` library exposes the plain, lit, and environment
 vertex-program paths as value-in/value-out math. Environment mode returns the
@@ -96,9 +97,13 @@ counts and assembled bounds without opening the renderer.
 The native ACM loader decodes the observed VIF position, normal, color and UV
 streams, triangle strips, chain-to-part mapping, and static part hierarchy.
 It rejects ACM blocks whose geometry-chain ownership is ambiguous, and
-currently omits model textures and animation. You can optionally
-`--texture path/to/image.ppm` or `--texture path/to/image.tga` to apply a
-texture to the scene, overriding OBJ material maps. The importer accepts standard homogeneous
+loads the first supported GIM from the bundle for the aircraft texture. Model
+animation remains unported. You can override OBJ material maps and bundled
+ACM textures with any of `--texture path/to/image.ppm`,
+`--texture path/to/image.tga`, or `--texture path/to/image.gim`. The native GIM
+decoder handles indexed 4bpp/8bpp retail variants
+and their 8bpp CSM1 palette order. Aircraft bundle palette alpha is treated as
+opaque because it does not encode material opacity. The importer accepts standard homogeneous
 `v x y z w` positions, `vt` texture
 coordinates, and the common optional RGB extension on `v` records (`x y z r g b`
 or `x y z w r g b`). Faces retain shared position/UV/normal tuples as indexed
