@@ -197,7 +197,9 @@ project does not build or link any of those files.
   now accept the shared native controller value corresponding to `+0x20`.
   Channel 20 follows its ACM model-flag gate: `0x10000` selects the aircraft
   speed curve, `0x20000` selects the `+0x20` controller value, and other
-  variants leave it neutral pending the stateful path.
+  variants leave it neutral pending the stateful path. Controller flag
+  `0x1000` also drives channel 24 to its full endpoint; its source remains
+  unavailable in the native viewer.
   `ac5_model_info --parts` reports the hierarchy and decoded track/key counts
   without opening Vulkan.
 - A Vulkan 1.3 renderer using SDL3, dynamic rendering, synchronization2,
