@@ -32,6 +32,8 @@ add_library(ac5_game_core STATIC
     src/flight_controls.hpp
     src/flight_dynamics.cpp
     src/flight_dynamics.hpp
+    src/flight_model.cpp
+    src/flight_model.hpp
     src/flight_rules_loader.cpp
     src/flight_rules_loader.hpp
     src/model_shading.cpp
@@ -85,6 +87,7 @@ install(FILES
     src/flight_input.hpp
     src/flight_controls.hpp
     src/flight_dynamics.hpp
+    src/flight_model.hpp
     src/flight_rules_loader.hpp
     src/obj_loader.hpp
     src/texture_loader.hpp
