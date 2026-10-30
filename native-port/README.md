@@ -32,8 +32,9 @@ OBJ/MTL, PPM/TGA/GIM importers, a bounds-checked ACM/VIF aircraft mesh loader,
 platform-independent camera/scene/input types, native SDL input, and a
 DATA.PAC/ULZ reader live entirely in this directory. The loader currently
 supports static bundles with unambiguous part ownership and the first bundled
-aircraft texture; other model families, animation, and game-accurate gameplay
-systems remain unported.
+aircraft texture. Unowned shape-variant chains are skipped for the neutral
+static pose. Nested aircraft LOD bundles include all five meshes and textures;
+animation and game-accurate gameplay systems remain unported.
 
 The portable `model_shading` library exposes the plain, lit, and environment
 vertex-program paths as value-in/value-out math. Environment mode returns the
@@ -101,7 +102,7 @@ and textures by camera distance using the recovered retail thresholds; use the
 mouse wheel to move through the LOD ranges.
 The native ACM loader decodes the observed VIF position, normal, color and UV
 streams, triangle strips, chain-to-part mapping, and static part hierarchy.
-It rejects ACM blocks whose geometry-chain ownership is ambiguous, and
+It rejects duplicate or unresolved geometry-chain ownership, and
 loads the first supported GIM from the bundle for the aircraft texture. Model
 animation remains unported. You can override OBJ material maps and bundled
 ACM textures with any of `--texture path/to/image.ppm`,

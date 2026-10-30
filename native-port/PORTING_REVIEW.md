@@ -161,8 +161,10 @@ project does not build or link any of those files.
   triangles with assembled bounds of about 59 x 26 x 96 game units, matching
   the measured reference model. The F-16 selection bundle produces 4,108
   vertices and 2,172 triangles with assembled bounds of about 49 x 26 x 79
-  game units. The separate F-16 player bundle has four chains without verified
-  part owners and is rejected until that mapping is understood.
+  game units. The F-16 player bundle has 57 part records and 33 geometry chains;
+  its 29 explicitly owned chains import to 3,102 vertices and 1,632 triangles.
+  The four unowned chains are shape alternatives, so static import skips them
+  while leaving their animation unsupported.
 - A Vulkan 1.3 renderer using SDL3, dynamic rendering, synchronization2,
   indexed textured meshes, push-constant transforms, per-image depth
   attachments, resize-aware swapchain recreation, and staging uploads that
@@ -266,8 +268,7 @@ back-to-front with depth writes disabled. This object-level ordering does not
 correctly order intersecting or interleaved transparent surfaces, which need
 finer-grained sorting or a different transparency technique.
 
-The next model work is to resolve chain ownership for the F-16 player bundle
-and bind per-part material textures. Game-accurate
+The next model work is to bind per-part material textures. Game-accurate
 flight behavior can follow once aircraft parameter and control routines have
 been mapped to native state. Archive files remain outside the repository; the
 source checkout contains only the filename index and native format code.

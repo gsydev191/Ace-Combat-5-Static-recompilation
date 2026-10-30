@@ -565,13 +565,15 @@ bool parse_acm(std::span<const std::uint8_t> block, MeshData& mesh,
             owners[chain] = i;
         }
     }
-    const bool owner_table_complete = !duplicate_owner &&
-        std::all_of(owners.begin(), owners.end(), [](std::uint32_t owner) {
-            return owner != no_link;
-        });
-    if (!owner_table_complete) {
-        const bool no_owners = std::all_of(parts.begin(), parts.end(), [](const Part& part) {
-            return part.words[2] == no_link || part.words[2] >= max_parts_or_chains;
+    if (duplicate_owner) {
+        error = "ACM chain is assigned to more than one part";
+        return false;
+    }
+    const bool has_owner = std::any_of(owners.begin(), owners.end(),
+        [](std::uint32_t owner) { return owner != no_link; });
+    if (!has_owner) {
+        const bool no_owners = std::all_of(parts.begin(), parts.end(), [chain_count](const Part& part) {
+            return part.words[2] == no_link || part.words[2] >= chain_count;
         });
         if (part_count != chain_count || !no_owners) {
             error = "ACM chain-to-part ownership is ambiguous";
@@ -593,6 +595,8 @@ bool parse_acm(std::span<const std::uint8_t> block, MeshData& mesh,
 
     MeshData decoded;
     for (std::uint32_t i = 0; i < chain_count; ++i) {
+        // Unowned chains are shape alternatives, not part of the neutral mesh.
+        if (owners[i] == no_link) continue;
         const std::size_t start = chains_start + chain_offsets[i];
         if (start > block.size() || block.size() - start < 16) {
             error = "ACM DMA chain header is truncated";
